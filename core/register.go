@@ -23,7 +23,7 @@ func (register *Register) getContext() *Context {
 	context := newContext(register)
 	return context
 }
-func (register *Register) RangeServer(f func(server Server)) {
+func (register *Register) rangeServer(f func(server Server)) {
 	register.servers.Range(func(key, value any) bool {
 		f(value.(Server))
 		return true
@@ -54,7 +54,7 @@ const (
 )
 
 func (httpPush *HttpPush) Start() error {
-	httpPush.context.RangeServer(func(server Server) {
+	httpPush.context.rangeServer(func(server Server) {
 		server.Init(httpPush.context)
 		go func() {
 			err := server.Start()

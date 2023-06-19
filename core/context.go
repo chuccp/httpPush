@@ -37,6 +37,6 @@ func (context *Context) AddHttpRoute(pattern string, handler func(http.ResponseW
 	context.httpPush.httpServer.AddRoute(pattern, handler)
 }
 
-func (context *Context) RangeServer(f func(server Server)) {
-	context.register.RangeServer(f)
+func (context *Context) rangeServer(f func(server Server)) {
+	context.register.rangeServer(f)
 }
