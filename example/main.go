@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/chuccp/httpPush/api"
+	"github.com/chuccp/httpPush/cluster"
 	"github.com/chuccp/httpPush/config"
 	"github.com/chuccp/httpPush/core"
 	"log"
@@ -15,7 +16,8 @@ func main() {
 		return
 	}
 	register := core.NewRegister(cfg)
-	register.AddServer(&api.Server{})
+	register.AddServer(api.NewServer())
+	register.AddServer(cluster.NewServer())
 	httpPush := register.Create()
 	err = httpPush.Start()
 	if err != nil {

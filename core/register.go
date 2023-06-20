@@ -54,7 +54,17 @@ const (
 )
 
 func (httpPush *HttpPush) Start() error {
+
 	httpPush.context.rangeServer(func(server Server) {
+		if s, ok := server.(IHttpServer); ok {
+			s.init(httpPush.context)
+			go func() {
+				err := s.start()
+				if err != nil {
+					log.Print(err)
+				}
+			}()
+		}
 		server.Init(httpPush.context)
 		go func() {
 			err := server.Start()

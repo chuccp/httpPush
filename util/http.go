@@ -1,7 +1,6 @@
 package util
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 )
@@ -15,7 +14,6 @@ type HttpServer struct {
 }
 
 func (hs *HttpServer) AddRoute(pattern string, handler func(http.ResponseWriter, *http.Request)) {
-	log.Println("============", pattern, handler)
 	hs.serveMux.HandleFunc(pattern, handler)
 }
 func (hs *HttpServer) Start(port int) error {
