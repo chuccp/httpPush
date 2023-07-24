@@ -3,39 +3,31 @@ package cluster
 import (
 	"net/url"
 	"strconv"
-	"sync"
 )
 
 type Machine struct {
+	Link        string
+	MachineId   string
+	IsLocal     bool
+	Scheme      string
+	Address     string
+	Port        int
+	liteMachine *LiteMachine
+}
+type LiteMachine struct {
 	Link      string
 	MachineId string
-	IsLocal   bool
-	Scheme    string
-	Address   string
-	Port      int
 }
 
-type MachineStore struct {
-	linkMachineMap      *sync.Map
-	machineIdMachineMap *sync.Map
+func (machine *Machine) getLiteMachine() *LiteMachine {
+	if machine.liteMachine != nil {
+		return machine.liteMachine
+	} else {
+		machine.liteMachine = &LiteMachine{Link: machine.Link, MachineId: machine.MachineId}
+	}
+	return machine.liteMachine
 }
 
-func (ms *MachineStore) addMachineByLink(machine *Machine) {
-	ms.linkMachineMap.Store(machine.Link, machine)
-}
-func (ms *MachineStore) addMachineById(machine *Machine) {
-	ms.machineIdMachineMap.Store(machine.MachineId, machine)
-
-}
-func (ms *MachineStore) RangeMachineByLink(f func(link string, machine *Machine) bool) {
-	ms.linkMachineMap.Range(func(key, value any) bool {
-		return f(key.(string), value.(*Machine))
-	})
-}
-
-func NewMachineStore() *MachineStore {
-	return &MachineStore{linkMachineMap: new(sync.Map), machineIdMachineMap: new(sync.Map)}
-}
 func parseLink(link string) (*Machine, error) {
 	url, err := url.Parse(link)
 	if err != nil {

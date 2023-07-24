@@ -54,7 +54,6 @@ const (
 )
 
 func (httpPush *HttpPush) Start() error {
-
 	httpPush.context.rangeServer(func(server Server) {
 		if s, ok := server.(IHttpServer); ok {
 			s.init(httpPush.context)

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/chuccp/httpPush/user"
 	"net/http"
 )
 
@@ -10,6 +11,7 @@ type Context struct {
 	register   *Register
 	systemInfo systemInfo
 	httpPush   *HttpPush
+	userStore  *user.Store
 }
 
 func newContext(register *Register) *Context {
@@ -20,6 +22,14 @@ func newContext(register *Register) *Context {
 func (context *Context) GetHttpPush() *HttpPush {
 	return context.httpPush
 }
+
+func (context *Context) AddUser(iUser user.IUser) {
+
+}
+func (context *Context) DeleteUser(iUser user.IUser) {
+
+}
+
 func (context *Context) GetCfgString(section, key string) string {
 	iSection := context.register.config.GetString(section, key)
 	return iSection

@@ -6,6 +6,9 @@ import (
 	"time"
 )
 
+type IMessage interface {
+}
+
 func MsgId() uint32 {
 	num := rand.Intn(1024)
 	return util.Millisecond()<<10 | (uint32(num))

@@ -28,6 +28,17 @@ func (r *Request) Call(link string, jsonData []byte) ([]byte, error) {
 	}
 	return all, nil
 }
+func (r *Request) Get(link string) ([]byte, error) {
+	resp, err := r.client.Get(link)
+	if err != nil {
+		return nil, err
+	}
+	all, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return all, nil
+}
 func (r *Request) JustCall(link string, jsonData []byte) error {
 	var buff = new(bytes.Buffer)
 	buff.Write(jsonData)
