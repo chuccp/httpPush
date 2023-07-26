@@ -5,8 +5,9 @@ import (
 	"time"
 )
 
+type WriteCallBackFunc func(err error, hasUser bool)
 type IUser interface {
-	WriteMessage(iMessage message.IMessage) error
+	WriteMessage(iMessage message.IMessage, writeFunc WriteCallBackFunc)
 	GetId() string
 	Close()
 	GetUsername() string

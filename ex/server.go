@@ -4,6 +4,7 @@ import (
 	"github.com/chuccp/httpPush/core"
 	"log"
 	"net/http"
+	"time"
 )
 
 type Server struct {
@@ -21,6 +22,7 @@ func NewServer() *Server {
 
 func (server *Server) Start() error {
 	server.AddHttpRoute("/ex", server.ex)
+	go server.expiredCheck()
 	return nil
 }
 func (server *Server) ex(w http.ResponseWriter, re *http.Request) {
@@ -34,6 +36,15 @@ func (server *Server) jack(w http.ResponseWriter, re *http.Request) {
 		log.Println("新增用户：", cl.username)
 	}
 	client.WaitMsg(w, re)
+}
+
+func (server *Server) expiredCheck() {
+	for {
+		time.Sleep(time.Second * 2)
+		server.store.RangeClient(func(c *client) {
+			c.expiredCheck()
+		})
+	}
 }
 
 func (server *Server) Init(context *core.Context) {

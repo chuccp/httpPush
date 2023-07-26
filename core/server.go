@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/chuccp/httpPush/util"
+	"log"
 	"net/http"
 )
 
@@ -28,6 +29,7 @@ func NewHttpServer(name string) IHttpServer {
 	return &httpServer{name: name}
 }
 func (server *httpServer) AddHttpRoute(pattern string, handler func(http.ResponseWriter, *http.Request)) {
+	log.Println(server.name, ":", server.port, "__", pattern)
 	if server.port > 0 {
 		server.httpServer.AddRoute(pattern, handler)
 	} else {
@@ -39,10 +41,13 @@ func (server *httpServer) init(context *Context) {
 	port := context.GetCfgInt(server.name, "http.port")
 	corePort := context.GetCfgInt("core", "http.port")
 	if port > 0 && corePort != port {
+		log.Println(server.name, "端口：", port)
 		server.certFile = context.GetCfgString(server.name, "http.certFile")
 		server.keyFile = context.GetCfgString(server.name, "http.keyFile")
 		server.port = port
 		server.httpServer = util.NewServer()
+	} else {
+		log.Println(server.name, "端口：", corePort)
 	}
 }
 func (server *httpServer) start() error {

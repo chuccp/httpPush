@@ -13,3 +13,9 @@ func (s *Store) LoadOrStore(c *client) (*client, bool) {
 	v, ok := s.clientMap.LoadOrStore(c.username, c)
 	return v.(*client), ok
 }
+func (s *Store) RangeClient(f func(c *client)) {
+	s.clientMap.Range(func(key, value any) bool {
+		f(value.(*client))
+		return true
+	})
+}
