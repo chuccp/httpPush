@@ -67,6 +67,7 @@ func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
 		c.context.AddUser(u)
 		return u
 	} else {
+		uv.liveTime = liveTime
 		uv.expiredTime = nil
 		uv.lastLiveTime = &t
 		uv.writer = writer
