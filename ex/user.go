@@ -38,11 +38,7 @@ func (u *User) GetId() string {
 }
 
 func (u *User) waitMessage() {
-	waitTime := time.Minute
-	if u.liveTime > 0 {
-		waitTime = 2 * time.Duration(u.liveTime) * time.Second
-	}
-	ctx, cancelFunc := context.WithTimeout(context.Background(), waitTime)
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(u.liveTime)*time.Second)
 	v, num, cls := u.queue.Dequeue(ctx)
 	log.Println("收到信息：剩余消息:{}===延时:{}", num, cls)
 	if cls {
@@ -62,6 +58,7 @@ func (u *User) waitMessage() {
 
 func (u *User) isExpired(now *time.Time) bool {
 	if u.expiredTime != nil {
+		log.Println(u.expiredTime.Format(time.DateTime), "==========", now.Format(time.DateTime))
 		if u.expiredTime.Before(*now) {
 			return true
 		}
@@ -79,10 +76,10 @@ func (u *User) WriteMessage(iMessage message.IMessage, writeFunc user.WriteCallB
 	data, err := json.Marshal(hts)
 	if err == nil {
 		u.queue.Offer(data)
+		writeFunc(nil, true)
 	} else {
 		writeFunc(err, false)
 	}
-	writeFunc(nil, true)
 }
 
 func (u *User) Close() {}

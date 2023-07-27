@@ -11,52 +11,62 @@ import (
 type client struct {
 	username string
 	context  *core.Context
-	connMap  *sync.Map
+	connMap  map[string]*User
 	queue    *util.Queue
+	liveTime int
+	rLock    *sync.RWMutex
 }
 
-func NewClient(context *core.Context, re *http.Request) *client {
+func NewClient(context *core.Context, re *http.Request, liveTime int) *client {
 	username := util.GetUsername(re)
-	connMap := new(sync.Map)
+	connMap := make(map[string]*User)
 	queue := util.NewQueue()
-	return &client{queue: queue, username: username, context: context, connMap: connMap}
-}
-func (c *client) WaitMsg(writer http.ResponseWriter, re *http.Request) {
-	user := c.loadUser(writer, re)
-	user.waitMessage()
-	t := time.Now()
-	user.last = &t
-	tm := t.Add(time.Duration(user.liveTime) * time.Second)
-	user.expiredTime = &tm
+	return &client{queue: queue, username: username, context: context, connMap: connMap, liveTime: liveTime, rLock: new(sync.RWMutex)}
 }
 func (c *client) expiredCheck() {
+	c.rLock.Lock()
+	defer c.rLock.Unlock()
 	t := time.Now()
-	c.connMap.Range(func(key, value any) bool {
-		u := value.(*User)
+	keys := make([]string, 0)
+	for key, u := range c.connMap {
 		if u.isExpired(&t) {
-			id := u.GetId()
-			c.connMap.Delete(id)
+			keys = append(keys, key)
 			c.context.DeleteUser(u)
 		}
-		return true
-	})
+	}
+	for _, key := range keys {
+		delete(c.connMap, key)
+	}
 }
-
+func (c *client) userNum() int {
+	c.rLock.RLock()
+	defer c.rLock.RUnlock()
+	return len(c.connMap)
+}
 func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
+	c.rLock.RLock()
+	defer c.rLock.RUnlock()
 	t := time.Now()
 	liveTime := util.GetLiveTime(re)
 	u := NewUser(c.username, c.queue, writer, re)
-	u.liveTime = liveTime
+	if liveTime > 0 {
+		u.liveTime = liveTime
+	} else if c.liveTime > 0 {
+		u.liveTime = c.liveTime
+	} else {
+		u.liveTime = 20
+	}
+	u.expiredTime = nil
 	id := u.GetId()
-	v, ok := c.connMap.LoadOrStore(id, u)
+	uv, ok := c.connMap[id]
 	if !ok {
+		c.connMap[id] = u
 		u.lastLiveTime = &t
 		u.createTime = &t
 		u.addTime = &t
 		c.context.AddUser(u)
 		return u
 	} else {
-		uv := v.(*User)
 		uv.expiredTime = nil
 		uv.lastLiveTime = &t
 		uv.writer = writer

@@ -50,10 +50,12 @@ func (context *Context) RangeUser(f func(username string, user *user.StoreUser) 
 	context.userStore.Range(f)
 }
 
-func (context *Context) DeleteUser(iUser user.IUser) {
+func (context *Context) DeleteUser(iUser user.IUser) bool {
 	if context.userStore.DeleteUser(iUser) {
 		context.msgDock.HandleAddUser(iUser)
+		return true
 	}
+	return false
 }
 func (context *Context) sendMessage(msg message.IMessage, write user.WriteCallBackFunc) {
 	context.msgDock.WriteMessage(msg, write)

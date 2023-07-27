@@ -4,19 +4,23 @@ import (
 	"github.com/chuccp/httpPush/core"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 )
 
 type Server struct {
 	core.IHttpServer
-	context *core.Context
-	store   *Store
+	context  *core.Context
+	store    *Store
+	liveTime int
+	rLock    *sync.RWMutex
 }
 
 func NewServer() *Server {
 	server := &Server{store: NewStore()}
 	httpServer := core.NewHttpServer(server.Name())
 	server.IHttpServer = httpServer
+	server.rLock = new(sync.RWMutex)
 	return server
 }
 
@@ -29,26 +33,40 @@ func (server *Server) ex(w http.ResponseWriter, re *http.Request) {
 	server.jack(w, re)
 }
 
-func (server *Server) jack(w http.ResponseWriter, re *http.Request) {
-	cl := NewClient(server.context, re)
+func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
+	cl := NewClient(server.context, re, server.liveTime)
+	server.rLock.RLock()
 	client, ok := server.store.LoadOrStore(cl)
 	if ok {
 		log.Println("新增用户：", cl.username)
 	}
-	client.WaitMsg(w, re)
+	user := client.loadUser(writer, re)
+	server.rLock.RUnlock()
+	user.waitMessage()
+	t := time.Now()
+	user.last = &t
+	tm := t.Add(time.Duration(user.liveTime) * time.Second)
+	user.expiredTime = &tm
 }
 
 func (server *Server) expiredCheck() {
 	for {
+		log.Println("过期检查")
 		time.Sleep(time.Second * 2)
 		server.store.RangeClient(func(c *client) {
 			c.expiredCheck()
+			server.rLock.Lock()
+			if c.userNum() == 0 {
+				server.store.Delete(c.username)
+			}
+			server.rLock.Unlock()
 		})
 	}
 }
 
 func (server *Server) Init(context *core.Context) {
 	server.context = context
+	server.liveTime = server.context.GetCfgInt("ex", "ex.liveTime")
 }
 func (server *Server) Name() string {
 

@@ -103,6 +103,9 @@ func (store *Store) GetUser(username string) ([]IUser, bool) {
 	}
 	return nil, false
 }
+func (store *Store) UserHasConn() bool {
+	return int(store.num) > 0
+}
 func (store *Store) GetUserNum() int {
 	return int(store.num)
 }
