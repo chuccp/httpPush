@@ -35,7 +35,6 @@ func UnmarshalJsonBody(re *http.Request, v any) error {
 	if err != nil {
 		return err
 	} else {
-		log.Println("UnmarshalJsonBody", string(all))
 		err = json.Unmarshal(all, v)
 		if err != nil {
 			return err
