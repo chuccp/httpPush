@@ -1,6 +1,7 @@
 package user
 
 import (
+	"github.com/chuccp/httpPush/util"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -18,6 +19,9 @@ func (u *StoreUser) add(user IUser) {
 	u.rLock.Lock()
 	defer u.rLock.Unlock()
 	u.store[user.GetId()] = user
+}
+func (u *StoreUser) GetCreateTime() string {
+	return u.createTime.Format(util.TimestampFormat)
 }
 
 func (u *StoreUser) delete(user IUser) int {
@@ -98,4 +102,12 @@ func (store *Store) GetUser(username string) ([]IUser, bool) {
 		return us.getUsers(), true
 	}
 	return nil, false
+}
+func (store *Store) GetUserNum() int {
+	return int(store.num)
+}
+func (store *Store) Range(f func(username string, user *StoreUser) bool) {
+	store.uMap.Range(func(key, value any) bool {
+		return f(key.(string), value.(*StoreUser))
+	})
 }

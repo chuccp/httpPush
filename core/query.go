@@ -10,13 +10,20 @@ type Parameter struct {
 	Path     string
 	Form     url.Values
 	PostForm url.Values
+	SetFrom  url.Values
 }
 
-func NewParameter(Path string, re *http.Request) *Parameter {
+func NewParameter(re *http.Request) *Parameter {
 	re.ParseForm()
-	return &Parameter{Path: Path, Form: re.Form, PostForm: re.PostForm}
+	path := re.URL.Path
+	return &Parameter{Path: path, Form: re.Form, PostForm: re.PostForm, SetFrom: make(url.Values)}
 }
 func (m *Parameter) GetString(key string) string {
+	if m.SetFrom != nil {
+		if m.SetFrom.Has(key) {
+			return m.SetFrom.Get(key)
+		}
+	}
 	if m.Form != nil {
 		if m.Form.Has(key) {
 			return m.Form.Get(key)
@@ -28,6 +35,9 @@ func (m *Parameter) GetString(key string) string {
 		}
 	}
 	return ""
+}
+func (m *Parameter) SetString(key string, value string) {
+	m.SetFrom[key] = []string{value}
 }
 func (m *Parameter) GetInt(key string) int {
 	v := m.GetString(key)

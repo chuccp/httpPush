@@ -7,12 +7,34 @@ import (
 	"time"
 )
 
+type RetryTransport struct {
+	Transport http.RoundTripper
+	Retries   int
+}
+
+func (r *RetryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	var resp *http.Response
+	var err error
+	for i := 0; i <= r.Retries; i++ {
+		resp, err = r.Transport.RoundTrip(req)
+		if err == nil && resp.StatusCode < 500 {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+	return resp, err
+}
+
 type Request struct {
 	client *http.Client
 }
 
 func NewRequest() *Request {
-	ct := http.Client{Timeout: time.Second * 3}
+	retryTransport := &RetryTransport{
+		Transport: http.DefaultTransport,
+		Retries:   3,
+	}
+	ct := http.Client{Timeout: time.Second * 3, Transport: retryTransport}
 	return &Request{client: &ct}
 }
 func (r *Request) Call(link string, jsonData []byte) ([]byte, error) {

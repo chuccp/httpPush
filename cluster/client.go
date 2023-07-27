@@ -6,6 +6,7 @@ import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/util"
 	"log"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -152,6 +153,7 @@ type ClientStore struct {
 	lock          *sync.Mutex
 	localMachine  *Machine
 	context       *core.Context
+	num           int
 }
 
 func NewClientStore(context *core.Context, localMachine *Machine) *ClientStore {
@@ -195,6 +197,7 @@ func (ms *ClientStore) addMachineClient(machineId string, client *client) {
 	defer ms.lock.Unlock()
 	_, ok := ms.clientMap.Load(machineId)
 	if !ok {
+		ms.num++
 		ms.clientMap.LoadOrStore(machineId, client)
 	}
 }
@@ -262,9 +265,12 @@ func (ms *ClientStore) SendDeleteUser(username string) {
 
 func (ms *ClientStore) Query(parameter *core.Parameter, localValue any) []any {
 	vs := make([]any, 0)
+	index := 0
 	ms.clientMap.Range(func(k, value any) bool {
 		client := value.(*client)
 		if !client.isLocal {
+			index++
+			parameter.SetString("index", strconv.Itoa(index))
 			v, err := client.query(parameter, localValue)
 			if err == nil && v != nil {
 				vs = append(vs, v)

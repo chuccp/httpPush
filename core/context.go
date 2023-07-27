@@ -43,6 +43,12 @@ func (context *Context) AddUser(iUser user.IUser) {
 func (context *Context) GetUser(userName string) ([]user.IUser, bool) {
 	return context.userStore.GetUser(userName)
 }
+func (context *Context) GetUserNum() int {
+	return context.userStore.GetUserNum()
+}
+func (context *Context) RangeUser(f func(username string, user *user.StoreUser) bool) {
+	context.userStore.Range(f)
+}
 
 func (context *Context) DeleteUser(iUser user.IUser) {
 	if context.userStore.DeleteUser(iUser) {

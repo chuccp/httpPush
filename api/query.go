@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"github.com/chuccp/httpPush/core"
+	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
 	"log"
 	"net/http"
@@ -13,24 +14,22 @@ type Query struct {
 	server  core.IHttpServer
 }
 
-func (query *Query) query(w http.ResponseWriter, re *http.Request) {
-	path := re.URL.Path
-	parameter := core.NewParameter(path, re)
+func (query *Query) queryUserApi(w http.ResponseWriter, re *http.Request) {
+	parameter := core.NewParameter(re)
 	value := query.context.Query(parameter)
 	data, _ := json.Marshal(value)
 	w.Write(data)
 }
-
 func (query *Query) Init() {
-	query.AddQuery("/queryUser", query.queryUser)
+	query.AddQuery("/queryUser", query.queryUser, query.queryUserApi)
+	query.AddQuery("/onlineUser", query.onlineUser, query.onlineUserAip)
 }
-func (query *Query) AddQuery(handleName string, handle core.RegisterHandle) {
+func (query *Query) AddQuery(handleName string, handle core.RegisterHandle, handler func(http.ResponseWriter, *http.Request)) {
 	query.context.RegisterHandle(handleName, handle)
-	query.server.AddHttpRoute(handleName, query.query)
+	query.server.AddHttpRoute(handleName, handler)
 }
 
 func (query *Query) queryUser(parameter *core.Parameter) any {
-	log.Println("queryUser")
 	var u User
 	machineInfoId, ok := query.context.GetHandle("machineInfoId")
 	if ok {
@@ -52,6 +51,57 @@ func (query *Query) queryUser(parameter *core.Parameter) any {
 	}
 	return &u
 }
+func (query *Query) onlineUserAip(writer http.ResponseWriter, request *http.Request) {
+	parameter := core.NewParameter(request)
+	page := NewPage()
+	values := query.context.Query(parameter).([]any)
+	for _, value := range values {
+		p := value.(*Page)
+		page.AddPage(p)
+	}
+	machineAddress, ok := query.context.GetHandle("machineAddress")
+	if ok {
+		for _, pageUser := range page.List {
+			parameter.SetString("machineId", pageUser.MachineId)
+			pageUser.MachineAddress = machineAddress(parameter).(string)
+		}
+	}
+	data, _ := json.Marshal(page)
+	writer.Write(data)
+}
+func (query *Query) onlineUser(parameter *core.Parameter) any {
+	handle, ok := query.context.GetHandle("remoteMachineNum")
+	total := 1
+	if ok {
+		num := handle(parameter).(int)
+		total = total + num
+	}
+	size := parameter.GetInt("size")
+	if size < 1 {
+		size = 10
+	}
+	index := parameter.GetInt("index")
+	num := size / total
+	yu := size % total
+	if yu > index {
+		num = num + 1
+	}
+	pageUsers := make([]*PageUser, 0)
+	machineId := ""
+	machineInfoId, ok := query.context.GetHandle("machineInfoId")
+	if ok {
+		machineId = machineInfoId(parameter).(string)
+	}
+	if num > 0 {
+		query.context.RangeUser(func(username string, user *user.StoreUser) bool {
+			num--
+			pageUsers = append(pageUsers, &PageUser{UserName: username, MachineId: machineId, CreateTime: user.GetCreateTime()})
+			return num > 0
+		})
+	}
+	return &Page{List: pageUsers, Num: query.context.GetUserNum()}
+}
+
 func NewQuery(context *core.Context, server core.IHttpServer) *Query {
 	query := &Query{context: context, server: server}
 	return query

@@ -7,6 +7,7 @@ import (
 	"github.com/chuccp/httpPush/user"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -165,6 +166,8 @@ func (server *Server) Init(context *core.Context) {
 	server.localMachine = localMachine
 	server.clientStore = clientStore
 	server.context.RegisterHandle("machineInfoId", server.machineInfoId)
+	server.context.RegisterHandle("remoteMachineNum", server.remoteMachineNum)
+	server.context.RegisterHandle("machineAddress", server.machineAddress)
 	server.AddHttpRoute("/_cluster/initial", server.initial)
 	server.AddHttpRoute("/_cluster/deleteUser", server.deleteUser)
 	server.AddHttpRoute("/_cluster/addUser", server.addUser)
@@ -228,4 +231,20 @@ func (server *Server) sendTextMsg(writer http.ResponseWriter, request *http.Requ
 
 func (server *Server) machineInfoId(parameter *core.Parameter) any {
 	return server.localMachine.MachineId
+}
+
+func (server *Server) machineAddress(parameter *core.Parameter) any {
+	machineId := parameter.GetString("machineId")
+	if machineId == server.localMachine.MachineId {
+		return server.localMachine.Address + ":" + strconv.Itoa(server.localMachine.Port)
+	}
+	c, ok := server.clientStore.getClient(machineId)
+	if ok {
+		return c.remoteMachine.Address
+	}
+	return ""
+}
+
+func (server *Server) remoteMachineNum(parameter *core.Parameter) any {
+	return server.clientStore.num
 }
