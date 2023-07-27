@@ -38,9 +38,13 @@ func (client *client) run() {
 	}
 }
 func (client *client) queryList() ([]*LiteMachine, error) {
+	marshal, err := json.Marshal(client.localMachine.getLiteMachine())
+	if err != nil {
+		return nil, err
+	}
 	log.Println("心跳 交换数据", client.remoteMachine.Link, "/_cluster/queryMachineList")
 	path := client.remoteMachine.Link + "/_cluster/queryMachineList"
-	call, err := client.request.Get(path)
+	call, err := client.request.Call(path, marshal)
 	if err == nil {
 		log.Println("心跳 交换数据", string(call))
 		var liteMachines []*LiteMachine
@@ -329,7 +333,7 @@ func (ms *ClientStore) userOperate() {
 }
 func (ms *ClientStore) live() {
 	for {
-		time.Sleep(time.Minute)
+		time.Sleep(time.Second * 10)
 		ms.clientMap.Range(func(_, value any) bool {
 			client := value.(*client)
 			if client.HasConn() {

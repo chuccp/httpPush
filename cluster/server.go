@@ -57,10 +57,18 @@ func (server *Server) initial(w http.ResponseWriter, re *http.Request) {
 
 // 查询当前服务器连接的其它机器
 func (server *Server) queryMachineList(w http.ResponseWriter, re *http.Request) {
-	marshal, err := json.Marshal(server.clientStore.getMachineLite())
+	var liteMachine LiteMachine
+	err := UnmarshalJsonBody(re, &liteMachine)
 	if err == nil {
-		w.Write(marshal)
-		return
+		machine, err := parseLink(liteMachine.Link)
+		if err == nil {
+			server.clientStore.addNewMachine(liteMachine.MachineId, machine)
+			marshal, err := json.Marshal(server.clientStore.getMachineLite())
+			if err == nil {
+				w.Write(marshal)
+				return
+			}
+		}
 	}
 	log.Println("！！！！！！！！===1", err)
 	w.WriteHeader(500)
