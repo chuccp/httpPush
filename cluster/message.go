@@ -10,13 +10,13 @@ func NewUser(MachineId string, UserId string) *User {
 }
 
 type Response struct {
-	code int
-	msg  string
+	Code int
+	Msg  string
 }
 
 func successResponse() *Response {
-	return &Response{code: 200, msg: "success"}
+	return &Response{Code: 200, Msg: "success"}
 }
 func failResponse(msg string) *Response {
-	return &Response{code: 500, msg: msg}
+	return &Response{Code: 500, Msg: msg}
 }

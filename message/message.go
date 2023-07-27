@@ -12,7 +12,6 @@ type IMessage interface {
 }
 
 type TextMessage struct {
-	IMessage
 	From  string
 	To    string
 	Msg   string

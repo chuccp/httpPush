@@ -66,7 +66,6 @@ func (context *Context) SendMessage(msg message.IMessage) (error, bool) {
 	flag := util.GetChanBool()
 	var err_ error
 	context.sendMessage(msg, func(err error, hasUser bool) {
-		log.Println("zzzzz", err, hasUser)
 		err_ = err
 		once.Do(func() {
 			flag <- hasUser

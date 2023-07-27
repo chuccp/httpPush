@@ -14,12 +14,6 @@ type Query struct {
 	server  core.IHttpServer
 }
 
-func (query *Query) queryUserApi(w http.ResponseWriter, re *http.Request) {
-	parameter := core.NewParameter(re)
-	value := query.context.Query(parameter)
-	data, _ := json.Marshal(value)
-	w.Write(data)
-}
 func (query *Query) Init() {
 	query.AddQuery("/queryUser", query.queryUser, query.queryUserApi)
 	query.AddQuery("/onlineUser", query.onlineUser, query.onlineUserAip)
@@ -28,7 +22,12 @@ func (query *Query) AddQuery(handleName string, handle core.RegisterHandle, hand
 	query.context.RegisterHandle(handleName, handle)
 	query.server.AddHttpRoute(handleName, handler)
 }
-
+func (query *Query) queryUserApi(w http.ResponseWriter, re *http.Request) {
+	parameter := core.NewParameter(re)
+	value := query.context.Query(parameter)
+	data, _ := json.Marshal(value)
+	w.Write(data)
+}
 func (query *Query) queryUser(parameter *core.Parameter) any {
 	var u User
 	machineInfoId, ok := query.context.GetHandle("machineInfoId")

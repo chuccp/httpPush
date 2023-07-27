@@ -43,9 +43,10 @@ func (server *Server) initial(w http.ResponseWriter, re *http.Request) {
 	if err == nil {
 		machine, err := parseLink(liteMachine.Link)
 		if err == nil {
-			server.clientStore.addNewMachine(liteMachine.MachineId, machine)
 			marshal, err := json.Marshal(server.localMachine.getLiteMachine())
 			if err == nil {
+				server.clientStore.addNewMachine(liteMachine.MachineId, machine)
+				log.Println(string(marshal))
 				w.Write(marshal)
 				return
 			}
@@ -56,20 +57,14 @@ func (server *Server) initial(w http.ResponseWriter, re *http.Request) {
 
 // 查询当前服务器连接的其它机器
 func (server *Server) queryMachineList(w http.ResponseWriter, re *http.Request) {
-	var liteMachine LiteMachine
-	err := UnmarshalJsonBody(re, &liteMachine)
+	marshal, err := json.Marshal(server.clientStore.getMachineLite())
 	if err == nil {
-		machine, err := parseLink(liteMachine.Link)
-		if err == nil {
-			server.clientStore.addNewMachine(liteMachine.MachineId, machine)
-			marshal, err := json.Marshal(server.clientStore.getMachineLite())
-			if err == nil {
-				w.Write(marshal)
-				return
-			}
-		}
+		w.Write(marshal)
+		return
 	}
+	log.Println("！！！！！！！！===1", err)
 	w.WriteHeader(500)
+	w.Write([]byte(err.Error()))
 }
 
 func (server *Server) query(w http.ResponseWriter, re *http.Request) {
@@ -114,6 +109,7 @@ func (server *Server) WriteMessage(msg message.IMessage, writeFunc user.WriteCal
 				cl, ok := server.clientStore.getClient(cu.machineId)
 				if ok {
 					err := cl.sendTextMsg(t)
+					log.Println("Server!!!!!!!", err)
 					if err == nil {
 						writeFunc(nil, true)
 						return
@@ -203,10 +199,12 @@ func (server *Server) sendTextMsg(writer http.ResponseWriter, request *http.Requ
 	var textMessage message.TextMessage
 	err := UnmarshalJsonBody(request, &textMessage)
 	if err == nil {
-		err, fa := server.context.SendMessage(&textMessage)
+		err, fa := server.context.SendNoForwardMessage(&textMessage)
+		log.Println("sendTextMsg", err, fa)
 		if fa {
 			v, err := json.Marshal(successResponse())
 			if err == nil {
+				log.Println("sendTextMsg", err, fa, string(v))
 				writer.Write(v)
 				return
 			}

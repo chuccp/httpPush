@@ -104,7 +104,7 @@ func (client *client) sendTextMsg(msg *message.TextMessage) error {
 			if err != nil {
 				return err
 			} else {
-				if response.code == 200 {
+				if response.Code == 200 {
 					return nil
 				} else {
 					return core.NoFoundUser
@@ -140,11 +140,15 @@ func (client *client) initial() error {
 			} else {
 				client.isLocal = false
 			}
-
+			log.Println(path, "握手完成")
+			client.isHandshake = true
 			return nil
 		}
 	}
 	return err
+}
+func (client *client) HasConn() bool {
+	return !client.isLocal && client.isHandshake
 }
 
 type ClientStore struct {
@@ -178,15 +182,15 @@ func (ms *ClientStore) addMachineNoMachineId(remoteMachine *Machine) {
 }
 func (ms *ClientStore) addNewMachine(machineId string, machine *Machine) {
 	if machineId != ms.localMachine.MachineId {
-		_, ok := ms.clientMap.Load(machineId)
+		client := NewClient(machine, ms.localMachine)
+		_, ok := ms.clientMap.LoadOrStore(machineId, client)
 		if !ok {
-			client := NewClient(machine, ms.localMachine)
 			err := client.initial()
 			if err != nil {
 				log.Println("initial", machineId, client.remoteLink, err)
-			} else {
-				ms.addMachineClient(machineId, client)
 			}
+		} else {
+			log.Println("已添加")
 		}
 	} else {
 		log.Println("自己连接到自己，不处理")
@@ -195,10 +199,11 @@ func (ms *ClientStore) addNewMachine(machineId string, machine *Machine) {
 func (ms *ClientStore) addMachineClient(machineId string, client *client) {
 	ms.lock.Lock()
 	defer ms.lock.Unlock()
-	_, ok := ms.clientMap.Load(machineId)
+	_, ok := ms.clientMap.LoadOrStore(machineId, client)
 	if !ok {
 		ms.num++
-		ms.clientMap.LoadOrStore(machineId, client)
+	} else {
+		log.Println("已添加")
 	}
 }
 func (ms *ClientStore) getMachineLite() []*LiteMachine {
@@ -207,7 +212,9 @@ func (ms *ClientStore) getMachineLite() []*LiteMachine {
 	lm := make([]*LiteMachine, 0)
 	ms.clientMap.Range(func(key, value any) bool {
 		c := value.(*client)
-		lm = append(lm, c.remoteMachine.getLiteMachine())
+		if c.HasConn() {
+			lm = append(lm, c.remoteMachine.getLiteMachine())
+		}
 		return true
 	})
 	return lm
@@ -217,7 +224,7 @@ func (ms *ClientStore) initial() {
 		client := value.(*client)
 		err := client.initial()
 		if err == nil {
-			if !client.isLocal {
+			if client.HasConn() {
 				ms.tempClientMap.Delete(k)
 				ms.addMachineClient(client.remoteMachine.MachineId, client)
 			}
@@ -231,7 +238,7 @@ func (ms *ClientStore) sendTextMsg(msg *message.TextMessage, exMachineId string)
 	machineId := ""
 	ms.clientMap.Range(func(k, value any) bool {
 		client := value.(*client)
-		if !client.isLocal && client.remoteMachine.MachineId != exMachineId {
+		if client.HasConn() && client.remoteMachine.MachineId != exMachineId {
 			err := client.sendTextMsg(msg)
 			_err_ = err
 			if err == nil {
@@ -247,7 +254,7 @@ func (ms *ClientStore) sendTextMsg(msg *message.TextMessage, exMachineId string)
 func (ms *ClientStore) SendAddUser(username string) {
 	ms.clientMap.Range(func(k, value any) bool {
 		client := value.(*client)
-		if !client.isLocal {
+		if client.HasConn() {
 			client.sendAddUser(username)
 		}
 		return true
@@ -256,7 +263,7 @@ func (ms *ClientStore) SendAddUser(username string) {
 func (ms *ClientStore) SendDeleteUser(username string) {
 	ms.clientMap.Range(func(k, value any) bool {
 		client := value.(*client)
-		if !client.isLocal {
+		if client.HasConn() {
 			client.sendDeleteUser(username)
 		}
 		return true
@@ -268,7 +275,7 @@ func (ms *ClientStore) Query(parameter *core.Parameter, localValue any) []any {
 	index := 0
 	ms.clientMap.Range(func(k, value any) bool {
 		client := value.(*client)
-		if !client.isLocal {
+		if client.HasConn() {
 			index++
 			parameter.SetString("index", strconv.Itoa(index))
 			v, err := client.query(parameter, localValue)
@@ -286,17 +293,19 @@ func (ms *ClientStore) live() {
 		time.Sleep(time.Minute)
 		ms.clientMap.Range(func(_, value any) bool {
 			client := value.(*client)
-			list, err := client.queryList()
-			if err != nil {
-				log.Println("queryList", client.remoteLink, err)
-			} else {
-				for _, machine := range list {
-					m, err := parseLink(machine.Link)
-					if err != nil {
-						log.Println("parseLink", client.remoteLink, err)
-					} else {
-						client := NewClient(m, ms.localMachine)
-						ms.addMachineClient(machine.MachineId, client)
+			if client.HasConn() {
+				list, err := client.queryList()
+				if err != nil {
+					log.Println("queryList", client.remoteLink, err)
+				} else {
+					for _, machine := range list {
+						m, err := parseLink(machine.Link)
+						if err != nil {
+							log.Println("parseLink", client.remoteLink, err)
+						} else {
+							client := NewClient(m, ms.localMachine)
+							ms.addMachineClient(machine.MachineId, client)
+						}
 					}
 				}
 			}
