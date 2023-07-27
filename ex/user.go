@@ -71,7 +71,7 @@ func (u *User) GetUsername() string {
 }
 
 func (u *User) WriteMessage(iMessage message.IMessage, writeFunc user.WriteCallBackFunc) {
-	ht := newHttpMessage(iMessage.GetString(message.From), iMessage.GetString(message.To))
+	ht := newHttpMessage(iMessage.GetString(message.From), iMessage.GetString(message.Msg))
 	hts := []*HttpMessage{ht}
 	data, err := json.Marshal(hts)
 	if err == nil {

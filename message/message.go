@@ -28,6 +28,9 @@ func (m *TextMessage) GetString(v byte) string {
 	if v == To {
 		return m.To
 	}
+	if v == Msg {
+		return m.Msg
+	}
 	return ""
 }
 func (m *TextMessage) GetUint32(v byte) uint32 {

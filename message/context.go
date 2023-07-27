@@ -5,4 +5,5 @@ const (
 	To
 	From
 	MId
+	Msg
 )
