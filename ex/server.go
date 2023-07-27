@@ -37,7 +37,7 @@ func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
 	cl := NewClient(server.context, re, server.liveTime)
 	server.rLock.RLock()
 	client, ok := server.store.LoadOrStore(cl)
-	if ok {
+	if !ok {
 		log.Println("新增用户：", cl.username)
 	}
 	user := client.loadUser(writer, re)

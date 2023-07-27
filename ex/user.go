@@ -38,6 +38,7 @@ func (u *User) GetId() string {
 }
 
 func (u *User) waitMessage() {
+	log.Println("收到信息：剩余消息:{}===延时:{}", u.liveTime)
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(u.liveTime)*time.Second)
 	v, num, cls := u.queue.Dequeue(ctx)
 	log.Println("收到信息：剩余消息:{}===延时:{}", num, cls)
@@ -58,7 +59,6 @@ func (u *User) waitMessage() {
 
 func (u *User) isExpired(now *time.Time) bool {
 	if u.expiredTime != nil {
-		log.Println(u.expiredTime.Format(time.DateTime), "==========", now.Format(time.DateTime))
 		if u.expiredTime.Before(*now) {
 			return true
 		}

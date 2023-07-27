@@ -29,7 +29,6 @@ func NewClient(remoteMachine *Machine, localMachine *Machine) *client {
 	return &client{request: util.NewRequest(), isHandshake: false, remoteMachine: remoteMachine, localMachine: localMachine}
 }
 func (client *client) run() {
-	log.Println("握手", client.remoteMachine.Link, "/_cluster/initial")
 	err := client.initial()
 	if err == nil {
 		log.Println("握手", client.remoteMachine.Link, "/_cluster/initial", "完成")
@@ -42,11 +41,9 @@ func (client *client) queryList() ([]*LiteMachine, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Println("心跳 交换数据", client.remoteMachine.Link, "/_cluster/queryMachineList")
 	path := client.remoteMachine.Link + "/_cluster/queryMachineList"
 	call, err := client.request.Call(path, marshal)
 	if err == nil {
-		log.Println("心跳 交换数据", string(call))
 		var liteMachines []*LiteMachine
 		err = json.Unmarshal(call, &liteMachines)
 		if err == nil {
@@ -60,7 +57,6 @@ func (client *client) queryList() ([]*LiteMachine, error) {
 }
 
 func (client *client) query(parameter *core.Parameter, localValue any) (any, error) {
-	log.Println("查询接口", client.remoteMachine.Link, "/_cluster/query")
 	path := client.remoteMachine.Link + "/_cluster/query"
 	marshal, err := json.Marshal(parameter)
 	if err == nil {
@@ -154,7 +150,6 @@ func (client *client) initial() error {
 			} else {
 				client.isLocal = false
 			}
-			log.Println(path, "握手完成")
 			client.isHandshake = true
 			return nil
 		}
@@ -204,11 +199,7 @@ func (ms *ClientStore) addNewMachine(machineId string, machine *Machine) {
 			if err != nil {
 				log.Println("initial", machineId, client.remoteLink, err)
 			}
-		} else {
-			log.Println("已添加")
 		}
-	} else {
-		log.Println("自己连接到自己，不处理")
 	}
 }
 func (ms *ClientStore) addMachineClient(machineId string, client *client) {
@@ -217,8 +208,6 @@ func (ms *ClientStore) addMachineClient(machineId string, client *client) {
 	_, ok := ms.clientMap.LoadOrStore(machineId, client)
 	if !ok {
 		ms.num++
-	} else {
-		log.Println("已添加")
 	}
 }
 func (ms *ClientStore) getMachineLite() []*LiteMachine {
