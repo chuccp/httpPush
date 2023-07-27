@@ -20,6 +20,11 @@ type client struct {
 	remoteLink    string
 }
 
+type operate struct {
+	isAdd    bool
+	username string
+}
+
 func NewClient(remoteMachine *Machine, localMachine *Machine) *client {
 	return &client{request: util.NewRequest(), isHandshake: false, remoteMachine: remoteMachine, localMachine: localMachine}
 }
@@ -83,10 +88,15 @@ func (client *client) sendAddUser(usernames ...string) {
 		client.request.JustCall(path, marshal)
 	}
 }
-func (client *client) sendDeleteUser(username string) {
+
+func (client *client) sendDeleteUser(usernames ...string) {
 	path := client.remoteMachine.Link + "/_cluster/deleteUser"
-	u := NewUser(client.localMachine.MachineId, username)
-	marshal, err := json.Marshal(u)
+	us := make([]*User, len(usernames))
+	for index, username := range usernames {
+		u := NewUser(client.localMachine.MachineId, username)
+		us[index] = u
+	}
+	marshal, err := json.Marshal(us)
 	if err == nil {
 		client.request.JustCall(path, marshal)
 	}
@@ -158,10 +168,11 @@ type ClientStore struct {
 	localMachine  *Machine
 	context       *core.Context
 	num           int
+	userQueue     *util.Queue
 }
 
 func NewClientStore(context *core.Context, localMachine *Machine) *ClientStore {
-	return &ClientStore{context: context, clientMap: new(sync.Map), lock: new(sync.Mutex), tempClientMap: new(sync.Map), localMachine: localMachine}
+	return &ClientStore{context: context, clientMap: new(sync.Map), lock: new(sync.Mutex), tempClientMap: new(sync.Map), localMachine: localMachine, userQueue: util.NewQueue()}
 }
 
 func (ms *ClientStore) getClient(machineId string) (*client, bool) {
@@ -251,23 +262,29 @@ func (ms *ClientStore) sendTextMsg(msg *message.TextMessage, exMachineId string)
 	return machineId, _err_
 }
 
-func (ms *ClientStore) SendAddUser(username string) {
+func (ms *ClientStore) sendAddUser0(usernames ...string) {
 	ms.clientMap.Range(func(k, value any) bool {
 		client := value.(*client)
 		if client.HasConn() {
-			client.sendAddUser(username)
+			client.sendAddUser(usernames...)
+		}
+		return true
+	})
+}
+func (ms *ClientStore) SendAddUser(username string) {
+	ms.userQueue.Offer(&operate{isAdd: true, username: username})
+}
+func (ms *ClientStore) sendDeleteUser0(usernames ...string) {
+	ms.clientMap.Range(func(k, value any) bool {
+		client := value.(*client)
+		if client.HasConn() {
+			client.sendDeleteUser(usernames...)
 		}
 		return true
 	})
 }
 func (ms *ClientStore) SendDeleteUser(username string) {
-	ms.clientMap.Range(func(k, value any) bool {
-		client := value.(*client)
-		if client.HasConn() {
-			client.sendDeleteUser(username)
-		}
-		return true
-	})
+	ms.userQueue.Offer(&operate{isAdd: false, username: username})
 }
 
 func (ms *ClientStore) Query(parameter *core.Parameter, localValue any) []any {
@@ -287,7 +304,29 @@ func (ms *ClientStore) Query(parameter *core.Parameter, localValue any) []any {
 	})
 	return vs
 }
-
+func (ms *ClientStore) userOperate() {
+	deleteUsers := make([]string, 0)
+	addUsers := make([]string, 0)
+	for {
+		v, num := ms.userQueue.Poll()
+		op := v.(*operate)
+		if op.isAdd {
+			addUsers = append(addUsers, op.username)
+		} else {
+			deleteUsers = append(deleteUsers, op.username)
+		}
+		if num == 0 || num >= 100 {
+			if len(addUsers) > 0 {
+				ms.sendAddUser0(addUsers...)
+				addUsers = make([]string, 0)
+			}
+			if len(deleteUsers) > 0 {
+				ms.sendDeleteUser0(deleteUsers...)
+				deleteUsers = make([]string, 0)
+			}
+		}
+	}
+}
 func (ms *ClientStore) live() {
 	for {
 		time.Sleep(time.Minute)
@@ -316,4 +355,5 @@ func (ms *ClientStore) live() {
 func (ms *ClientStore) run() {
 	ms.initial()
 	go ms.live()
+	go ms.userOperate()
 }

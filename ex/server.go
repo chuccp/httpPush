@@ -43,15 +43,11 @@ func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
 	user := client.loadUser(writer, re)
 	server.rLock.RUnlock()
 	user.waitMessage()
-	t := time.Now()
-	user.last = &t
-	tm := t.Add(time.Duration(user.liveTime) * time.Second)
-	user.expiredTime = &tm
+	client.setExpired(user)
 }
 
 func (server *Server) expiredCheck() {
 	for {
-		log.Println("过期检查")
 		time.Sleep(time.Second * 2)
 		server.store.RangeClient(func(c *client) {
 			c.expiredCheck()
@@ -63,7 +59,6 @@ func (server *Server) expiredCheck() {
 		})
 	}
 }
-
 func (server *Server) Init(context *core.Context) {
 	server.context = context
 	server.liveTime = server.context.GetCfgInt("ex", "ex.liveTime")

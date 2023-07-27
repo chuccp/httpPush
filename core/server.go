@@ -19,6 +19,7 @@ type IHttpServer interface {
 type httpServer struct {
 	context    *Context
 	port       int
+	usePort    int
 	httpServer *util.HttpServer
 	certFile   string
 	keyFile    string
@@ -29,7 +30,7 @@ func NewHttpServer(name string) IHttpServer {
 	return &httpServer{name: name}
 }
 func (server *httpServer) AddHttpRoute(pattern string, handler func(http.ResponseWriter, *http.Request)) {
-	log.Println(server.name, ":", server.port, "__", pattern)
+	log.Println(server.name, ":", server.usePort, "__", pattern)
 	if server.port > 0 {
 		server.httpServer.AddRoute(pattern, handler)
 	} else {
@@ -45,8 +46,10 @@ func (server *httpServer) init(context *Context) {
 		server.certFile = context.GetCfgString(server.name, "http.certFile")
 		server.keyFile = context.GetCfgString(server.name, "http.keyFile")
 		server.port = port
+		server.usePort = port
 		server.httpServer = util.NewServer()
 	} else {
+		server.usePort = corePort
 		log.Println(server.name, "端口：", corePort)
 	}
 }

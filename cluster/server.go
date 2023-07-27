@@ -177,6 +177,7 @@ func (server *Server) Name() string {
 }
 
 func (server *Server) deleteUser(writer http.ResponseWriter, request *http.Request) {
+	log.Println("deleteUser")
 	var us []*User
 	err := UnmarshalJsonBody(request, &us)
 	if err == nil {
@@ -186,6 +187,7 @@ func (server *Server) deleteUser(writer http.ResponseWriter, request *http.Reque
 	}
 }
 func (server *Server) addUser(writer http.ResponseWriter, request *http.Request) {
+	log.Println("addUser")
 	var us []*User
 	err := UnmarshalJsonBody(request, &us)
 	if err == nil {

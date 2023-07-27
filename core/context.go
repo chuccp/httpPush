@@ -52,7 +52,7 @@ func (context *Context) RangeUser(f func(username string, user *user.StoreUser) 
 
 func (context *Context) DeleteUser(iUser user.IUser) bool {
 	if context.userStore.DeleteUser(iUser) {
-		context.msgDock.HandleAddUser(iUser)
+		context.msgDock.HandleDeleteUser(iUser.GetUsername())
 		return true
 	}
 	return false

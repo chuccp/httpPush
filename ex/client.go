@@ -38,6 +38,14 @@ func (c *client) expiredCheck() {
 		delete(c.connMap, key)
 	}
 }
+func (c *client) setExpired(user *User) {
+	c.rLock.RLock()
+	defer c.rLock.RUnlock()
+	t := time.Now()
+	user.last = &t
+	tm := t.Add(time.Duration(user.liveTime) * time.Second)
+	user.expiredTime = &tm
+}
 func (c *client) userNum() int {
 	c.rLock.RLock()
 	defer c.rLock.RUnlock()
