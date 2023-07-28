@@ -322,7 +322,9 @@ func (ms *ClientStore) userOperate() {
 }
 func (ms *ClientStore) live() {
 	for {
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 5)
+		ms.initial()
+		time.Sleep(time.Second * 5)
 		ms.clientMap.Range(func(_, value any) bool {
 			client := value.(*client)
 			if client.HasConn() {

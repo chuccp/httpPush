@@ -41,7 +41,8 @@ func (server *Server) initial(w http.ResponseWriter, re *http.Request) {
 	var liteMachine LiteMachine
 	err := UnmarshalJsonBody(re, &liteMachine)
 	if err == nil {
-		machine, err := parseLink(liteMachine.Link)
+		log.Println("initial", liteMachine.Link)
+		machine, err := parseLink2(liteMachine.Link, re)
 		if err == nil {
 			marshal, err := json.Marshal(server.localMachine.getLiteMachine())
 			if err == nil {
@@ -60,7 +61,7 @@ func (server *Server) queryMachineList(w http.ResponseWriter, re *http.Request) 
 	var liteMachine LiteMachine
 	err := UnmarshalJsonBody(re, &liteMachine)
 	if err == nil {
-		machine, err := parseLink(liteMachine.Link)
+		machine, err := parseLink2(liteMachine.Link, re)
 		if err == nil {
 			server.clientStore.addNewMachine(liteMachine.MachineId, machine)
 			marshal, err := json.Marshal(server.clientStore.getMachineLite())
