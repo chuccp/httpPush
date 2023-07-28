@@ -43,7 +43,7 @@ func (c *client) setExpired(user *User) {
 	defer c.rLock.RUnlock()
 	t := time.Now()
 	user.last = &t
-	tm := t.Add(time.Duration(user.liveTime) * time.Second)
+	tm := t.Add(5 * time.Second)
 	user.expiredTime = &tm
 }
 func (c *client) userNum() int {
