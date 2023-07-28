@@ -150,6 +150,9 @@ func (server *Server) Init(context *core.Context) {
 	}
 	log.Println("machineId", machineId)
 	localLink := server.context.GetCfgString("cluster", "local.link")
+	if len(localLink) == 0 {
+		localLink = server.GetServerHost()
+	}
 	localMachine, err := parseLink(localLink)
 	if err != nil {
 		log.Panicln(err)

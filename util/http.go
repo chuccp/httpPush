@@ -11,8 +11,12 @@ func NewServer() *HttpServer {
 
 type HttpServer struct {
 	serveMux *http.ServeMux
+	isTls    bool
 }
 
+func (hs *HttpServer) IsTls() bool {
+	return hs.isTls
+}
 func (hs *HttpServer) AddRoute(pattern string, handler func(http.ResponseWriter, *http.Request)) {
 	hs.serveMux.HandleFunc(pattern, handler)
 }
@@ -21,6 +25,7 @@ func (hs *HttpServer) Start(port int) error {
 		Addr:    ":" + strconv.Itoa(port),
 		Handler: hs.serveMux,
 	}
+	hs.isTls = false
 	error := srv.ListenAndServe()
 	return error
 }
@@ -29,6 +34,7 @@ func (hs *HttpServer) StartTLS(port int, certFile, keyFile string) error {
 		Addr:    ":" + strconv.Itoa(port),
 		Handler: hs.serveMux,
 	}
+	hs.isTls = true
 	return srv.ListenAndServeTLS(certFile, keyFile)
 }
 func (hs *HttpServer) StartAutoTLS(port int, certFile, keyFile string) error {

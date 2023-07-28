@@ -128,10 +128,12 @@ func (context *Context) SetSystemInfo(key string, value any) {
 func (context *Context) GetCfgInt(section, key string) int {
 	return context.register.config.GetInt(section, key)
 }
-func (context *Context) AddHttpRoute(pattern string, handler func(http.ResponseWriter, *http.Request)) {
+func (context *Context) addHttpRoute(pattern string, handler func(http.ResponseWriter, *http.Request)) {
 	context.httpPush.httpServer.AddRoute(pattern, handler)
 }
-
+func (context *Context) isTls() bool {
+	return context.httpPush.httpServer.IsTls()
+}
 func (context *Context) rangeServer(f func(server Server)) {
 	context.register.rangeServer(f)
 }

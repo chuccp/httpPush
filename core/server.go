@@ -3,7 +3,9 @@ package core
 import (
 	"github.com/chuccp/httpPush/util"
 	"log"
+	"net"
 	"net/http"
+	"strconv"
 )
 
 type Server interface {
@@ -15,6 +17,7 @@ type IHttpServer interface {
 	AddHttpRoute(pattern string, handler func(http.ResponseWriter, *http.Request))
 	init(context *Context)
 	start() error
+	GetServerHost() string
 }
 type httpServer struct {
 	context    *Context
@@ -30,13 +33,27 @@ func NewHttpServer(name string) IHttpServer {
 	return &httpServer{name: name}
 }
 func (server *httpServer) AddHttpRoute(pattern string, handler func(http.ResponseWriter, *http.Request)) {
-	log.Println(server.name, ":", server.usePort, "__", pattern)
 	if server.port > 0 {
 		server.httpServer.AddRoute(pattern, handler)
 	} else {
-		server.context.AddHttpRoute(pattern, handler)
+		server.context.addHttpRoute(pattern, handler)
 	}
 }
+func (server *httpServer) GetServerHost() string {
+	if server.IsTls() {
+		return "https://" + net.IPv4zero.String() + ":" + strconv.Itoa(server.usePort)
+	} else {
+		return "http://" + net.IPv4zero.String() + ":" + strconv.Itoa(server.usePort)
+	}
+}
+func (server *httpServer) IsTls() bool {
+	if server.port > 0 {
+		return server.httpServer.IsTls()
+	} else {
+		return server.context.isTls()
+	}
+}
+
 func (server *httpServer) init(context *Context) {
 	server.context = context
 	port := context.GetCfgInt(server.name, "http.port")
