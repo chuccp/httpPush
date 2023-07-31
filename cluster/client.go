@@ -133,6 +133,7 @@ func (client *client) initial() error {
 	if err != nil {
 		return err
 	} else {
+		log.Println(string(marshal))
 		call, err := client.request.Call(path, marshal)
 		log.Println("!!!!!!!!!!!!", err)
 		if err != nil {

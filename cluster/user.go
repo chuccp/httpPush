@@ -2,7 +2,6 @@ package cluster
 
 import (
 	"github.com/chuccp/httpPush/util"
-	"log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -41,15 +40,12 @@ func (us *userStore) AddUser(username string, machineId string) {
 	if !ok {
 		atomic.AddInt32(&us.num, 1)
 	}
-
-	log.Println(us.num)
 }
 func (us *userStore) DeleteUser(username string) {
 	_, ok := us.userMap.LoadAndDelete(username)
 	if ok {
 		atomic.AddInt32(&us.num, -1)
 	}
-	log.Println(us.num)
 }
 func (us *userStore) Num() int32 {
 	return us.num

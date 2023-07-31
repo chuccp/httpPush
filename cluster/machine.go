@@ -67,6 +67,6 @@ func parseLink2(link string, re *http.Request) (*Machine, error) {
 		return nil, err
 	}
 	machine.Port = port
-	machine.Link = url.Scheme + "//" + machine.Address + ":" + url.Port()
+	machine.Link = url.Scheme + "://" + machine.Address + ":" + url.Port()
 	return &machine, nil
 }
