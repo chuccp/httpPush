@@ -14,11 +14,8 @@ func GetUsername(re *http.Request) string {
 	return username
 }
 func GetGroupIds(re *http.Request) []string {
-	group := re.FormValue("groupId")
-	if len(group) == 0 {
-		group = re.FormValue("GroupId")
-	}
-	if len(group) == 0 {
+	group := GetGroupId(re)
+	if len(group) > 0 {
 		return strings.Split(group, ",")
 	}
 	return []string{}
@@ -28,7 +25,6 @@ func GetGroupId(re *http.Request) string {
 	if len(group) == 0 {
 		group = re.FormValue("GroupId")
 	}
-
 	return group
 }
 func GetLiveTime(re *http.Request) int {
