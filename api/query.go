@@ -31,9 +31,9 @@ func (query *Query) queryUserApi(w http.ResponseWriter, re *http.Request) {
 }
 func (query *Query) queryUser(parameter *core.Parameter) any {
 	var u User
-	machineInfoId, ok := query.context.GetHandle("machineInfoId")
+	machineInfoId, ok := query.getMachineInfoId(parameter)
 	if ok {
-		u.Machine = machineInfoId(parameter)
+		u.Machine = machineInfoId
 	}
 	u.Conn = make([]*Conn, 0)
 	data, _ := json.Marshal(parameter)
@@ -59,11 +59,10 @@ func (query *Query) onlineUserApi(writer http.ResponseWriter, request *http.Requ
 		p := value.(*Page)
 		page.AddPage(p)
 	}
-	machineAddress, ok := query.context.GetHandle("machineAddress")
-	if ok {
-		for _, pageUser := range page.List {
-			parameter.SetString("machineId", pageUser.MachineId)
-			pageUser.MachineAddress = machineAddress(parameter).(string)
+	for _, pageUser := range page.List {
+		machineAddress, ok := query.getMachineAddress(pageUser.MachineId, parameter)
+		if ok {
+			pageUser.MachineAddress = machineAddress
 		}
 	}
 	data, _ := json.Marshal(page)
@@ -87,28 +86,41 @@ func (query *Query) onlineUser(parameter *core.Parameter) any {
 		num = num + 1
 	}
 	pageUsers := make([]*PageUser, 0)
-	machineId := ""
-	machineInfoId, ok := query.context.GetHandle("machineInfoId")
-	if ok {
-		machineId = machineInfoId(parameter).(string)
-	}
+	machineInfoId, _ := query.getMachineInfoId(parameter)
 	if num > 0 {
 		query.context.RangeUser(func(username string, user *user.StoreUser) bool {
 			num--
-			pageUsers = append(pageUsers, &PageUser{UserName: username, MachineId: machineId, CreateTime: user.GetCreateTime()})
+			pageUsers = append(pageUsers, &PageUser{UserName: username, MachineId: machineInfoId, CreateTime: user.GetCreateTime()})
 			return num > 0
 		})
 	}
 	return &Page{List: pageUsers, Num: query.context.GetUserNum()}
+}
+func (query *Query) getMachineInfoId(parameter *core.Parameter) (string, bool) {
+	machineInfoId, ok := query.context.GetHandle("machineInfoId")
+	if ok {
+		mm := machineInfoId(parameter)
+		return mm.(string), ok
+	}
+	return "", false
+}
+
+func (query *Query) getMachineAddress(machineInfoId string, parameter *core.Parameter) (string, bool) {
+	machineAddress, ok := query.context.GetHandle("machineAddress")
+	if ok {
+		parameter.SetString("machineId", machineInfoId)
+		return machineAddress(parameter).(string), true
+	}
+	return "", false
 }
 
 func (query *Query) sendGroupMsg(parameter *core.Parameter) any {
 	groupId := parameter.GetString("groupId")
 	msg := parameter.GetString("msg")
 	groupMsg := &GroupMsg{}
-	machineInfoId, ok := query.context.GetHandle("machineInfoId")
+	machineInfoId, ok := query.getMachineInfoId(parameter)
 	if ok {
-		groupMsg.MachineId = machineInfoId(parameter).(string)
+		groupMsg.MachineId = machineInfoId
 	}
 	groupMsg.Num = query.context.SendGroupTextMessage("system", groupId, msg)
 	return groupMsg
@@ -118,13 +130,12 @@ func (query *Query) sendGroupMsgApi(writer http.ResponseWriter, request *http.Re
 	daMap := make(map[string]any)
 	var total int32 = 0
 	values := query.context.Query(parameter).([]any)
-	machineAddress, ok := query.context.GetHandle("machineAddress")
 	for _, value := range values {
 		p := value.(*GroupMsg)
 		total = p.Num + total
+		machineAddress, ok := query.getMachineAddress(p.MachineId, parameter)
 		if ok {
-			parameter.SetString("machineId", p.MachineId)
-			p.MachineAddress = machineAddress(parameter).(string)
+			p.MachineAddress = machineAddress
 		}
 	}
 	daMap["total"] = total
