@@ -36,6 +36,17 @@ func (m *Parameter) GetString(key string) string {
 	}
 	return ""
 }
+
+func (m *Parameter) GetVString(keys ...string) string {
+	for _, key := range keys {
+		v := m.GetString(key)
+		if len(v) > 0 {
+			return v
+		}
+	}
+	return ""
+}
+
 func (m *Parameter) SetString(key string, value string) {
 	m.SetFrom[key] = []string{value}
 }
