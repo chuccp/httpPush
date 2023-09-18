@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"sync/atomic"
 )
 
 type systemInfo map[string]any
@@ -78,6 +79,26 @@ func (context *Context) SendMessage(msg message.IMessage) (error, bool) {
 	return err_, fg
 
 }
+
+func (context *Context) SendGroupTextMessage(form string, groupId, msg string) int32 {
+	var num int32
+	waitGroup := new(sync.WaitGroup)
+	context.userStore.RangeGroupUser(groupId, func(username string) bool {
+		textMsg := message.NewTextMessage(form, username, msg)
+		waitGroup.Add(1)
+		context.sendNoForwardMessage(textMsg, func(err error, hasUser bool) {
+			if hasUser {
+				atomic.AddInt32(&num, 1)
+			}
+			waitGroup.Done()
+		})
+		return true
+	})
+	waitGroup.Wait()
+	return num
+
+}
+
 func (context *Context) SendNoForwardMessage(msg message.IMessage) (error, bool) {
 	var once sync.Once
 	flag := util.GetChanBool()

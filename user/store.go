@@ -19,6 +19,12 @@ func (u *StoreUser) add(user IUser) {
 	u.rLock.Lock()
 	defer u.rLock.Unlock()
 	u.store[user.GetId()] = user
+	groupIds := user.GetGroupIds()
+	if groupIds != nil {
+		for _, s := range groupIds {
+			u.groups[s] = true
+		}
+	}
 }
 func (u *StoreUser) GetCreateTime() string {
 	return u.createTime.Format(util.TimestampFormat)
@@ -44,25 +50,84 @@ func (u *StoreUser) num() int {
 	defer u.rLock.RUnlock()
 	return len(u.store)
 }
+func (u *StoreUser) GetGroupIds() []string {
+	u.rLock.RLock()
+	defer u.rLock.RUnlock()
+	v := make([]string, len(u.groups))
+	var i = 0
+	for k, _ := range u.groups {
+		v[i] = k
+		i++
+	}
+	return v
+}
+func (u *StoreUser) IsInGroup(group string) bool {
+	u.rLock.RLock()
+	defer u.rLock.RUnlock()
+	_, ok := u.groups[group]
+	return ok
+}
 func newUserStore(username string) *StoreUser {
 	t := time.Now()
 	return &StoreUser{rLock: new(sync.RWMutex), store: make(map[string]IUser), username: username, createTime: &t, groups: make(map[string]bool)}
 }
 
+type StoreGroup struct {
+	uMap *sync.Map
+}
+
+func NewStoreGroup() *StoreGroup {
+	return &StoreGroup{uMap: new(sync.Map)}
+}
+
+func (storeGroup *StoreGroup) AddUser(user IUser) {
+	v, ok := storeGroup.uMap.Load(user.GetUsername())
+	if ok {
+		group := v.(*Group)
+		group.lastLiveTime = user.LastLiveTime()
+	} else {
+		group := NewGroup(user)
+		storeGroup.uMap.Store(user.GetUsername(), group)
+	}
+}
+func (storeGroup *StoreGroup) RangeUser(f func(string) bool) {
+	storeGroup.uMap.Range(func(key, value any) bool {
+		return f(key.(string))
+	})
+}
+func (storeGroup *StoreGroup) RemoteUser(user IUser) {
+	storeGroup.uMap.Delete(user.GetUsername())
+}
+
 type Store struct {
 	uMap  *sync.Map
+	gMap  *sync.Map
 	num   int32
 	rLock *sync.RWMutex
 }
 
 func NewStore() *Store {
-	return &Store{uMap: new(sync.Map), num: 0, rLock: new(sync.RWMutex)}
+	return &Store{gMap: new(sync.Map), uMap: new(sync.Map), num: 0, rLock: new(sync.RWMutex)}
 }
 
 func (store *Store) AddUser(user IUser) bool {
 	username := user.GetUsername()
 	store.rLock.Lock()
 	v, ok := store.uMap.Load(username)
+	groupIds := user.GetGroupIds()
+	if groupIds != nil {
+		for _, groupId := range groupIds {
+			gp, ok := store.gMap.Load(groupId)
+			if ok {
+				storeGroup := gp.(*StoreGroup)
+				storeGroup.AddUser(user)
+			} else {
+				storeGroup := NewStoreGroup()
+				store.gMap.Store(groupId, storeGroup)
+				storeGroup.AddUser(user)
+			}
+		}
+	}
 	if ok {
 		us := v.(*StoreUser)
 		us.add(user)
@@ -87,6 +152,16 @@ func (store *Store) DeleteUser(user IUser) bool {
 			store.rLock.Lock()
 			if us.num() == 0 {
 				store.uMap.Delete(username)
+				groupIds := us.GetGroupIds()
+				if groupIds != nil {
+					for _, groupId := range groupIds {
+						gp, ok := store.gMap.Load(groupId)
+						if ok {
+							storeGroup := gp.(*StoreGroup)
+							storeGroup.RemoteUser(user)
+						}
+					}
+				}
 				atomic.AddInt32(&store.num, -1)
 			}
 			store.rLock.Unlock()
@@ -103,6 +178,15 @@ func (store *Store) GetUser(username string) ([]IUser, bool) {
 	}
 	return nil, false
 }
+
+func (store *Store) RangeGroupUser(groupId string, f func(username string) bool) {
+	gp, ok := store.gMap.Load(groupId)
+	if ok {
+		storeGroup := gp.(*StoreGroup)
+		storeGroup.RangeUser(f)
+	}
+}
+
 func (store *Store) UserHasConn() bool {
 	return int(store.num) > 0
 }

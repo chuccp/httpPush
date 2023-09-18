@@ -16,7 +16,8 @@ type Query struct {
 
 func (query *Query) Init() {
 	query.AddQuery("/queryUser", query.queryUser, query.queryUserApi)
-	query.AddQuery("/onlineUser", query.onlineUser, query.onlineUserAip)
+	query.AddQuery("/onlineUser", query.onlineUser, query.onlineUserApi)
+	query.AddQuery("/sendGroupMsg", query.sendGroupMsg, query.sendGroupMsgApi)
 }
 func (query *Query) AddQuery(handleName string, handle core.RegisterHandle, handler func(http.ResponseWriter, *http.Request)) {
 	query.context.RegisterHandle(handleName, handle)
@@ -50,7 +51,7 @@ func (query *Query) queryUser(parameter *core.Parameter) any {
 	}
 	return &u
 }
-func (query *Query) onlineUserAip(writer http.ResponseWriter, request *http.Request) {
+func (query *Query) onlineUserApi(writer http.ResponseWriter, request *http.Request) {
 	parameter := core.NewParameter(request)
 	page := NewPage()
 	values := query.context.Query(parameter).([]any)
@@ -101,6 +102,37 @@ func (query *Query) onlineUser(parameter *core.Parameter) any {
 	return &Page{List: pageUsers, Num: query.context.GetUserNum()}
 }
 
+func (query *Query) sendGroupMsg(parameter *core.Parameter) any {
+	groupId := parameter.GetString("groupId")
+	msg := parameter.GetString("msg")
+	groupMsg := &GroupMsg{}
+	machineInfoId, ok := query.context.GetHandle("machineInfoId")
+	if ok {
+		groupMsg.MachineId = machineInfoId(parameter).(string)
+	}
+	groupMsg.Num = query.context.SendGroupTextMessage("system", groupId, msg)
+	return groupMsg
+}
+func (query *Query) sendGroupMsgApi(writer http.ResponseWriter, request *http.Request) {
+	parameter := core.NewParameter(request)
+	daMap := make(map[string]any)
+	var total int32 = 0
+	values := query.context.Query(parameter).([]any)
+	machineAddress, ok := query.context.GetHandle("machineAddress")
+	for _, value := range values {
+		p := value.(*GroupMsg)
+		total = p.Num + total
+		if ok {
+			parameter.SetString("machineId", p.MachineId)
+			p.MachineAddress = machineAddress(parameter).(string)
+		}
+	}
+	daMap["total"] = total
+	daMap["list"] = values
+	data, _ := json.Marshal(daMap)
+	writer.Write(data)
+}
+
 func NewQuery(context *core.Context, server core.IHttpServer) *Query {
 	query := &Query{context: context, server: server}
 	return query
@@ -109,7 +141,7 @@ func NewQuery(context *core.Context, server core.IHttpServer) *Query {
 type User struct {
 	Username string
 	Conn     []*Conn
-	Machine  interface{}
+	Machine  any
 }
 type Conn struct {
 	RemoteAddress string

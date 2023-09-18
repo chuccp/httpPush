@@ -25,3 +25,9 @@ type PageUser struct {
 	CreateTime     string
 	MachineId      string
 }
+
+type GroupMsg struct {
+	MachineAddress string
+	Num            int32
+	MachineId      string
+}

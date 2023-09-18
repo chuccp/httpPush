@@ -71,7 +71,6 @@ func (server *Server) queryMachineList(w http.ResponseWriter, re *http.Request) 
 			}
 		}
 	}
-	log.Println("！！！！！！！！===1", err)
 	w.WriteHeader(500)
 	w.Write([]byte(err.Error()))
 }
@@ -107,7 +106,6 @@ func (server *Server) Query(parameter *core.Parameter, localValue any) []any {
 }
 
 func (server *Server) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc) {
-	log.Println("Server!!!!!!!")
 	switch t := msg.(type) {
 	case *message.TextMessage:
 		{
@@ -118,7 +116,6 @@ func (server *Server) WriteMessage(msg message.IMessage, writeFunc user.WriteCal
 				cl, ok := server.clientStore.getClient(cu.machineId)
 				if ok {
 					err := cl.sendTextMsg(t)
-					log.Println("Server!!!!!!!", err)
 					if err == nil {
 						writeFunc(nil, true)
 						return
@@ -214,7 +211,6 @@ func (server *Server) sendTextMsg(writer http.ResponseWriter, request *http.Requ
 	err := UnmarshalJsonBody(request, &textMessage)
 	if err == nil {
 		err, fa := server.context.SendNoForwardMessage(&textMessage)
-		log.Println("sendTextMsg", err, fa)
 		if fa {
 			v, err := json.Marshal(successResponse())
 			if err == nil {

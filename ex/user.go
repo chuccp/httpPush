@@ -23,6 +23,7 @@ type User struct {
 	last          *time.Time
 	queue         *util.Queue
 	expiredTime   *time.Time
+	groupIds      []string
 }
 type HttpMessage struct {
 	From string
@@ -85,7 +86,7 @@ func (u *User) WriteMessage(iMessage message.IMessage, writeFunc user.WriteCallB
 func (u *User) Close() {}
 
 func (u *User) GetGroupIds() []string {
-	return []string{}
+	return u.groupIds
 }
 func (u *User) GetRemoteAddress() string {
 	return u.remoteAddress
@@ -101,5 +102,7 @@ func (u *User) CreateTime() *time.Time {
 }
 
 func NewUser(username string, queue *util.Queue, writer http.ResponseWriter, re *http.Request) *User {
-	return &User{username: username, queue: queue, writer: writer, remoteAddress: re.RemoteAddr}
+	u := &User{username: username, queue: queue, writer: writer, remoteAddress: re.RemoteAddr}
+	u.groupIds = util.GetGroupIds(re)
+	return u
 }
