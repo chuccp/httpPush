@@ -64,11 +64,7 @@ func (m *Parameter) GetInt(key string) int {
 }
 
 func GetUsername(re *Parameter) string {
-	username := re.GetString("id")
-	if len(username) > 0 {
-		return username
-	}
-	username = re.GetString("username")
+	username := re.GetVString("id", "username")
 	return username
 }
 
