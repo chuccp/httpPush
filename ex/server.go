@@ -61,7 +61,7 @@ func (server *Server) expiredCheck() {
 }
 func (server *Server) Init(context *core.Context) {
 	server.context = context
-	server.liveTime = server.context.GetCfgInt("ex", "ex.liveTime")
+	server.liveTime = server.context.GetCfgInt("ex", "liveTime")
 }
 func (server *Server) Name() string {
 
