@@ -4,7 +4,6 @@ import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
-	"log"
 )
 
 // IForward 集群使用/*
@@ -71,7 +70,6 @@ func (md *MsgDock) writeUserMsg(dockMessage *DockMessage) {
 		}
 	} else {
 		if md.IForward != nil && md.IForward.WriteMessage != nil {
-			log.Println("!!!!!!  writeUserMsg", md.IForward, md.IForward.WriteMessage)
 			md.IForward.WriteMessage(dockMessage.InputMessage, func(err error, hasUser bool) {
 				dockMessage.err = err
 				dockMessage.hasUser = hasUser
