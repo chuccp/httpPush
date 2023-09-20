@@ -9,19 +9,18 @@ import (
 type IMessage interface {
 	GetString(byte) string
 	GetUint32(byte) uint32
+	SetExString(string, string)
+	GetExString(string) string
+	GetExData() map[string]string
 }
 
 type TextMessage struct {
-	From  string
-	To    string
-	Msg   string
-	MsgId uint32
-}
-type GroupTextMessage struct {
-	From    string
-	GroupId string
-	Msg     string
-	MsgId   uint32
+	IMessage
+	From   string
+	To     string
+	Msg    string
+	MsgId  uint32
+	ExData map[string]string
 }
 
 func (m *TextMessage) GetString(v byte) string {
@@ -46,12 +45,22 @@ func (m *TextMessage) GetUint32(v byte) uint32 {
 	return 0
 }
 
-func NewTextMessage(From string, To string, Msg string) *TextMessage {
-	return &TextMessage{From: From, To: To, Msg: Msg, MsgId: MsgId()}
+func (m *TextMessage) SetExString(k string, v string) {
+	m.ExData[k] = v
+}
+func (m *TextMessage) GetExData() map[string]string {
+	return m.ExData
+}
+func (m *TextMessage) GetExString(k string) string {
+	v, ok := m.ExData[k]
+	if ok {
+		return v
+	}
+	return ""
 }
 
-func NewGroupTextMessage(From string, GroupId string, Msg string) *GroupTextMessage {
-	return &GroupTextMessage{From: From, GroupId: GroupId, Msg: Msg, MsgId: MsgId()}
+func NewTextMessage(From string, To string, Msg string) *TextMessage {
+	return &TextMessage{From: From, To: To, Msg: Msg, MsgId: MsgId(), ExData: make(map[string]string)}
 }
 
 func MsgId() uint32 {

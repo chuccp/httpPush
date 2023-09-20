@@ -3,7 +3,6 @@ package api
 import (
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/util"
-	"log"
 	"net/http"
 )
 
@@ -28,7 +27,6 @@ func (server *Server) sendMsg(w http.ResponseWriter, re *http.Request) {
 		return
 	}
 	err, b := server.context.SendTextMessage("system", username, msg)
-	log.Println(err, b)
 	if b && err == nil {
 		w.Write([]byte("success"))
 	} else {
