@@ -28,11 +28,12 @@ type User struct {
 type HttpMessage struct {
 	From   string
 	Body   string
+	MsgId  uint32
 	ExData map[string]string
 }
 
-func newHttpMessage(from string, body string, exData map[string]string) *HttpMessage {
-	return &HttpMessage{From: from, Body: body, ExData: exData}
+func newHttpMessage(from string, body string, MsgId uint32, exData map[string]string) *HttpMessage {
+	return &HttpMessage{From: from, Body: body, MsgId: MsgId, ExData: exData}
 }
 
 func (u *User) GetId() string {
@@ -73,7 +74,11 @@ func (u *User) GetUsername() string {
 }
 
 func (u *User) WriteMessage(iMessage message.IMessage, writeFunc user.WriteCallBackFunc) {
-	ht := newHttpMessage(iMessage.GetString(message.From), iMessage.GetString(message.Msg), iMessage.GetExData())
+	ht := newHttpMessage(
+		iMessage.GetString(message.From),
+		iMessage.GetString(message.Msg),
+		iMessage.GetUint32(message.MId),
+		iMessage.GetExData())
 	ht.ExData = iMessage.GetExData()
 	hts := []*HttpMessage{ht}
 	data, err := json.Marshal(hts)
