@@ -24,6 +24,7 @@ func LoadFile(fileName string) (*Config, error) {
 	if err == nil {
 		var config = &Config{lock: new(sync.RWMutex)}
 		config.cfg = cfg
+		config.data = make(map[string]string)
 		return config, err
 	}
 	return nil, err
