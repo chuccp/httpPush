@@ -135,7 +135,6 @@ func (client *client) initial() error {
 	} else {
 		log.Println(string(marshal))
 		call, err := client.request.Call(path, marshal)
-		log.Println("!!!!!!!!!!!!", err)
 		if err != nil {
 			return err
 		} else {
