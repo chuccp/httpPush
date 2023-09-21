@@ -58,6 +58,11 @@ func (context *Context) DeleteUser(iUser user.IUser) bool {
 	}
 	return false
 }
+
+func (context *Context) SendMessageForBack(msg message.IMessage, write user.WriteCallBackFunc) {
+	context.sendMessage(msg, write)
+}
+
 func (context *Context) sendMessage(msg message.IMessage, write user.WriteCallBackFunc) {
 	context.msgDock.WriteMessage(msg, write)
 }
