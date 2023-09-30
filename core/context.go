@@ -4,7 +4,6 @@ import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
-	"log"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -127,7 +126,6 @@ func (context *Context) SendTextMessage(from string, to string, msg string) (err
 func (context *Context) Query(parameter *Parameter) any {
 	iv := make([]any, 0)
 	registerHandle, fa := context.GetHandle(parameter.Path)
-	log.Println(parameter.Path, registerHandle, fa)
 	if fa {
 		v := registerHandle(parameter)
 		iv = append(iv, v)
