@@ -2,11 +2,13 @@ package cluster
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/util"
 	"log"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -37,6 +39,7 @@ func (client *client) run() {
 	}
 }
 func (client *client) queryList() ([]*LiteMachine, error) {
+	log.Println("查询", client.remoteMachine.Link, "/_cluster/queryMachineList")
 	marshal, err := json.Marshal(client.localMachine.getLiteMachine())
 	if err != nil {
 		return nil, err
@@ -133,15 +136,14 @@ func (client *client) initial() error {
 	if err != nil {
 		return err
 	} else {
-		log.Println(string(marshal))
 		call, err := client.request.Call(path, marshal)
 		if err != nil {
-			return err
+			return fmt.Errorf("initial Call err:%s", err.Error())
 		} else {
 			var liteMachine LiteMachine
 			err = json.Unmarshal(call, &liteMachine)
 			if err != nil {
-				return err
+				return fmt.Errorf("initial Call json.Unmarshal err:%s", err.Error())
 			}
 			client.remoteMachine.MachineId = liteMachine.MachineId
 			client.remoteLink = liteMachine.Link
@@ -150,32 +152,72 @@ func (client *client) initial() error {
 			} else {
 				client.isLocal = false
 			}
+			log.Println("path:", path, " body:", string(marshal), " back:", string(call), "  isLocal:", client.isLocal)
 			client.isHandshake = true
 			return nil
 		}
 	}
 	return err
 }
+
+// HasConn 是否成功建立 链接
 func (client *client) HasConn() bool {
 	return !client.isLocal && client.isHandshake
 }
 
-type ClientStore struct {
+type store struct {
 	tempClientMap *sync.Map
 	clientMap     *sync.Map
+	num           int
 	lock          *sync.Mutex
 	localMachine  *Machine
-	context       *core.Context
-	num           int
-	userQueue     *util.Queue
 }
 
-func NewClientStore(context *core.Context, localMachine *Machine) *ClientStore {
-	return &ClientStore{context: context, clientMap: new(sync.Map), lock: new(sync.Mutex), tempClientMap: new(sync.Map), localMachine: localMachine, userQueue: util.NewQueue()}
+func newStore(localMachine *Machine) *store {
+	return &store{clientMap: new(sync.Map), lock: new(sync.Mutex), tempClientMap: new(sync.Map), localMachine: localMachine}
 }
 
-func (ms *ClientStore) getClient(machineId string) (*client, bool) {
-	v, ok := ms.clientMap.Load(machineId)
+func (s *store) addConfigMachine(remoteMachine *Machine) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	client := NewClient(remoteMachine, s.localMachine)
+	s.tempClientMap.Store(client.remoteLink, client)
+}
+
+func (s *store) addTemp(client *client) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.tempClientMap.Store(client.remoteLink, client)
+}
+func (s *store) deleteTemp(remoteLink string) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.tempClientMap.Delete(remoteLink)
+}
+
+// 将机器从临时缓存移动到持久储存
+func (s *store) moveTempToStore(client *client) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.tempClientMap.Delete(client.remoteLink)
+	_, fa := s.clientMap.LoadOrStore(client.remoteMachine.MachineId, client)
+	if fa {
+		s.num++
+	}
+}
+
+// 将机器移动至临时缓存
+func (s *store) moveStoreToTemp(client *client) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	_, fa := s.clientMap.LoadAndDelete(client.remoteMachine.MachineId)
+	if fa {
+		s.tempClientMap.Store(client.remoteLink, client)
+		s.num--
+	}
+}
+func (s *store) getClient(machineId string) (*client, bool) {
+	v, ok := s.clientMap.Load(machineId)
 	if ok {
 		return v.(*client), true
 	} else {
@@ -183,65 +225,62 @@ func (ms *ClientStore) getClient(machineId string) (*client, bool) {
 	}
 }
 
-// 只用于读取配置文件的时候使用
-func (ms *ClientStore) addMachineNoMachineId(remoteMachine *Machine) {
-	ms.lock.Lock()
-	defer ms.lock.Unlock()
-	client := NewClient(remoteMachine, ms.localMachine)
-	ms.tempClientMap.Store(client.remoteLink, client)
-}
-func (ms *ClientStore) addNewMachine(machineId string, machine *Machine) {
-	if machineId != ms.localMachine.MachineId {
-		client := NewClient(machine, ms.localMachine)
-		_, ok := ms.clientMap.LoadOrStore(machineId, client)
-		if !ok {
-			err := client.initial()
-			if err != nil {
-				log.Println("initial", machineId, client.remoteLink, err)
-			}
-		}
-	}
-}
-func (ms *ClientStore) addMachineClient(machineId string, client *client) {
-	ms.lock.Lock()
-	defer ms.lock.Unlock()
-	_, ok := ms.clientMap.LoadOrStore(machineId, client)
-	if !ok {
-		ms.num++
-	}
-}
-func (ms *ClientStore) getMachineLite() []*LiteMachine {
-	ms.lock.Lock()
-	defer ms.lock.Unlock()
-	lm := make([]*LiteMachine, 0)
-	ms.clientMap.Range(func(key, value any) bool {
-		c := value.(*client)
-		if c.HasConn() {
-			lm = append(lm, c.remoteMachine.getLiteMachine())
-		}
-		return true
+func (s *store) eachTempClient(f func(remoteLink string, client *client) bool) {
+	s.tempClientMap.Range(func(key, value any) bool {
+		return f(key.(string), value.(*client))
 	})
-	return lm
 }
-func (ms *ClientStore) initial() {
-	ms.tempClientMap.Range(func(k, value any) bool {
-		client := value.(*client)
-		err := client.initial()
-		if err == nil {
-			if client.HasConn() {
-				ms.tempClientMap.Delete(k)
-				ms.addMachineClient(client.remoteMachine.MachineId, client)
-			}
-		}
-		return true
+func (s *store) eachStoreClient(f func(machineId string, client *client) bool) {
+	s.clientMap.Range(func(key, value any) bool {
+		return f(key.(string), value.(*client))
 	})
 }
 
-func (ms *ClientStore) sendTextMsg(msg *message.TextMessage, exMachineId string) (string, error) {
+// 如果没有存储机器，则添加为临时机器
+func (s *store) addNewClient(client *client) {
+	if client.remoteMachine.MachineId != s.localMachine.MachineId {
+		s.lock.Lock()
+		defer s.lock.Unlock()
+		machineId := client.remoteMachine.MachineId
+		_, ok := s.clientMap.Load(machineId)
+		if !ok {
+			s.tempClientMap.Store(client.remoteLink, client)
+		}
+	}
+}
+
+type ClientOperate struct {
+	localMachine *Machine
+	context      *core.Context
+	userQueue    *util.Queue
+	store        *store
+}
+
+func NewClientOperate(context *core.Context, localMachine *Machine) *ClientOperate {
+	return &ClientOperate{context: context, localMachine: localMachine, userQueue: util.NewQueue(), store: newStore(localMachine)}
+}
+
+func (ms *ClientOperate) getClient(machineId string) (*client, bool) {
+	return ms.store.getClient(machineId)
+}
+func (ms *ClientOperate) num() int {
+	return ms.store.num
+}
+
+// 只用于读取配置文件的时候使用
+func (ms *ClientOperate) addConfigMachine(remoteMachine *Machine) {
+	ms.store.addConfigMachine(remoteMachine)
+}
+
+func (ms *ClientOperate) addNewMachine(machine *Machine) {
+	client := NewClient(machine, ms.localMachine)
+	ms.store.addNewClient(client)
+
+}
+func (ms *ClientOperate) sendTextMsg(msg *message.TextMessage, exMachineId string) (string, error) {
 	var _err_ error = core.NoFoundUser
 	machineId := ""
-	ms.clientMap.Range(func(k, value any) bool {
-		client := value.(*client)
+	ms.store.eachStoreClient(func(machineId string, client *client) bool {
 		if client.HasConn() && client.remoteMachine.MachineId != exMachineId {
 			err := client.sendTextMsg(msg)
 			_err_ = err
@@ -254,37 +293,10 @@ func (ms *ClientStore) sendTextMsg(msg *message.TextMessage, exMachineId string)
 	})
 	return machineId, _err_
 }
-
-func (ms *ClientStore) sendAddUser0(usernames ...string) {
-	ms.clientMap.Range(func(k, value any) bool {
-		client := value.(*client)
-		if client.HasConn() {
-			client.sendAddUser(usernames...)
-		}
-		return true
-	})
-}
-func (ms *ClientStore) SendAddUser(username string) {
-	ms.userQueue.Offer(&operate{isAdd: true, username: username})
-}
-func (ms *ClientStore) sendDeleteUser0(usernames ...string) {
-	ms.clientMap.Range(func(k, value any) bool {
-		client := value.(*client)
-		if client.HasConn() {
-			client.sendDeleteUser(usernames...)
-		}
-		return true
-	})
-}
-func (ms *ClientStore) SendDeleteUser(username string) {
-	ms.userQueue.Offer(&operate{isAdd: false, username: username})
-}
-
-func (ms *ClientStore) Query(parameter *core.Parameter, localValue any) []any {
+func (ms *ClientOperate) Query(parameter *core.Parameter, localValue any) []any {
 	vs := make([]any, 0)
 	index := 0
-	ms.clientMap.Range(func(k, value any) bool {
-		client := value.(*client)
+	ms.store.eachStoreClient(func(machineId string, client *client) bool {
 		if client.HasConn() {
 			index++
 			parameter.SetString("index", strconv.Itoa(index))
@@ -297,7 +309,89 @@ func (ms *ClientStore) Query(parameter *core.Parameter, localValue any) []any {
 	})
 	return vs
 }
-func (ms *ClientStore) userOperate() {
+
+func (ms *ClientOperate) initial() {
+	ms.store.eachTempClient(func(remoteLink string, client *client) bool {
+		err := client.initial()
+		if err == nil {
+			if client.isLocal {
+				log.Println("连接到自己，不在尝试连接")
+				ms.store.deleteTemp(remoteLink)
+			} else if client.HasConn() {
+				ms.store.moveTempToStore(client)
+			}
+		}
+
+		return true
+	})
+}
+
+func (ms *ClientOperate) live() {
+	for {
+		time.Sleep(time.Second * 5)
+		ms.initial()
+		time.Sleep(time.Second * 5)
+		ms.store.eachStoreClient(func(machineId string, client *client) bool {
+			if client.HasConn() {
+				list, err := client.queryList()
+				if err != nil {
+					if strings.Contains(err.Error(), "Client.Timeout") {
+						ms.store.moveStoreToTemp(client)
+					}
+					err = fmt.Errorf("queryList:%s err:%s", client.remoteLink, err)
+					log.Println(err)
+				} else {
+					for _, machine := range list {
+						m, err := parseLink(machine.Link)
+						if err != nil {
+							log.Println("parseLink", client.remoteLink, err)
+						} else {
+							client := NewClient(m, ms.localMachine)
+							ms.store.addNewClient(client)
+						}
+					}
+				}
+			}
+			return true
+		})
+	}
+}
+func (ms *ClientOperate) sendAddUser0(usernames ...string) {
+	ms.store.eachStoreClient(func(machineId string, client *client) bool {
+		if client.HasConn() {
+			client.sendAddUser(usernames...)
+		}
+		return true
+	})
+}
+
+func (ms *ClientOperate) sendDeleteUser0(usernames ...string) {
+	ms.store.eachStoreClient(func(machineId string, client *client) bool {
+		if client.HasConn() {
+			client.sendDeleteUser(usernames...)
+		}
+		return true
+	})
+}
+func (ms *ClientOperate) getMachineLite() []*LiteMachine {
+	lm := make([]*LiteMachine, 0)
+	ms.store.eachStoreClient(func(machineId string, c *client) bool {
+		if c.HasConn() {
+			lm = append(lm, c.remoteMachine.getLiteMachine())
+		}
+		return true
+	})
+	return lm
+}
+
+func (ms *ClientOperate) SendAddUser(username string) {
+	ms.userQueue.Offer(&operate{isAdd: true, username: username})
+}
+func (ms *ClientOperate) SendDeleteUser(username string) {
+	ms.userQueue.Offer(&operate{isAdd: false, username: username})
+}
+
+func (ms *ClientOperate) userOperate() {
 	deleteUsers := make([]string, 0)
 	addUsers := make([]string, 0)
 	for {
@@ -320,34 +414,7 @@ func (ms *ClientStore) userOperate() {
 		}
 	}
 }
-func (ms *ClientStore) live() {
-	for {
-		time.Sleep(time.Second * 5)
-		ms.initial()
-		time.Sleep(time.Second * 5)
-		ms.clientMap.Range(func(_, value any) bool {
-			client := value.(*client)
-			if client.HasConn() {
-				list, err := client.queryList()
-				if err != nil {
-					log.Println("queryList", client.remoteLink, err)
-				} else {
-					for _, machine := range list {
-						m, err := parseLink(machine.Link)
-						if err != nil {
-							log.Println("parseLink", client.remoteLink, err)
-						} else {
-							client := NewClient(m, ms.localMachine)
-							ms.addMachineClient(machine.MachineId, client)
-						}
-					}
-				}
-			}
-			return true
-		})
-	}
-}
-func (ms *ClientStore) run() {
+func (ms *ClientOperate) run() {
 	ms.initial()
 	go ms.live()
 	go ms.userOperate()

@@ -1,5 +1,5 @@
 module github.com/chuccp/httpPush
 
-go 1.20
+go 1.21
 
 require gopkg.in/ini.v1 v1.67.0 // indirect

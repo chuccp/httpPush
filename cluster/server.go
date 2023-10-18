@@ -14,10 +14,10 @@ import (
 type Server struct {
 	core.IForward
 	core.IHttpServer
-	context      *core.Context
-	localMachine *Machine
-	clientStore  *ClientStore
-	userStore    *userStore
+	context       *core.Context
+	localMachine  *Machine
+	clientOperate *ClientOperate
+	userStore     *userStore
 }
 
 func NewServer() *Server {
@@ -33,20 +33,20 @@ func (server *Server) Start() error {
 }
 
 func (server *Server) run() {
-	server.clientStore.run()
+	server.clientOperate.run()
 }
 
-// 初始化，用于机器之间握手
+// 初始化，用于机器之间握手,客户端请求时，返回当前机器信息
 func (server *Server) initial(w http.ResponseWriter, re *http.Request) {
 	var liteMachine LiteMachine
 	err := UnmarshalJsonBody(re, &liteMachine)
 	if err == nil {
 		log.Println("initial", liteMachine.Link)
-		machine, err := parseLink2(liteMachine.Link, re)
+		machine, err := parseLiteMachine(&liteMachine, re)
 		if err == nil {
 			marshal, err := json.Marshal(server.localMachine.getLiteMachine())
 			if err == nil {
-				server.clientStore.addNewMachine(liteMachine.MachineId, machine)
+				server.clientOperate.addNewMachine(machine)
 				log.Println(string(marshal))
 				w.Write(marshal)
 				return
@@ -61,10 +61,10 @@ func (server *Server) queryMachineList(w http.ResponseWriter, re *http.Request) 
 	var liteMachine LiteMachine
 	err := UnmarshalJsonBody(re, &liteMachine)
 	if err == nil {
-		machine, err := parseLink2(liteMachine.Link, re)
+		machine, err := parseLiteMachine(&liteMachine, re)
 		if err == nil {
-			server.clientStore.addNewMachine(liteMachine.MachineId, machine)
-			marshal, err := json.Marshal(server.clientStore.getMachineLite())
+			server.clientOperate.addNewMachine(machine)
+			marshal, err := json.Marshal(server.clientOperate.getMachineLite())
 			if err == nil {
 				w.Write(marshal)
 				return
@@ -96,13 +96,13 @@ func (server *Server) query(w http.ResponseWriter, re *http.Request) {
 }
 
 func (server *Server) HandleAddUser(iUser user.IUser) {
-	server.clientStore.SendAddUser(iUser.GetUsername())
+	server.clientOperate.SendAddUser(iUser.GetUsername())
 }
 func (server *Server) HandleDeleteUser(username string) {
-	server.clientStore.SendDeleteUser(username)
+	server.clientOperate.SendDeleteUser(username)
 }
 func (server *Server) Query(parameter *core.Parameter, localValue any) []any {
-	return server.clientStore.Query(parameter, localValue)
+	return server.clientOperate.Query(parameter, localValue)
 }
 
 func (server *Server) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc) {
@@ -113,7 +113,7 @@ func (server *Server) WriteMessage(msg message.IMessage, writeFunc user.WriteCal
 			un := t.GetString(message.To)
 			cu, ok := server.userStore.GetUser(un)
 			if ok {
-				cl, ok := server.clientStore.getClient(cu.machineId)
+				cl, ok := server.clientOperate.getClient(cu.machineId)
 				if ok {
 					err := cl.sendTextMsg(t)
 					if err == nil {
@@ -124,7 +124,7 @@ func (server *Server) WriteMessage(msg message.IMessage, writeFunc user.WriteCal
 					}
 				}
 			}
-			machineId, err := server.clientStore.sendTextMsg(t, exMachineId)
+			machineId, err := server.clientOperate.sendTextMsg(t, exMachineId)
 			if err == nil {
 				server.userStore.AddUser(un, machineId)
 				writeFunc(nil, true)
@@ -156,7 +156,7 @@ func (server *Server) Init(context *core.Context) {
 		return
 	}
 	localMachine.MachineId = machineId
-	clientStore := NewClientStore(server.context, localMachine)
+	clientOperate := NewClientOperate(server.context, localMachine)
 	remoteLinkStr := server.context.GetCfgString("cluster", "remote.link")
 	remoteLinks := strings.Split(remoteLinkStr, ",")
 	for _, remoteLink := range remoteLinks {
@@ -165,11 +165,11 @@ func (server *Server) Init(context *core.Context) {
 			log.Panicln(err)
 			return
 		} else {
-			clientStore.addMachineNoMachineId(machine)
+			clientOperate.addConfigMachine(machine)
 		}
 	}
 	server.localMachine = localMachine
-	server.clientStore = clientStore
+	server.clientOperate = clientOperate
 	server.context.RegisterHandle("machineInfoId", server.machineInfoId)
 	server.context.RegisterHandle("remoteMachineNum", server.remoteMachineNum)
 	server.context.RegisterHandle("machineAddress", server.machineAddress)
@@ -246,7 +246,7 @@ func (server *Server) machineAddress(parameter *core.Parameter) any {
 	if machineId == server.localMachine.MachineId {
 		return server.localMachine.Address + ":" + strconv.Itoa(server.localMachine.Port)
 	}
-	c, ok := server.clientStore.getClient(machineId)
+	c, ok := server.clientOperate.getClient(machineId)
 	if ok {
 		return c.remoteMachine.Address
 	}
@@ -254,5 +254,5 @@ func (server *Server) machineAddress(parameter *core.Parameter) any {
 }
 
 func (server *Server) remoteMachineNum(parameter *core.Parameter) any {
-	return server.clientStore.num
+	return server.clientOperate.num()
 }

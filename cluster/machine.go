@@ -46,12 +46,13 @@ func parseLink(link string) (*Machine, error) {
 	machine.Link = link
 	return &machine, nil
 }
-func parseLink2(link string, re *http.Request) (*Machine, error) {
-	url, err := url.Parse(link)
+func parseLiteMachine(liteMachine *LiteMachine, re *http.Request) (*Machine, error) {
+	url, err := url.Parse(liteMachine.Link)
 	if err != nil {
 		return nil, err
 	}
 	var machine Machine
+	machine.MachineId = liteMachine.MachineId
 	machine.Scheme = url.Scheme
 	machine.Address = url.Hostname()
 	ip := net.ParseIP(machine.Address)
