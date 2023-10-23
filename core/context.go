@@ -146,6 +146,15 @@ func (context *Context) GetCfgString(section, key string) string {
 	iSection := context.register.config.GetString(section, key)
 	return iSection
 }
+
+func (context *Context) GetCfgStringDefault(section, key, defaultValue string) string {
+	value := context.GetCfgString(section, key)
+	if len(value) == 0 {
+		return defaultValue
+	}
+	return value
+}
+
 func (context *Context) GetSystemInfo() systemInfo {
 	return context.systemInfo
 }

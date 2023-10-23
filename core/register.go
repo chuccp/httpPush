@@ -4,7 +4,9 @@ import (
 	"github.com/chuccp/httpPush/config"
 	"github.com/chuccp/httpPush/util"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"log"
+	"os"
 	"sync"
 )
 
@@ -54,8 +56,38 @@ const (
 	VERSION = "0.1.8"
 )
 
+func initLogger(path string) (*zap.Logger, error) {
+	writeFileCore, err := getFileLogWriter(path)
+	if err != nil {
+		return nil, err
+	}
+	core := zapcore.NewTee(writeFileCore, getStdoutLogWriter())
+	return zap.New(core, zap.AddCaller()), nil
+}
+
+func getEncoder() zapcore.Encoder {
+	return zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
+}
+
+func getFileLogWriter(path string) (zapcore.Core, error) {
+	file, err := os.Create(path)
+	if err != nil {
+		return nil, err
+	}
+	encoder := getEncoder()
+	core := zapcore.NewCore(encoder, zapcore.AddSync(file), zapcore.InfoLevel)
+	return core, nil
+}
+func getStdoutLogWriter() zapcore.Core {
+	encoder := getEncoder()
+	core := zapcore.NewCore(encoder, os.Stdout, zapcore.DebugLevel)
+	return core
+}
+
 func (httpPush *HttpPush) Start() error {
-	logger, err := zap.NewProduction()
+
+	logPath := httpPush.context.GetCfgStringDefault("log", "file.path", "push.log")
+	logger, err := initLogger(logPath)
 	if err != nil {
 		panic(err)
 	}
