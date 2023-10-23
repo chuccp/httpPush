@@ -3,6 +3,7 @@ package core
 import (
 	"github.com/chuccp/httpPush/config"
 	"github.com/chuccp/httpPush/util"
+	"go.uber.org/zap"
 	"log"
 	"sync"
 )
@@ -54,6 +55,12 @@ const (
 )
 
 func (httpPush *HttpPush) Start() error {
+	logger, err := zap.NewProduction()
+	if err != nil {
+		panic(err)
+	}
+	defer logger.Sync()
+	httpPush.context.log = logger
 	httpPush.context.rangeServer(func(server Server) {
 		if s, ok := server.(IHttpServer); ok {
 			s.init(httpPush.context)

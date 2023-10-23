@@ -6,7 +6,7 @@ import (
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/util"
-	"log"
+	"go.uber.org/zap"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,6 +20,7 @@ type client struct {
 	isHandshake   bool
 	isLocal       bool
 	remoteLink    string
+	context       *core.Context
 }
 
 type operate struct {
@@ -27,19 +28,19 @@ type operate struct {
 	username string
 }
 
-func NewClient(remoteMachine *Machine, localMachine *Machine) *client {
-	return &client{request: util.NewRequest(), isHandshake: false, remoteMachine: remoteMachine, localMachine: localMachine}
+func NewClient(remoteMachine *Machine, localMachine *Machine, context *core.Context) *client {
+	return &client{request: util.NewRequest(), isHandshake: false, remoteMachine: remoteMachine, localMachine: localMachine, context: context}
 }
 func (client *client) run() {
 	err := client.initial()
 	if err == nil {
-		log.Println("握手", client.remoteMachine.Link, "/_cluster/initial", "完成")
+		client.context.GetLog().Info("握手", zap.String("client.remoteMachine.Link", client.remoteMachine.Link), zap.String("query", "/_cluster/initial"))
 	} else {
-		log.Println("握手", client.remoteMachine.Link, "/_cluster/initial", "失败", err)
+		client.context.GetLog().Info("握手", zap.String("client.remoteMachine.Link", client.remoteMachine.Link), zap.String("query", "/_cluster/initial"), zap.Error(err))
 	}
 }
 func (client *client) queryList() ([]*LiteMachine, error) {
-	log.Println("查询", client.remoteMachine.Link, "/_cluster/queryMachineList")
+	client.context.GetLog().Info("查询", zap.String("client.remoteMachine.Link", client.remoteMachine.Link), zap.String("query", "/_cluster/queryMachineList"))
 	marshal, err := json.Marshal(client.localMachine.getLiteMachine())
 	if err != nil {
 		return nil, err
@@ -155,7 +156,6 @@ func (client *client) initial() error {
 			} else {
 				client.isLocal = false
 			}
-			log.Println("path:", path, " body:", string(marshal), " back:", string(call), "  isLocal:", client.isLocal)
 			client.isHandshake = true
 			return nil
 		}
@@ -174,16 +174,17 @@ type store struct {
 	num           int
 	lock          *sync.Mutex
 	localMachine  *Machine
+	context       *core.Context
 }
 
-func newStore(localMachine *Machine) *store {
-	return &store{clientMap: new(sync.Map), lock: new(sync.Mutex), tempClientMap: new(sync.Map), localMachine: localMachine}
+func newStore(localMachine *Machine, context *core.Context) *store {
+	return &store{clientMap: new(sync.Map), lock: new(sync.Mutex), tempClientMap: new(sync.Map), localMachine: localMachine, context: context}
 }
 
 func (s *store) addConfigMachine(remoteMachine *Machine) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	client := NewClient(remoteMachine, s.localMachine)
+	client := NewClient(remoteMachine, s.localMachine, s.context)
 	s.tempClientMap.Store(client.remoteLink, client)
 }
 
@@ -260,7 +261,7 @@ type ClientOperate struct {
 }
 
 func NewClientOperate(context *core.Context, localMachine *Machine) *ClientOperate {
-	return &ClientOperate{context: context, localMachine: localMachine, userQueue: util.NewQueue(), store: newStore(localMachine)}
+	return &ClientOperate{context: context, localMachine: localMachine, userQueue: util.NewQueue(), store: newStore(localMachine, context)}
 }
 
 func (ms *ClientOperate) getClient(machineId string) (*client, bool) {
@@ -276,7 +277,7 @@ func (ms *ClientOperate) addConfigMachine(remoteMachine *Machine) {
 }
 
 func (ms *ClientOperate) addNewMachine(machine *Machine) {
-	client := NewClient(machine, ms.localMachine)
+	client := NewClient(machine, ms.localMachine, ms.context)
 	ms.store.addNewClient(client)
 
 }
@@ -318,7 +319,7 @@ func (ms *ClientOperate) initial() {
 		err := client.initial()
 		if err == nil {
 			if client.isLocal {
-				log.Println("连接到自己，不在尝试连接")
+				ms.context.GetLog().Info("连接到自己，不在尝试连接")
 				ms.store.deleteTemp(remoteLink)
 			} else if client.HasConn() {
 				ms.store.moveTempToStore(client)
@@ -341,15 +342,14 @@ func (ms *ClientOperate) live() {
 					if strings.Contains(err.Error(), "Client.Timeout") {
 						ms.store.moveStoreToTemp(client)
 					}
-					err = fmt.Errorf("queryList:%s err:%s", client.remoteLink, err)
-					log.Println(err)
+					ms.context.GetLog().Error("网络请求失败", zap.Error(err))
 				} else {
 					for _, machine := range list {
 						m, err := parseLink(machine.Link)
 						if err != nil {
-							log.Println("parseLink", client.remoteLink, err)
+							ms.context.GetLog().Error("parseLink", zap.String("client.remoteLink", client.remoteLink), zap.Error(err))
 						} else {
-							client := NewClient(m, ms.localMachine)
+							client := NewClient(m, ms.localMachine, ms.context)
 							ms.store.addNewClient(client)
 						}
 					}

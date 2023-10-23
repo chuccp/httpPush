@@ -2,7 +2,7 @@ package core
 
 import (
 	"github.com/chuccp/httpPush/util"
-	"log"
+	"go.uber.org/zap"
 	"net"
 	"net/http"
 	"strconv"
@@ -59,7 +59,7 @@ func (server *httpServer) init(context *Context) {
 	port := context.GetCfgInt(server.name, "http.port")
 	corePort := context.GetCfgInt("core", "http.port")
 	if port > 0 && corePort != port {
-		log.Println(server.name, "端口：", port)
+		context.log.Info("服务名称与端口", zap.String("name", server.name), zap.Int("port", port))
 		server.certFile = context.GetCfgString(server.name, "http.certFile")
 		server.keyFile = context.GetCfgString(server.name, "http.keyFile")
 		server.port = port
@@ -67,7 +67,7 @@ func (server *httpServer) init(context *Context) {
 		server.httpServer = util.NewServer()
 	} else {
 		server.usePort = corePort
-		log.Println(server.name, "端口：", corePort)
+		context.log.Info("服务名称与端口", zap.String("name", server.name), zap.Int("port", corePort))
 	}
 }
 func (server *httpServer) start() error {

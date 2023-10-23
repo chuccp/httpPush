@@ -5,7 +5,7 @@ import (
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
-	"log"
+	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 	"strings"
@@ -41,13 +41,13 @@ func (server *Server) initial(w http.ResponseWriter, re *http.Request) {
 	var liteMachine LiteMachine
 	err := UnmarshalJsonBody(re, &liteMachine)
 	if err == nil {
-		log.Println("initial", liteMachine.Link)
+		server.context.GetLog().Info("接收客户端的握手", zap.String("liteMachine.Link", liteMachine.Link))
 		machine, err := parseLiteMachine(&liteMachine, re)
 		if err == nil {
 			marshal, err := json.Marshal(server.localMachine.getLiteMachine())
 			if err == nil {
 				server.clientOperate.addNewMachine(machine)
-				log.Println(string(marshal))
+				server.context.GetLog().Info("回馈客户端的握手信息", zap.ByteString("body", marshal))
 				w.Write(marshal)
 				return
 			}
@@ -149,14 +149,14 @@ func (server *Server) Init(context *core.Context) {
 	if len(machineId) == 0 {
 		machineId = MachineId()
 	}
-	log.Println("machineId", machineId)
+	server.context.GetLog().Info("machineId配置", zap.String("machineId", machineId))
 	localLink := server.context.GetCfgString("cluster", "local.link")
 	if len(localLink) == 0 {
 		localLink = server.GetServerHost()
 	}
 	localMachine, err := parseLink(localLink)
 	if err != nil {
-		log.Panicln(err)
+		server.context.GetLog().Panic("解析本地配置localLink失败", zap.Error(err))
 		return
 	}
 	localMachine.MachineId = machineId
@@ -166,7 +166,7 @@ func (server *Server) Init(context *core.Context) {
 	for _, remoteLink := range remoteLinks {
 		machine, err := parseLink(remoteLink)
 		if err != nil {
-			log.Panicln(err)
+			server.context.GetLog().Panic("解析本地配置remoteLink失败", zap.Error(err))
 			return
 		} else {
 			clientOperate.addConfigMachine(machine)

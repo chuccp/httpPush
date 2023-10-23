@@ -4,6 +4,7 @@ import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
+	"go.uber.org/zap"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -18,6 +19,7 @@ type Context struct {
 	userStore     *user.Store
 	msgDock       *MsgDock
 	handleFuncMap map[string]RegisterHandle
+	log           *zap.Logger
 }
 
 func newContext(register *Register) *Context {
@@ -30,6 +32,9 @@ func newContext(register *Register) *Context {
 }
 func (context *Context) GetHttpPush() *HttpPush {
 	return context.httpPush
+}
+func (context *Context) GetLog() *zap.Logger {
+	return context.log
 }
 func (context *Context) SetForward(forward IForward) {
 	context.msgDock.IForward = forward
