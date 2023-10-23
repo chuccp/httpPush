@@ -31,7 +31,7 @@ func (h *HistoryStore) userOffline(user IUser) {
 		signUpLog := v.(*SignUpLog)
 		signUpLog.OfflineTime = &t
 	} else {
-		h.userStore.LoadOrStore(username, &SignUpLog{Username: username, OnlineTime: &t, OfflineTime: &t})
+		h.userStore.Store(username, &SignUpLog{Username: username, OnlineTime: &t, OfflineTime: &t})
 	}
 }
 
