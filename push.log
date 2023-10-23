@@ -1,7 +1,7 @@
-{"level":"info","ts":1698057161.502566,"caller":"core/server.go:70","msg":"服务名称与端口","name":"api","port":8083}
-{"level":"info","ts":1698057161.502566,"caller":"core/server.go:70","msg":"服务名称与端口","name":"cluster","port":8083}
-{"level":"info","ts":1698057161.5030859,"caller":"cluster/server.go:152","msg":"machineId配置","machineId":"b74hg3"}
-{"level":"info","ts":1698057161.5030859,"caller":"core/server.go:70","msg":"服务名称与端口","name":"ex","port":8083}
-{"level":"info","ts":1698057162.5105968,"caller":"cluster/server.go:44","msg":"接收客户端的握手","liteMachine.Link":"http://0.0.0.0:8083"}
-{"level":"info","ts":1698057162.5105968,"caller":"cluster/server.go:50","msg":"回馈客户端的握手信息","body":"{\"Link\":\"http://0.0.0.0:8083\",\"MachineId\":\"b74hg3\"}"}
-{"level":"info","ts":1698057162.5105968,"caller":"cluster/client.go:322","msg":"连接到自己，不在尝试连接"}
+{"level":"info","ts":"2023-10-23 18:37:49","caller":"core/server.go:70","msg":"服务名称与端口","name":"api","port":8083}
+{"level":"info","ts":"2023-10-23 18:37:49","caller":"core/server.go:70","msg":"服务名称与端口","name":"cluster","port":8083}
+{"level":"info","ts":"2023-10-23 18:37:49","caller":"cluster/server.go:152","msg":"machineId配置","machineId":"b74hg3"}
+{"level":"info","ts":"2023-10-23 18:37:49","caller":"core/server.go:70","msg":"服务名称与端口","name":"ex","port":8083}
+{"level":"info","ts":"2023-10-23 18:37:50","caller":"cluster/server.go:44","msg":"接收客户端的握手","liteMachine.Link":"http://0.0.0.0:8083"}
+{"level":"info","ts":"2023-10-23 18:37:50","caller":"cluster/server.go:50","msg":"回馈客户端的握手信息","body":"{\"Link\":\"http://0.0.0.0:8083\",\"MachineId\":\"b74hg3\"}"}
+{"level":"info","ts":"2023-10-23 18:37:50","caller":"cluster/client.go:322","msg":"连接到自己，不在尝试连接"}

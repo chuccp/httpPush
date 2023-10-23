@@ -66,7 +66,9 @@ func initLogger(path string) (*zap.Logger, error) {
 }
 
 func getEncoder() zapcore.Encoder {
-	return zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
+	config := zap.NewProductionEncoderConfig()
+	config.EncodeTime = zapcore.TimeEncoderOfLayout(util.TimestampFormat)
+	return zapcore.NewJSONEncoder(config)
 }
 
 func getFileLogWriter(path string) (zapcore.Core, error) {
