@@ -56,7 +56,7 @@ func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
 	defer c.rLock.RUnlock()
 	t := time.Now()
 	liveTime := util.GetLiveTime(re)
-	u := NewUser(c.username, c.queue, writer, re)
+	u := NewUser(c.username, c.queue, c.context, writer, re)
 	if liveTime > 0 {
 		u.liveTime = liveTime
 	} else if c.liveTime > 0 {

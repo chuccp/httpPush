@@ -43,6 +43,9 @@ func (context *Context) AddUser(iUser user.IUser) {
 func (context *Context) GetUser(userName string) ([]user.IUser, bool) {
 	return context.userStore.GetUser(userName)
 }
+func (context *Context) GetHistory(userName string) (*user.SignUpLog, bool) {
+	return context.userStore.GetHistory(userName)
+}
 func (context *Context) GetUserNum() int {
 	return context.userStore.GetUserNum()
 }
@@ -57,11 +60,6 @@ func (context *Context) DeleteUser(iUser user.IUser) bool {
 	}
 	return false
 }
-
-func (context *Context) SendMessageForBack(msg message.IMessage, write user.WriteCallBackFunc) {
-	context.sendMessage(msg, write)
-}
-
 func (context *Context) sendMessage(msg message.IMessage, write user.WriteCallBackFunc) {
 	context.msgDock.WriteMessage(msg, write)
 }

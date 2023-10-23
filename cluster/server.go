@@ -84,14 +84,18 @@ func (server *Server) query(w http.ResponseWriter, re *http.Request) {
 		handleFunc, fa := server.context.GetHandle(parameter.Path)
 		if fa {
 			v := handleFunc(&parameter)
-			marshal, err := json.Marshal(v)
-			if err == nil {
-				w.Write(marshal)
+			if v == nil {
+				w.Write([]byte(""))
 				return
+			} else {
+				marshal, err := json.Marshal(v)
+				if err == nil {
+					w.Write(marshal)
+					return
+				}
 			}
 		}
 	}
-
 	w.WriteHeader(500)
 }
 

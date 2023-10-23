@@ -100,14 +100,19 @@ func (storeGroup *StoreGroup) RemoteUser(user IUser) {
 }
 
 type Store struct {
-	uMap  *sync.Map
-	gMap  *sync.Map
-	num   int32
-	rLock *sync.RWMutex
+	uMap         *sync.Map
+	gMap         *sync.Map
+	num          int32
+	rLock        *sync.RWMutex
+	historyStore *HistoryStore
 }
 
 func NewStore() *Store {
-	return &Store{gMap: new(sync.Map), uMap: new(sync.Map), num: 0, rLock: new(sync.RWMutex)}
+	return &Store{gMap: new(sync.Map), uMap: new(sync.Map), num: 0, rLock: new(sync.RWMutex), historyStore: NewHistoryStore()}
+}
+
+func (store *Store) GetHistory(username string) (*SignUpLog, bool) {
+	return store.historyStore.getUserHistory(username)
 }
 
 func (store *Store) AddUser(user IUser) bool {
@@ -136,6 +141,7 @@ func (store *Store) AddUser(user IUser) bool {
 		us.add(user)
 		store.uMap.Store(username, us)
 		atomic.AddInt32(&store.num, 1)
+		store.historyStore.userOnline(user)
 		store.rLock.Unlock()
 		return true
 	}
@@ -162,6 +168,7 @@ func (store *Store) DeleteUser(user IUser) bool {
 						}
 					}
 				}
+				store.historyStore.userOffline(user)
 				atomic.AddInt32(&store.num, -1)
 			}
 			store.rLock.Unlock()

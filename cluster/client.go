@@ -66,6 +66,9 @@ func (client *client) query(parameter *core.Parameter, localValue any) (any, err
 		call, err := client.request.Call(path, marshal)
 		if err == nil {
 			m := util.NewPtr(localValue)
+			if len(call) == 0 {
+				return m, nil
+			}
 			err = json.Unmarshal(call, m)
 			if err == nil {
 				return m, nil

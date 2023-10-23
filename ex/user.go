@@ -3,6 +3,7 @@ package ex
 import (
 	"context"
 	"encoding/json"
+	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
@@ -24,6 +25,7 @@ type User struct {
 	queue         *util.Queue
 	expiredTime   *time.Time
 	groupIds      []string
+	context       *core.Context
 }
 type HttpMessage struct {
 	From string
@@ -104,8 +106,8 @@ func (u *User) CreateTime() *time.Time {
 	return u.createTime
 }
 
-func NewUser(username string, queue *util.Queue, writer http.ResponseWriter, re *http.Request) *User {
-	u := &User{username: username, queue: queue, writer: writer, remoteAddress: re.RemoteAddr}
+func NewUser(username string, queue *util.Queue, context *core.Context, writer http.ResponseWriter, re *http.Request) *User {
+	u := &User{username: username, context: context, queue: queue, writer: writer, remoteAddress: re.RemoteAddr}
 	u.groupIds = util.GetGroupIds(re)
 	return u
 }

@@ -5,7 +5,6 @@ import (
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
-	"log"
 	"net/http"
 )
 
@@ -16,6 +15,7 @@ type Query struct {
 
 func (query *Query) Init() {
 	query.AddQuery("/queryUser", query.queryUser, query.queryUserApi)
+	query.AddQuery("/queryHistory", query.queryHistory, query.queryHistoryApi)
 	query.AddQuery("/onlineUser", query.onlineUser, query.onlineUserApi)
 	query.AddQuery("/sendGroupMsg", query.sendGroupMsg, query.sendGroupMsgApi)
 }
@@ -23,6 +23,28 @@ func (query *Query) AddQuery(handleName string, handle core.RegisterHandle, hand
 	query.context.RegisterHandle(handleName, handle)
 	query.server.AddHttpRoute(handleName, handler)
 }
+
+func (query *Query) queryHistory(parameter *core.Parameter) any {
+	id := core.GetUsername(parameter)
+	var history = &History{}
+	log, fa := query.context.GetHistory(id)
+	if fa {
+		history.History = &Log{Username: log.Username, OnlineTime: util.FormatTime(log.OnlineTime), OfflineTime: util.FormatTime(log.OfflineTime)}
+	}
+	machineInfoId, ok := query.getMachineInfoId(parameter)
+	if ok {
+		history.Machine = machineInfoId
+	}
+	return history
+}
+
+func (query *Query) queryHistoryApi(writer http.ResponseWriter, request *http.Request) {
+	parameter := core.NewParameter(request)
+	value := query.context.Query(parameter)
+	data, _ := json.Marshal(value)
+	writer.Write(data)
+}
+
 func (query *Query) queryUserApi(w http.ResponseWriter, re *http.Request) {
 	parameter := core.NewParameter(re)
 	value := query.context.Query(parameter)
@@ -36,10 +58,7 @@ func (query *Query) queryUser(parameter *core.Parameter) any {
 		u.Machine = machineInfoId
 	}
 	u.Conn = make([]*Conn, 0)
-	data, _ := json.Marshal(parameter)
-	log.Println(string(data))
 	id := core.GetUsername(parameter)
-	log.Println("id", id)
 	if len(id) > 0 {
 		us, fa := query.context.GetUser(id)
 		if fa {
@@ -158,6 +177,16 @@ type Conn struct {
 	RemoteAddress string
 	LastLiveTime  string
 	CreateTime    string
+}
+
+type History struct {
+	Machine any
+	History *Log
+}
+type Log struct {
+	Username    string
+	OnlineTime  string
+	OfflineTime string
 }
 
 func newConn(RemoteAddress string, LastLiveTime string, CreateTime string) *Conn {
