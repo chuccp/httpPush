@@ -41,6 +41,7 @@ func (context *Context) SetForward(forward IForward) {
 }
 func (context *Context) AddUser(iUser user.IUser) {
 	if context.userStore.AddUser(iUser) {
+		context.log.Info("新增用户", zap.String("username", iUser.GetUsername()), zap.String("remoteAddress", iUser.GetRemoteAddress()))
 		context.msgDock.HandleAddUser(iUser)
 	}
 }
@@ -60,6 +61,7 @@ func (context *Context) RangeUser(f func(username string, user *user.StoreUser) 
 
 func (context *Context) DeleteUser(iUser user.IUser) bool {
 	if context.userStore.DeleteUser(iUser) {
+		context.log.Info("用户离线", zap.String("username", iUser.GetUsername()), zap.String("remoteAddress", iUser.GetRemoteAddress()))
 		context.msgDock.HandleDeleteUser(iUser.GetUsername())
 		return true
 	}

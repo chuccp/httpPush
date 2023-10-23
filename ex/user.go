@@ -7,7 +7,7 @@ import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
-	"log"
+	"go.uber.org/zap"
 	"net/http"
 	"time"
 )
@@ -41,10 +41,11 @@ func (u *User) GetId() string {
 }
 
 func (u *User) waitMessage() {
-	log.Println("收到信息：剩余消息:{}===延时:{}", u.liveTime)
+
+	u.context.GetLog().Debug("等待信息", zap.Int("liveTime", u.liveTime))
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(u.liveTime)*time.Second)
 	v, num, cls := u.queue.Dequeue(ctx)
-	log.Println("收到信息：剩余消息:{}===延时:{}", num, cls)
+	u.context.GetLog().Debug("收到信息：剩余消息", zap.Int32("num", num), zap.Bool("cls", cls))
 	if cls {
 		u.writer.Write([]byte("[]"))
 	} else {
