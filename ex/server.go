@@ -2,7 +2,7 @@ package ex
 
 import (
 	"github.com/chuccp/httpPush/core"
-	"log"
+	"go.uber.org/zap"
 	"net/http"
 	"sync"
 	"time"
@@ -38,7 +38,8 @@ func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
 	server.rLock.RLock()
 	client, ok := server.store.LoadOrStore(cl)
 	if !ok {
-		log.Println("新增用户：", cl.username)
+		//log.Println("新增用户：", cl.username)
+		server.context.GetLog().Debug("新增连接", zap.String("username", cl.username), zap.String("remoteAddress", re.RemoteAddr))
 	}
 	user := client.loadUser(writer, re)
 	server.rLock.RUnlock()
