@@ -2,7 +2,6 @@ package cluster
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/util"
@@ -29,7 +28,8 @@ type operate struct {
 }
 
 func NewClient(remoteMachine *Machine, localMachine *Machine, context *core.Context) *client {
-	return &client{request: util.NewRequest(), isHandshake: false, remoteMachine: remoteMachine, localMachine: localMachine, context: context}
+
+	return &client{request: util.NewRequest(), remoteLink: remoteMachine.Link, isHandshake: false, remoteMachine: remoteMachine, localMachine: localMachine, context: context}
 }
 func (client *client) run() {
 	err := client.initial()
@@ -142,12 +142,14 @@ func (client *client) initial() error {
 	} else {
 		call, err := client.request.Call(path, marshal)
 		if err != nil {
-			return fmt.Errorf("initial Call err:%s", err.Error())
+			client.context.GetLog().Error("网络请求错误", zap.Error(err))
+			return err
 		} else {
 			var liteMachine LiteMachine
 			err = json.Unmarshal(call, &liteMachine)
 			if err != nil {
-				return fmt.Errorf("initial Call json.Unmarshal err:%s", err.Error())
+				client.context.GetLog().Error("网络请求错误", zap.Error(err))
+				return err
 			}
 			client.remoteMachine.MachineId = liteMachine.MachineId
 			client.remoteLink = liteMachine.Link
@@ -185,6 +187,7 @@ func (s *store) addConfigMachine(remoteMachine *Machine) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	client := NewClient(remoteMachine, s.localMachine, s.context)
+	client.context.GetLog().Info("添加临时集群节点", zap.String("link", client.remoteLink))
 	s.tempClientMap.Store(client.remoteLink, client)
 }
 
@@ -216,6 +219,7 @@ func (s *store) moveStoreToTemp(client *client) {
 	defer s.lock.Unlock()
 	_, fa := s.clientMap.LoadAndDelete(client.remoteMachine.MachineId)
 	if fa {
+		client.context.GetLog().Info("添加临时集群节点", zap.String("link", client.remoteLink))
 		s.tempClientMap.Store(client.remoteLink, client)
 		s.num--
 	}
