@@ -141,7 +141,6 @@ func (server *Server) WriteMessage(msg message.IMessage, writeFunc user.WriteCal
 	}
 	writeFunc(nil, false)
 }
-
 func (server *Server) Init(context *core.Context) {
 	server.context = context
 	context.SetForward(server)
@@ -249,7 +248,7 @@ func (server *Server) machineAddress(parameter *core.Parameter) any {
 	}
 	c, ok := server.clientOperate.getClient(machineId)
 	if ok {
-		return c.remoteMachine.Address
+		return c.remoteMachine.Address + ":" + strconv.Itoa(c.remoteMachine.Port)
 	}
 	return ""
 }

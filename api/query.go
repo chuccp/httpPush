@@ -18,7 +18,37 @@ func (query *Query) Init() {
 	query.AddQuery("/queryHistory", query.queryHistory, query.queryHistoryApi)
 	query.AddQuery("/onlineUser", query.onlineUser, query.onlineUserApi)
 	query.AddQuery("/sendGroupMsg", query.sendGroupMsg, query.sendGroupMsgApi)
+	query.AddQuery("/info_user", query.clusterInfo, query.clusterInfoApi)
+
 }
+
+func (query *Query) clusterInfoApi(writer http.ResponseWriter, request *http.Request) {
+	parameter := core.NewParameter(request)
+	values := query.context.Query(parameter).([]any)
+	machineInfos := make([]*MachineInfo, 0)
+	for _, value := range values {
+		machineInfo := value.(*MachineInfo)
+		machineInfo.Address, _ = query.getMachineAddress(machineInfo.MachineId, parameter)
+		machineInfos = append(machineInfos, machineInfo)
+	}
+	data, _ := json.Marshal(machineInfos)
+	writer.Write(data)
+}
+
+type MachineInfo struct {
+	UserNum   int
+	MachineId string
+	Address   string
+}
+
+func (query *Query) clusterInfo(parameter *core.Parameter) any {
+	var machineInfo MachineInfo
+	machineInfo.UserNum = query.context.GetUserNum()
+	machineId, _ := query.getMachineInfoId(parameter)
+	machineInfo.MachineId = machineId
+	return &machineInfo
+}
+
 func (query *Query) AddQuery(handleName string, handle core.RegisterHandle, handler func(http.ResponseWriter, *http.Request)) {
 	query.context.RegisterHandle(handleName, handle)
 	query.server.AddHttpRoute(handleName, handler)

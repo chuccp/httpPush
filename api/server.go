@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/util"
 	"net/http"
@@ -33,9 +34,15 @@ func (server *Server) sendMsg(w http.ResponseWriter, re *http.Request) {
 		w.Write([]byte("NO user"))
 	}
 }
-
+func (server *Server) root(writer http.ResponseWriter, request *http.Request) {
+	var dm = make(map[string]interface{})
+	dm["version"] = core.VERSION
+	data, _ := json.Marshal(dm)
+	writer.Write(data)
+}
 func (server *Server) Start() error {
 	server.AddHttpRoute("/sendmsg", server.sendMsg)
+	server.AddHttpRoute("/root_version", server.root)
 	server.query.Init()
 	return nil
 }
