@@ -99,8 +99,12 @@ func (query *Query) onlineUser(parameter *core.Parameter) any {
 		size = 10
 	}
 	index := parameter.GetInt("index")
-	num := size / total
-	yu := size % total
+	num := 0
+	yu := size
+	if total != 0 {
+		num = size / total
+		yu = size % total
+	}
 	if yu > index {
 		num = num + 1
 	}

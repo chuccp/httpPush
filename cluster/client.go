@@ -316,7 +316,13 @@ func (ms *ClientOperate) Query(parameter *core.Parameter, localValue any) []any 
 			parameter.SetString("index", strconv.Itoa(index))
 			v, err := client.query(parameter, localValue)
 			if err == nil && v != nil {
-				vs = append(vs, v)
+				v1, ok := v.(*interface{})
+				if ok {
+					vs = append(vs, *v1)
+				} else {
+					vs = append(vs, v)
+				}
+
 			}
 		}
 		return true
