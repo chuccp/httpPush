@@ -62,6 +62,7 @@ func (server *Server) queryMachineList(w http.ResponseWriter, re *http.Request) 
 	err := UnmarshalJsonBody(re, &liteMachine)
 	if err == nil {
 		machine, err := parseLiteMachine(&liteMachine, re)
+
 		if err == nil {
 			server.clientOperate.addNewMachine(machine)
 			marshal, err := json.Marshal(server.clientOperate.getMachineLite())

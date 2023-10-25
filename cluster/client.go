@@ -152,7 +152,7 @@ func (client *client) initial() error {
 				return err
 			}
 			client.remoteMachine.MachineId = liteMachine.MachineId
-			client.remoteLink = liteMachine.Link
+			client.remoteLink = client.remoteMachine.Link
 			if liteMachine.MachineId == client.localMachine.MachineId {
 				client.isLocal = true
 			} else {
@@ -206,6 +206,7 @@ func (s *store) deleteTemp(remoteLink string) {
 func (s *store) moveTempToStore(client *client) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
+	client.context.GetLog().Info("moveTempToStore", zap.String("link", client.remoteLink), zap.String("MachineId", client.remoteMachine.MachineId))
 	s.tempClientMap.Delete(client.remoteLink)
 	_, fa := s.clientMap.LoadOrStore(client.remoteMachine.MachineId, client)
 	if fa {
@@ -219,7 +220,7 @@ func (s *store) moveStoreToTemp(client *client) {
 	defer s.lock.Unlock()
 	_, fa := s.clientMap.LoadAndDelete(client.remoteMachine.MachineId)
 	if fa {
-		client.context.GetLog().Info("添加临时集群节点", zap.String("link", client.remoteLink))
+		client.context.GetLog().Info("moveStoreToTemp", zap.String("link", client.remoteLink))
 		s.tempClientMap.Store(client.remoteLink, client)
 		s.num--
 	}
@@ -246,13 +247,18 @@ func (s *store) eachStoreClient(f func(machineId string, client *client) bool) {
 
 // 如果没有存储机器，则添加为临时机器
 func (s *store) addNewClient(client *client) {
+	client.context.GetLog().Debug("addNewClient", zap.String("remoteMachine.MachineId", client.remoteMachine.MachineId), zap.String("localMachine.MachineId", s.localMachine.MachineId))
 	if client.remoteMachine.MachineId != s.localMachine.MachineId {
+		client.context.GetLog().Debug("不是本机添加", zap.String("remoteMachine.MachineId", client.remoteMachine.MachineId), zap.String("localMachine.MachineId", s.localMachine.MachineId))
 		s.lock.Lock()
 		defer s.lock.Unlock()
 		machineId := client.remoteMachine.MachineId
 		_, ok := s.clientMap.Load(machineId)
 		if !ok {
+			client.context.GetLog().Info("addNewClient", zap.String("link", client.remoteLink))
 			s.tempClientMap.Store(client.remoteLink, client)
+		} else {
+			client.context.GetLog().Info("addNewClient 已存在不添加", zap.String("link", client.remoteLink))
 		}
 	}
 }
@@ -353,6 +359,7 @@ func (ms *ClientOperate) live() {
 						if err != nil {
 							ms.context.GetLog().Error("parseLink", zap.String("client.remoteLink", client.remoteLink), zap.Error(err))
 						} else {
+							m.MachineId = machine.MachineId
 							client := NewClient(m, ms.localMachine, ms.context)
 							ms.store.addNewClient(client)
 						}
