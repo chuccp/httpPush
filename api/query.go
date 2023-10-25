@@ -23,15 +23,16 @@ func (query *Query) Init() {
 }
 
 func (query *Query) clusterInfoApi(writer http.ResponseWriter, request *http.Request) {
+	machineInfoView := &MachineInfos{Total: 0, List: make([]*MachineInfo, 0)}
 	parameter := core.NewParameter(request)
 	values := query.context.Query(parameter).([]any)
-	machineInfos := make([]*MachineInfo, 0)
 	for _, value := range values {
 		machineInfo := value.(*MachineInfo)
 		machineInfo.Address, _ = query.getMachineAddress(machineInfo.MachineId, parameter)
-		machineInfos = append(machineInfos, machineInfo)
+		machineInfoView.List = append(machineInfoView.List, machineInfo)
+		machineInfoView.Total = machineInfoView.Total + machineInfo.UserNum
 	}
-	data, _ := json.Marshal(machineInfos)
+	data, _ := json.Marshal(machineInfoView)
 	writer.Write(data)
 }
 
@@ -39,6 +40,10 @@ type MachineInfo struct {
 	UserNum   int
 	MachineId string
 	Address   string
+}
+type MachineInfos struct {
+	Total int
+	List  []*MachineInfo
 }
 
 func (query *Query) clusterInfo(parameter *core.Parameter) any {
