@@ -258,7 +258,7 @@ func (s *store) addNewClient(client *client) {
 			client.context.GetLog().Info("addNewClient", zap.String("link", client.remoteLink))
 			s.tempClientMap.Store(client.remoteLink, client)
 		} else {
-			client.context.GetLog().Info("addNewClient 已存在不添加", zap.String("link", client.remoteLink))
+			client.context.GetLog().Debug("addNewClient 已存在不添加", zap.String("link", client.remoteLink))
 		}
 	}
 }
