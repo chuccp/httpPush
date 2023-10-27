@@ -34,7 +34,7 @@ func NewRequest() *Request {
 		Transport: http.DefaultTransport,
 		Retries:   3,
 	}
-	ct := http.Client{Timeout: time.Second * 3, Transport: retryTransport}
+	ct := http.Client{Timeout: time.Second * 10, Transport: retryTransport}
 	return &Request{client: &ct}
 }
 func (r *Request) Call(link string, jsonData []byte) ([]byte, error) {

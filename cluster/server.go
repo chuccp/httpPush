@@ -41,13 +41,13 @@ func (server *Server) initial(w http.ResponseWriter, re *http.Request) {
 	var liteMachine LiteMachine
 	err := UnmarshalJsonBody(re, &liteMachine)
 	if err == nil {
-		server.context.GetLog().Info("接收客户端的握手", zap.String("liteMachine.Link", liteMachine.Link))
+		server.context.GetLog().Info("接收客户端的握手", zap.String("liteMachine.Link", liteMachine.Link), zap.String("remoteAddress", re.RemoteAddr))
 		machine, err := parseLiteMachine(&liteMachine, re)
 		if err == nil {
 			marshal, err := json.Marshal(server.localMachine.getLiteMachine())
 			if err == nil {
 				server.clientOperate.addNewMachine(machine)
-				server.context.GetLog().Info("回馈客户端的握手信息", zap.ByteString("body", marshal))
+				server.context.GetLog().Debug("回馈客户端的握手信息", zap.ByteString("body", marshal))
 				w.Write(marshal)
 				return
 			}
@@ -60,6 +60,7 @@ func (server *Server) initial(w http.ResponseWriter, re *http.Request) {
 func (server *Server) queryMachineList(w http.ResponseWriter, re *http.Request) {
 	var liteMachine LiteMachine
 	err := UnmarshalJsonBody(re, &liteMachine)
+	server.context.GetLog().Debug("接收客户端的查询", zap.String("liteMachine.Link", liteMachine.Link), zap.String("remoteAddress", re.RemoteAddr))
 	if err == nil {
 		machine, err := parseLiteMachine(&liteMachine, re)
 		if err == nil {
@@ -193,6 +194,7 @@ func (server *Server) deleteUser(writer http.ResponseWriter, request *http.Reque
 	err := UnmarshalJsonBody(request, &us)
 	if err == nil {
 		for _, u := range us {
+			server.context.GetLog().Debug("收到用户删除", zap.String("userId", u.UserId), zap.String("MachineId", u.MachineId))
 			server.userStore.DeleteUser(u.UserId)
 		}
 	}
@@ -202,6 +204,7 @@ func (server *Server) addUser(writer http.ResponseWriter, request *http.Request)
 	err := UnmarshalJsonBody(request, &us)
 	if err == nil {
 		for _, u := range us {
+			server.context.GetLog().Debug("收到用户添加", zap.String("userId", u.UserId), zap.String("MachineId", u.MachineId))
 			server.userStore.AddUser(u.UserId, u.MachineId)
 		}
 	}
