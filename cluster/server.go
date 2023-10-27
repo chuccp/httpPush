@@ -79,6 +79,7 @@ func (server *Server) queryMachineList(w http.ResponseWriter, re *http.Request) 
 func (server *Server) query(w http.ResponseWriter, re *http.Request) {
 	var parameter core.Parameter
 	err := UnmarshalJsonBody(re, &parameter)
+	server.context.GetLog().Debug("收到查询", zap.Any("parameter", &parameter))
 	if err != nil {
 		return
 	} else {
