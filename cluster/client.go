@@ -291,11 +291,11 @@ func (ms *ClientOperate) addNewMachine(machine *Machine) {
 	ms.store.addNewClient(client)
 
 }
-func (ms *ClientOperate) sendTextMsg(msg *message.TextMessage, exMachineId string) (string, error) {
-	var _err_ error = core.NoFoundUser
+func (ms *ClientOperate) sendTextMsg(msg *message.TextMessage, exMachineIds ...string) (string, error) {
+	var _err_ = core.NoFoundUser
 	machineId := ""
 	ms.store.eachStoreClient(func(machineId string, client *client) bool {
-		if client.HasConn() && client.remoteMachine.MachineId != exMachineId {
+		if client.HasConn() && (len(exMachineIds) == 0 || !util.ContainsInArray(exMachineIds, client.remoteMachine.MachineId)) {
 			err := client.sendTextMsg(msg)
 			_err_ = err
 			if err == nil {

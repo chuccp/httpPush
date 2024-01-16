@@ -17,6 +17,7 @@ type User struct {
 	username      string
 	remoteAddress string
 	liveTime      int
+	priority      int
 	writer        http.ResponseWriter
 	lastLiveTime  *time.Time
 	createTime    *time.Time
@@ -107,6 +108,15 @@ func (u *User) CreateTime() *time.Time {
 	return u.createTime
 }
 
+func (u *User) GetPriority() int {
+	return u.priority
+}
+func (u *User) GetMachineId() string {
+	return ""
+}
+func (u *User) GetOrderTime() *time.Time {
+	return u.lastLiveTime
+}
 func NewUser(username string, queue *util.Queue, context *core.Context, writer http.ResponseWriter, re *http.Request) *User {
 	u := &User{username: username, context: context, queue: queue, writer: writer, remoteAddress: re.RemoteAddr}
 	u.groupIds = util.GetGroupIds(re)

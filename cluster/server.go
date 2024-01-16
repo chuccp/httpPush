@@ -111,28 +111,19 @@ func (server *Server) Query(parameter *core.Parameter, localValue any) []any {
 	return server.clientOperate.Query(parameter, localValue)
 }
 
-func (server *Server) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc) {
+func (server *Server) GetOrderUser(username string) ([]user.IOrderUser, bool) {
+	return server.userStore.GetOrderUser(username)
+}
+
+func (server *Server) WriteMessage(msg message.IMessage, exMachineId []string, writeFunc user.WriteCallBackFunc) {
+
 	switch t := msg.(type) {
 	case *message.TextMessage:
 		{
-			exMachineId := ""
 			un := t.GetString(message.To)
-			cu, ok := server.userStore.GetUser(un)
-			if ok {
-				cl, ok := server.clientOperate.getClient(cu.machineId)
-				if ok {
-					err := cl.sendTextMsg(t)
-					if err == nil {
-						writeFunc(nil, true)
-						return
-					} else {
-						exMachineId = cl.remoteMachine.MachineId
-					}
-				}
-			}
-			machineId, err := server.clientOperate.sendTextMsg(t, exMachineId)
+			machineId, err := server.clientOperate.sendTextMsg(t, exMachineId...)
 			if err == nil {
-				server.userStore.AddUser(un, machineId)
+				server.userStore.AddUser(un, machineId, server.clientOperate)
 				writeFunc(nil, true)
 				return
 			} else {
@@ -196,7 +187,7 @@ func (server *Server) deleteUser(writer http.ResponseWriter, request *http.Reque
 	if err == nil {
 		for _, u := range us {
 			server.context.GetLog().Debug("收到用户删除", zap.String("userId", u.UserId), zap.String("MachineId", u.MachineId))
-			server.userStore.DeleteUser(u.UserId)
+			server.userStore.DeleteUser(u.UserId, u.MachineId)
 		}
 	}
 }
@@ -206,7 +197,7 @@ func (server *Server) addUser(writer http.ResponseWriter, request *http.Request)
 	if err == nil {
 		for _, u := range us {
 			server.context.GetLog().Debug("收到用户添加", zap.String("userId", u.UserId), zap.String("MachineId", u.MachineId))
-			server.userStore.AddUser(u.UserId, u.MachineId)
+			server.userStore.AddUser(u.UserId, u.MachineId, server.clientOperate)
 		}
 	}
 }

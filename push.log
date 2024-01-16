@@ -1,27 +1,11 @@
-{"level":"info","ts":"2023-10-25 10:19:18","caller":"core/server.go:70","msg":"服务名称与端口","name":"api","port":8083}
-{"level":"info","ts":"2023-10-25 10:19:18","caller":"core/server.go:70","msg":"服务名称与端口","name":"cluster","port":8083}
-{"level":"info","ts":"2023-10-25 10:19:18","caller":"cluster/server.go:153","msg":"machineId配置","machineId":"b74hg3"}
-{"level":"info","ts":"2023-10-25 10:19:18","caller":"cluster/client.go:190","msg":"添加临时集群节点","link":"http://127.0.0.1:8083"}
-{"level":"info","ts":"2023-10-25 10:19:18","caller":"core/server.go:70","msg":"服务名称与端口","name":"ex","port":8083}
-{"level":"info","ts":"2023-10-25 10:19:18","caller":"cluster/server.go:44","msg":"接收客户端的握手","liteMachine.Link":"http://0.0.0.0:8089"}
-{"level":"info","ts":"2023-10-25 10:19:18","caller":"cluster/client.go:258","msg":"addNewClient","link":"http://127.0.0.1:8089"}
-{"level":"info","ts":"2023-10-25 10:19:18","caller":"cluster/server.go:50","msg":"回馈客户端的握手信息","body":"{\"Link\":\"http://0.0.0.0:8083\",\"MachineId\":\"b74hg3\"}"}
-{"level":"info","ts":"2023-10-25 10:19:19","caller":"cluster/server.go:44","msg":"接收客户端的握手","liteMachine.Link":"http://0.0.0.0:8083"}
-{"level":"info","ts":"2023-10-25 10:19:19","caller":"cluster/server.go:50","msg":"回馈客户端的握手信息","body":"{\"Link\":\"http://0.0.0.0:8083\",\"MachineId\":\"b74hg3\"}"}
-{"level":"info","ts":"2023-10-25 10:19:19","caller":"cluster/client.go:332","msg":"连接到自己，不在尝试连接"}
-{"level":"info","ts":"2023-10-25 10:19:23","caller":"cluster/client.go:258","msg":"addNewClient","link":"http://127.0.0.1:8089"}
-{"level":"info","ts":"2023-10-25 10:19:24","caller":"cluster/client.go:209","msg":"moveTempToStore","link":"http://127.0.0.1:8089","MachineId":"who98t"}
-{"level":"info","ts":"2023-10-25 10:19:28","caller":"cluster/server.go:44","msg":"接收客户端的握手","liteMachine.Link":"http://0.0.0.0:8089"}
-{"level":"info","ts":"2023-10-25 10:19:28","caller":"cluster/client.go:261","msg":"addNewClient 已存在不添加","link":"http://127.0.0.1:8089"}
-{"level":"info","ts":"2023-10-25 10:19:28","caller":"cluster/server.go:50","msg":"回馈客户端的握手信息","body":"{\"Link\":\"http://0.0.0.0:8083\",\"MachineId\":\"b74hg3\"}"}
-{"level":"info","ts":"2023-10-25 10:19:29","caller":"cluster/client.go:43","msg":"查询","client.remoteMachine.Link":"http://127.0.0.1:8089","query":"/_cluster/queryMachineList"}
-{"level":"info","ts":"2023-10-25 10:19:33","caller":"cluster/client.go:261","msg":"addNewClient 已存在不添加","link":"http://127.0.0.1:8089"}
-{"level":"info","ts":"2023-10-25 10:19:38","caller":"cluster/server.go:44","msg":"接收客户端的握手","liteMachine.Link":"http://0.0.0.0:8089"}
-{"level":"info","ts":"2023-10-25 10:19:38","caller":"cluster/client.go:261","msg":"addNewClient 已存在不添加","link":"http://127.0.0.1:8089"}
-{"level":"info","ts":"2023-10-25 10:19:38","caller":"cluster/server.go:50","msg":"回馈客户端的握手信息","body":"{\"Link\":\"http://0.0.0.0:8083\",\"MachineId\":\"b74hg3\"}"}
-{"level":"info","ts":"2023-10-25 10:19:39","caller":"cluster/client.go:43","msg":"查询","client.remoteMachine.Link":"http://127.0.0.1:8089","query":"/_cluster/queryMachineList"}
-{"level":"info","ts":"2023-10-25 10:19:43","caller":"cluster/client.go:261","msg":"addNewClient 已存在不添加","link":"http://127.0.0.1:8089"}
-{"level":"info","ts":"2023-10-25 10:19:48","caller":"cluster/server.go:44","msg":"接收客户端的握手","liteMachine.Link":"http://0.0.0.0:8089"}
-{"level":"info","ts":"2023-10-25 10:19:48","caller":"cluster/client.go:261","msg":"addNewClient 已存在不添加","link":"http://127.0.0.1:8089"}
-{"level":"info","ts":"2023-10-25 10:19:48","caller":"cluster/server.go:50","msg":"回馈客户端的握手信息","body":"{\"Link\":\"http://0.0.0.0:8083\",\"MachineId\":\"b74hg3\"}"}
-{"level":"info","ts":"2023-10-25 10:19:49","caller":"cluster/client.go:43","msg":"查询","client.remoteMachine.Link":"http://127.0.0.1:8089","query":"/_cluster/queryMachineList"}
+{"level":"info","ts":"2024-01-16 11:00:33","caller":"core/server.go:70","msg":"服务名称与端口","name":"api","port":8083}
+{"level":"info","ts":"2024-01-16 11:00:33","caller":"core/server.go:70","msg":"服务名称与端口","name":"cluster","port":8083}
+{"level":"info","ts":"2024-01-16 11:00:33","caller":"cluster/server.go:144","msg":"machineId配置","machineId":"b74hg3"}
+{"level":"info","ts":"2024-01-16 11:00:33","caller":"cluster/client.go:190","msg":"添加临时集群节点","link":"http://127.0.0.1:8083"}
+{"level":"info","ts":"2024-01-16 11:00:33","caller":"core/server.go:70","msg":"服务名称与端口","name":"ex","port":8083}
+{"level":"info","ts":"2024-01-16 11:00:34","caller":"cluster/server.go:44","msg":"接收客户端的握手","liteMachine.Link":"http://0.0.0.0:8083","remoteAddress":"127.0.0.1:10190"}
+{"level":"info","ts":"2024-01-16 11:00:34","caller":"cluster/client.go:338","msg":"连接到自己，不在尝试连接"}
+{"level":"info","ts":"2024-01-16 11:21:10","caller":"core/context.go:44","msg":"新增用户","username":"234","remoteAddress":"127.0.0.1:10704"}
+{"level":"info","ts":"2024-01-16 11:21:26","caller":"core/context.go:64","msg":"用户离线","username":"234","remoteAddress":"127.0.0.1:10704"}
+{"level":"info","ts":"2024-01-16 11:22:15","caller":"core/context.go:44","msg":"新增用户","username":"234","remoteAddress":"127.0.0.1:10704"}
+{"level":"info","ts":"2024-01-16 11:22:57","caller":"core/context.go:64","msg":"用户离线","username":"234","remoteAddress":"127.0.0.1:10762"}

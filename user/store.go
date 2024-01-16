@@ -45,6 +45,15 @@ func (u *StoreUser) getUsers() []IUser {
 	}
 	return us
 }
+func (u *StoreUser) getOrderUser() []IOrderUser {
+	u.rLock.RLock()
+	defer u.rLock.RUnlock()
+	us := make([]IOrderUser, 0)
+	for _, user := range u.store {
+		us = append(us, user)
+	}
+	return us
+}
 func (u *StoreUser) num() int {
 	u.rLock.RLock()
 	defer u.rLock.RUnlock()
@@ -182,6 +191,15 @@ func (store *Store) GetUser(username string) ([]IUser, bool) {
 	if ok {
 		us := v.(*StoreUser)
 		return us.getUsers(), true
+	}
+	return nil, false
+}
+
+func (store *Store) GetOrderUser(username string) ([]IOrderUser, bool) {
+	v, ok := store.uMap.Load(username)
+	if ok {
+		us := v.(*StoreUser)
+		return us.getOrderUser(), true
 	}
 	return nil, false
 }

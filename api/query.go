@@ -19,7 +19,6 @@ func (query *Query) Init() {
 	query.AddQuery("/onlineUser", query.onlineUser, query.onlineUserApi)
 	query.AddQuery("/sendGroupMsg", query.sendGroupMsg, query.sendGroupMsgApi)
 	query.AddQuery("/info_user", query.clusterInfo, query.clusterInfoApi)
-
 }
 
 func (query *Query) clusterInfoApi(writer http.ResponseWriter, request *http.Request) {
