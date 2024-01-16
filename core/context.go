@@ -33,6 +33,21 @@ func newContext(register *Register) *Context {
 func (context *Context) GetHttpPush() *HttpPush {
 	return context.httpPush
 }
+func (context *Context) GetUserAllOrder(username string) []user.IOrderUser {
+
+	var us = make([]user.IOrderUser, 0)
+	us1, fa := context.userStore.GetOrderUser(username)
+	if fa && us1 != nil {
+		us = append(us, us1...)
+	}
+	if context.msgDock.IForward != nil {
+		us2, fa := context.msgDock.IForward.GetOrderUser(username)
+		if fa && us2 != nil {
+			us = append(us, us2...)
+		}
+	}
+	return us
+}
 func (context *Context) GetLog() *zap.Logger {
 	return context.log
 }

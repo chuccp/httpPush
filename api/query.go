@@ -19,6 +19,9 @@ func (query *Query) Init() {
 	query.AddQuery("/onlineUser", query.onlineUser, query.onlineUserApi)
 	query.AddQuery("/sendGroupMsg", query.sendGroupMsg, query.sendGroupMsgApi)
 	query.AddQuery("/info_user", query.clusterInfo, query.clusterInfoApi)
+
+	query.AddQuery("/queryOrderInfo", query.queryOrderInfo, query.queryOrderInfoApi)
+
 }
 
 func (query *Query) clusterInfoApi(writer http.ResponseWriter, request *http.Request) {
@@ -198,6 +201,23 @@ func (query *Query) sendGroupMsgApi(writer http.ResponseWriter, request *http.Re
 	daMap["total"] = total
 	daMap["list"] = values
 	data, _ := json.Marshal(daMap)
+	writer.Write(data)
+}
+
+func (query *Query) queryOrderInfo(parameter *core.Parameter) any {
+	userId := parameter.GetVString("userId", "username", "id")
+	us := query.context.GetUserAllOrder(userId)
+	ous := make([]*OrderUser, 0)
+	for _, u := range us {
+		ous = append(ous, &OrderUser{Priority: u.GetPriority(), MachineId: u.GetMachineId(), OrderTime: util.FormatTime(u.GetOrderTime())})
+	}
+	return ous
+}
+
+func (query *Query) queryOrderInfoApi(writer http.ResponseWriter, request *http.Request) {
+	parameter := core.NewParameter(request)
+	value := query.context.Query(parameter)
+	data, _ := json.Marshal(value)
 	writer.Write(data)
 }
 

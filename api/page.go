@@ -31,3 +31,8 @@ type GroupMsg struct {
 	Num            int32
 	MachineId      string
 }
+type OrderUser struct {
+	Priority  int
+	MachineId string
+	OrderTime string
+}

@@ -40,7 +40,7 @@ func (client *client) run() {
 	}
 }
 func (client *client) queryList() ([]*LiteMachine, error) {
-	client.context.GetLog().Info("查询", zap.String("client.remoteMachine.Link", client.remoteMachine.Link), zap.String("query", "/_cluster/queryMachineList"))
+	client.context.GetLog().Debug("查询", zap.String("client.remoteMachine.Link", client.remoteMachine.Link), zap.String("query", "/_cluster/queryMachineList"))
 	marshal, err := json.Marshal(client.localMachine.getLiteMachine())
 	if err != nil {
 		return nil, err
