@@ -82,7 +82,9 @@ func (u *cu) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc
 			}
 		}
 	}
-	u.priority = 1
+	if u.priority < 5 {
+		u.priority = u.priority + 1
+	}
 	writeFunc(nil, false)
 }
 
@@ -93,7 +95,7 @@ func (u *cu) CreateTime() string {
 	return u.createTime.Format(util.TimestampFormat)
 }
 func newCu(username string, machineId string, clientOperate *ClientOperate) *cu {
-	u := &cu{username: username, machineId: machineId, clientOperate: clientOperate}
+	u := &cu{username: username, machineId: machineId, clientOperate: clientOperate, priority: 0}
 	tu := time.Now()
 	u.createTime = &tu
 	return u

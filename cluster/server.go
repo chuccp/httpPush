@@ -116,7 +116,6 @@ func (server *Server) GetOrderUser(username string) ([]user.IOrderUser, bool) {
 }
 
 func (server *Server) WriteMessage(msg message.IMessage, exMachineId []string, writeFunc user.WriteCallBackFunc) {
-
 	switch t := msg.(type) {
 	case *message.TextMessage:
 		{
