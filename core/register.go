@@ -49,7 +49,12 @@ func (httpPush *HttpPush) startHttpServer() error {
 	port := httpPush.context.GetCfgInt("core", "http.port")
 	certFile := httpPush.context.GetCfgString("core", "http.certFile")
 	keyFile := httpPush.context.GetCfgString("core", "http.keyFile")
-	return httpPush.httpServer.StartAutoTLS(port, certFile, keyFile)
+	err := httpPush.httpServer.StartAutoTLS(port, certFile, keyFile)
+	if err != nil {
+		httpPush.context.log.Error("服务启动失败", zap.String("name", "httpPush"), zap.Int("port", port), zap.Error(err))
+		return err
+	}
+	return nil
 }
 
 const (
@@ -101,7 +106,7 @@ func (httpPush *HttpPush) Start() error {
 			go func() {
 				err := s.start()
 				if err != nil {
-					log.Print(err)
+					log.Panic(err)
 				}
 			}()
 		}
@@ -109,7 +114,7 @@ func (httpPush *HttpPush) Start() error {
 		go func() {
 			err := server.Start()
 			if err != nil {
-				log.Print(err)
+				log.Panic(err)
 			}
 		}()
 	})

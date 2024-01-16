@@ -72,7 +72,12 @@ func (server *httpServer) init(context *Context) {
 }
 func (server *httpServer) start() error {
 	if server.port > 0 {
-		return server.httpServer.StartAutoTLS(server.port, server.certFile, server.keyFile)
+		err := server.httpServer.StartAutoTLS(server.port, server.certFile, server.keyFile)
+		if err != nil {
+			server.context.log.Error("服务启动失败", zap.String("name", server.name), zap.Int("port", server.port), zap.Error(err))
+			return err
+		}
+		return nil
 	} else {
 		return nil
 	}

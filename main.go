@@ -13,7 +13,7 @@ func main() {
 
 	cfg, err := config.LoadFile("config.ini")
 	if err != nil {
-		log.Print(err)
+		log.Panic(err)
 		return
 	}
 	register := core.NewRegister(cfg)
@@ -23,6 +23,6 @@ func main() {
 	httpPush := register.Create()
 	err = httpPush.Start()
 	if err != nil {
-		log.Print(err)
+		log.Panic(err)
 	}
 }
