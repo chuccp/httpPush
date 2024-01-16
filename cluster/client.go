@@ -28,7 +28,6 @@ type operate struct {
 }
 
 func NewClient(remoteMachine *Machine, localMachine *Machine, context *core.Context) *client {
-
 	return &client{request: util.NewRequest(), remoteLink: remoteMachine.Link, isHandshake: false, remoteMachine: remoteMachine, localMachine: localMachine, context: context}
 }
 func (client *client) run() {
@@ -112,7 +111,7 @@ func (client *client) sendTextMsg(msg *message.TextMessage) error {
 	path := client.remoteMachine.Link + "/_cluster/sendTextMsg"
 	marshal, err := json.Marshal(msg)
 	if err == nil {
-		call, err := client.request.Call(path, marshal)
+		call, err := client.request.CallBreak(path, marshal)
 		if err != nil {
 			return err
 		} else {
