@@ -46,17 +46,18 @@ func (md *MsgDock) run() {
 
 func (md *MsgDock) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc) {
 	username := msg.GetString(message.To)
+	ius := make([]user.IOrderUser, 0)
 	us, fg := md.userStore.GetOrderUser(msg.GetString(message.To))
-	if !fg {
-		us = make([]user.IOrderUser, 0)
+	if fg {
+		ius = append(ius, us...)
 	}
 	if md.IForward != nil && md.IForward.WriteMessage != nil {
 		mu, fa := md.IForward.GetOrderUser(username)
 		if fa {
-			us = append(us, mu...)
+			ius = append(ius, mu...)
 		}
 	}
-	sort.Sort(user.ByAsc(us))
+	sort.Sort(user.ByAsc(ius))
 	md.sendQueue.Offer(&DockMessage{InputMessage: msg, write: writeFunc, users: us, userIndex: -1, userSize: len(us), isForward: true})
 }
 func (md *MsgDock) WriteNoForwardMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc) {
