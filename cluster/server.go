@@ -205,7 +205,9 @@ func (server *Server) sendTextMsg(writer http.ResponseWriter, request *http.Requ
 	var textMessage message.TextMessage
 	err := UnmarshalJsonBody(request, &textMessage)
 	if err == nil {
+		server.context.GetLog().Debug("收到远程信息:", zap.String("toUser", textMessage.GetString(message.To)))
 		err, fa := server.context.SendNoForwardMessage(&textMessage)
+		server.context.GetLog().Debug("收到远程信息=转发失败:", zap.String("toUser", textMessage.GetString(message.To)), zap.Bool("fa", fa), zap.Error(err))
 		if fa {
 			v, err := json.Marshal(successResponse())
 			if err == nil {

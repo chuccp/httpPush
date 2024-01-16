@@ -26,7 +26,7 @@ func newContext(register *Register) *Context {
 	context := &Context{register: register, systemInfo: make(systemInfo)}
 	context.httpPush = newHttpPush(context)
 	context.userStore = user.NewStore()
-	context.msgDock = NewMsgDock(context.userStore)
+	context.msgDock = NewMsgDock(context.userStore, context)
 	context.handleFuncMap = make(map[string]RegisterHandle)
 	return context
 }
@@ -112,7 +112,7 @@ func (context *Context) SendMessage(msg message.IMessage) (error, bool) {
 func (context *Context) SendGroupTextMessage(form string, groupId, msg string) int32 {
 	var num int32
 	waitGroup := new(sync.WaitGroup)
-	context.userStore.RangeGroupUser(groupId, func(username string) bool {
+	go context.userStore.RangeGroupUser(groupId, func(username string) bool {
 		textMsg := message.NewTextMessage(form, username, msg)
 		waitGroup.Add(1)
 		context.sendNoForwardMessage(textMsg, func(err error, hasUser bool) {
@@ -132,7 +132,7 @@ func (context *Context) SendNoForwardMessage(msg message.IMessage) (error, bool)
 	var once sync.Once
 	flag := util.GetChanBool()
 	var err_ error
-	context.sendNoForwardMessage(msg, func(err error, hasUser bool) {
+	go context.sendNoForwardMessage(msg, func(err error, hasUser bool) {
 		err_ = err
 		once.Do(func() {
 			flag <- hasUser

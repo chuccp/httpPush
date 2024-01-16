@@ -4,6 +4,8 @@ import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
+	"go.uber.org/zap"
+	"log"
 	"sort"
 )
 
@@ -32,10 +34,11 @@ type MsgDock struct {
 	sendQueue  *util.Queue
 	replyQueue *util.Queue
 	userStore  *user.Store
+	context    *Context
 }
 
-func NewMsgDock(userStore *user.Store) *MsgDock {
-	msgDock := &MsgDock{sendQueue: util.NewQueue(), replyQueue: util.NewQueue(), userStore: userStore}
+func NewMsgDock(userStore *user.Store, context *Context) *MsgDock {
+	msgDock := &MsgDock{sendQueue: util.NewQueue(), replyQueue: util.NewQueue(), userStore: userStore, context: context}
 	msgDock.run()
 	return msgDock
 }
@@ -57,14 +60,19 @@ func (md *MsgDock) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBa
 			ius = append(ius, mu...)
 		}
 	}
-	sort.Sort(user.ByAsc(ius))
+	if len(ius) > 0 {
+		sort.Sort(user.ByAsc(ius))
+	}
+	md.context.GetLog().Debug("已存在用户连接数", zap.Int("order.user.num", len(ius)))
 	md.sendQueue.Offer(&DockMessage{InputMessage: msg, write: writeFunc, users: us, userIndex: -1, userSize: len(us), isForward: true})
 }
 func (md *MsgDock) WriteNoForwardMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc) {
 	us, fg := md.userStore.GetOrderUser(msg.GetString(message.To))
+	md.context.GetLog().Debug("收到不转发信息", zap.Int("order.user.num", len(us)), zap.Bool("fa", fg))
 	if fg {
 		sort.Sort(user.ByAsc(us))
-		md.sendQueue.Offer(&DockMessage{InputMessage: msg, write: writeFunc, users: us, userIndex: -1, userSize: len(us), isForward: false})
+		num := md.sendQueue.Offer(&DockMessage{InputMessage: msg, write: writeFunc, users: us, userIndex: -1, userSize: len(us), isForward: false})
+		md.context.GetLog().Debug("收到不转发信息入库", zap.Int("dockMessage.userIndex", int(num)))
 	} else {
 		writeFunc(NoFoundUser, false)
 	}
@@ -72,6 +80,7 @@ func (md *MsgDock) WriteNoForwardMessage(msg message.IMessage, writeFunc user.Wr
 }
 func (md *MsgDock) writeUserMsg(dockMessage *DockMessage) {
 	dockMessage.userIndex++
+	md.context.GetLog().Debug("ooooooooooooooo", zap.Int("dockMessage.userIndex", dockMessage.userIndex), zap.Int("dockMessage.userSize", dockMessage.userSize))
 	if (dockMessage.userIndex) < dockMessage.userSize {
 		u := dockMessage.users[dockMessage.userIndex]
 		u.WriteMessage(dockMessage.InputMessage, func(err error, hasUser bool) {
@@ -106,35 +115,6 @@ func (md *MsgDock) writeUserMsg(dockMessage *DockMessage) {
 
 		}
 	}
-
-	//if dockMessage.hasLocal || !dockMessage.isForward {
-	//	dockMessage.userIndex++
-	//	if (dockMessage.userIndex) < dockMessage.userSize {
-	//		u := dockMessage.users[dockMessage.userIndex]
-	//		u.WriteMessage(dockMessage.InputMessage, func(err error, hasUser bool) {
-	//			if hasUser && err == nil {
-	//				dockMessage.hasUser = hasUser
-	//				md.replyMessage(dockMessage)
-	//			} else {
-	//				dockMessage.err = err
-	//				md.sendQueue.Offer(dockMessage)
-	//			}
-	//		})
-	//	} else {
-	//		md.replyMessage(dockMessage)
-	//	}
-	//} else {
-	//	if md.IForward != nil && md.IForward.WriteMessage != nil {
-	//		md.IForward.WriteMessage(dockMessage.InputMessage, func(err error, hasUser bool) {
-	//			dockMessage.err = err
-	//			dockMessage.hasUser = hasUser
-	//			md.replyMessage(dockMessage)
-	//		})
-	//	} else {
-	//		dockMessage.hasUser = false
-	//		md.replyMessage(dockMessage)
-	//	}
-	//}
 }
 
 func (md *MsgDock) replyMessage(msg *DockMessage) {
@@ -168,9 +148,12 @@ func (md *MsgDock) exchangeReplyMsg() {
 	}
 }
 func (md *MsgDock) exchangeSendMsg() {
+	log.Println("==========!!!!!!=======================")
 	for {
 		msg, _ := md.sendQueue.Poll()
+		log.Println("==========XXXXXXXXXXX=======================")
 		if msg != nil {
+			log.Println("=================================", msg)
 			dm := msg.(*DockMessage)
 			md.writeUserMsg(dm)
 		}
