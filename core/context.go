@@ -97,7 +97,7 @@ func (context *Context) SendMessage(msg message.IMessage) (error, bool) {
 	var once sync.Once
 	flag := util.GetChanBool()
 	var err_ error
-	context.sendMessage(msg, func(err error, hasUser bool) {
+	go context.sendMessage(msg, func(err error, hasUser bool) {
 		err_ = err
 		once.Do(func() {
 			flag <- hasUser
