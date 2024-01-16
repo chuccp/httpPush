@@ -5,7 +5,6 @@ import (
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
 	"go.uber.org/zap"
-	"log"
 	"sort"
 )
 
@@ -80,7 +79,6 @@ func (md *MsgDock) WriteNoForwardMessage(msg message.IMessage, writeFunc user.Wr
 }
 func (md *MsgDock) writeUserMsg(dockMessage *DockMessage) {
 	dockMessage.userIndex++
-	md.context.GetLog().Debug("ooooooooooooooo", zap.Int("dockMessage.userIndex", dockMessage.userIndex), zap.Int("dockMessage.userSize", dockMessage.userSize))
 	if (dockMessage.userIndex) < dockMessage.userSize {
 		u := dockMessage.users[dockMessage.userIndex]
 		u.WriteMessage(dockMessage.InputMessage, func(err error, hasUser bool) {
@@ -148,12 +146,9 @@ func (md *MsgDock) exchangeReplyMsg() {
 	}
 }
 func (md *MsgDock) exchangeSendMsg() {
-	log.Println("==========!!!!!!=======================")
 	for {
 		msg, _ := md.sendQueue.Poll()
-		log.Println("==========XXXXXXXXXXX=======================")
 		if msg != nil {
-			log.Println("=================================", msg)
 			dm := msg.(*DockMessage)
 			md.writeUserMsg(dm)
 		}
