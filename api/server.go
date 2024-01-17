@@ -42,6 +42,7 @@ func (server *Server) root(writer http.ResponseWriter, request *http.Request) {
 }
 func (server *Server) Start() error {
 	server.AddHttpRoute("/sendmsg", server.sendMsg)
+	server.AddHttpRoute("/sendMessage", server.sendMsg)
 	server.AddHttpRoute("/root_version", server.root)
 	server.query.Init()
 	return nil

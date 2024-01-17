@@ -53,7 +53,7 @@ func (md *MsgDock) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBa
 	if fg {
 		ius = append(ius, us...)
 	}
-	if md.IForward != nil && md.IForward.WriteMessage != nil {
+	if md.IForward != nil {
 		mu, fa := md.IForward.GetOrderUser(username)
 		if fa {
 			ius = append(ius, mu...)
@@ -94,7 +94,7 @@ func (md *MsgDock) writeUserMsg(dockMessage *DockMessage) {
 		if !dockMessage.isForward {
 			md.replyMessage(dockMessage)
 		} else {
-			if md.IForward != nil && md.IForward.WriteMessage != nil {
+			if md.IForward != nil {
 				var exMachineIds = make([]string, 0)
 				for _, orderUser := range dockMessage.users {
 					if orderUser.GetMachineId() != "" {
@@ -119,20 +119,20 @@ func (md *MsgDock) replyMessage(msg *DockMessage) {
 	md.replyQueue.Offer(msg)
 }
 func (md *MsgDock) HandleAddUser(iUser user.IUser) {
-	if md.IForward != nil && md.IForward.HandleAddUser != nil {
+	if md.IForward != nil {
 		md.IForward.HandleAddUser(iUser)
 	}
 }
 
 func (md *MsgDock) Query(parameter *Parameter, localValue any) []any {
-	if md.IForward != nil && md.IForward.Query != nil {
+	if md.IForward != nil {
 		return md.IForward.Query(parameter, localValue)
 	}
 	return nil
 }
 
 func (md *MsgDock) HandleDeleteUser(username string) {
-	if md.IForward != nil && md.IForward.HandleDeleteUser != nil {
+	if md.IForward != nil {
 		md.IForward.HandleDeleteUser(username)
 	}
 }

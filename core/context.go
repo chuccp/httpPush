@@ -112,7 +112,7 @@ func (context *Context) SendMessage(msg message.IMessage) (error, bool) {
 func (context *Context) SendGroupTextMessage(form string, groupId, msg string) int32 {
 	var num int32
 	waitGroup := new(sync.WaitGroup)
-	go context.userStore.RangeGroupUser(groupId, func(username string) bool {
+	context.userStore.RangeGroupUser(groupId, func(username string) bool {
 		textMsg := message.NewTextMessage(form, username, msg)
 		waitGroup.Add(1)
 		context.sendNoForwardMessage(textMsg, func(err error, hasUser bool) {
@@ -125,7 +125,6 @@ func (context *Context) SendGroupTextMessage(form string, groupId, msg string) i
 	})
 	waitGroup.Wait()
 	return num
-
 }
 
 func (context *Context) SendNoForwardMessage(msg message.IMessage) (error, bool) {

@@ -212,6 +212,21 @@ func (store *Store) RangeGroupUser(groupId string, f func(username string) bool)
 	}
 }
 
+func (store *Store) QueryGroupsUser(groupIds ...string) *GroupUser {
+	groupUser := NewGroupUser()
+	for _, groupId := range groupIds {
+		gp, ok := store.gMap.Load(groupId)
+		if ok {
+			storeGroup := gp.(*StoreGroup)
+			storeGroup.RangeUser(func(s string) bool {
+				groupUser.AddUser(s)
+				return true
+			})
+		}
+	}
+	return groupUser
+}
+
 func (store *Store) UserHasConn() bool {
 	return int(store.num) > 0
 }
