@@ -36,3 +36,12 @@ type OrderUser struct {
 	MachineId string
 	OrderTime string
 }
+type AllOrderUser struct {
+	OrderUser      []*OrderUser
+	MachineId      string
+	MachineAddress string
+}
+
+func NewAllOrderUser() *AllOrderUser {
+	return &AllOrderUser{OrderUser: make([]*OrderUser, 0)}
+}

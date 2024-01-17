@@ -206,17 +206,30 @@ func (query *Query) sendGroupMsgApi(writer http.ResponseWriter, request *http.Re
 func (query *Query) queryOrderInfo(parameter *core.Parameter) any {
 	userId := parameter.GetVString("userId", "username", "id")
 	us := query.context.GetUserAllOrder(userId)
+	allOrderUser := NewAllOrderUser()
+	machineInfoId, ok := query.getMachineInfoId(parameter)
+	if ok {
+		allOrderUser.MachineId = machineInfoId
+	}
 	ous := make([]*OrderUser, 0)
 	for _, u := range us {
 		ous = append(ous, &OrderUser{Priority: u.GetPriority(), MachineId: u.GetMachineId(), OrderTime: util.FormatTime(u.GetOrderTime())})
 	}
-	return ous
+	allOrderUser.OrderUser = ous
+	return allOrderUser
 }
 
 func (query *Query) queryOrderInfoApi(writer http.ResponseWriter, request *http.Request) {
 	parameter := core.NewParameter(request)
-	value := query.context.Query(parameter)
-	data, _ := json.Marshal(value)
+	values := query.context.Query(parameter).([]any)
+	for _, value := range values {
+		p := value.(*AllOrderUser)
+		machineAddress, ok := query.getMachineAddress(p.MachineId, parameter)
+		if ok {
+			p.MachineAddress = machineAddress
+		}
+	}
+	data, _ := json.Marshal(values)
 	writer.Write(data)
 }
 
