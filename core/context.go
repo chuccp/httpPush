@@ -33,7 +33,6 @@ func (context *Context) GetHttpPush() *HttpPush {
 	return context.httpPush
 }
 func (context *Context) GetUserAllOrder(username string) []user.IOrderUser {
-
 	var us = make([]user.IOrderUser, 0)
 	us1, fa := context.userStore.GetOrderUser(username)
 	if fa && us1 != nil {

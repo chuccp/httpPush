@@ -125,7 +125,7 @@ func (us *userStore) AddUser(username string, machineId string, clientOperate *C
 func (us *userStore) DeleteUser(username string, machineId string) {
 	us.rLock.Lock()
 	defer us.rLock.Unlock()
-	cu, ok := us.userMap.LoadAndDelete(username)
+	cu, ok := us.userMap.Load(username)
 	if ok {
 		sc := cu.(*cuStore)
 		sc.deleteUser(machineId)
