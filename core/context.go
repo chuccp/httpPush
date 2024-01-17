@@ -3,7 +3,6 @@ package core
 import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
-	"github.com/chuccp/httpPush/util"
 	"go.uber.org/zap"
 	"net/http"
 	"sync"
@@ -127,18 +126,17 @@ func (context *Context) SendGroupTextMessage(form string, groupId, msg string) i
 }
 
 func (context *Context) SendNoForwardMessage(msg message.IMessage) (error, bool) {
-	var once sync.Once
-	flag := util.GetChanBool()
+	waitGroup := new(sync.WaitGroup)
 	var err_ error
-	go context.sendNoForwardMessage(msg, func(err error, hasUser bool) {
+	var hasUser_ = false
+	waitGroup.Add(1)
+	context.sendNoForwardMessage(msg, func(err error, hasUser bool) {
 		err_ = err
-		once.Do(func() {
-			flag <- hasUser
-		})
+		hasUser_ = hasUser
+		waitGroup.Done()
 	})
-	fg := <-flag
-	util.FreeChanBool(flag)
-	return err_, fg
+	waitGroup.Wait()
+	return err_, hasUser_
 
 }
 func (context *Context) SendTextMessage(from string, to string, msg string) (error, bool) {
