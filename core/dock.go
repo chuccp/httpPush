@@ -6,6 +6,7 @@ import (
 	"github.com/chuccp/httpPush/util"
 	"go.uber.org/zap"
 	"sort"
+	"sync"
 )
 
 // IForward 集群使用/*
@@ -25,6 +26,13 @@ type DockMessage struct {
 	err          error
 	hasUser      bool
 	isForward    bool
+	once         sync.Once
+}
+
+func (m *DockMessage) writeCallBackFunc(err error, hasUser bool) {
+	m.once.Do(func() {
+		m.write(err, hasUser)
+	})
 }
 
 type MsgDock struct {
@@ -140,7 +148,7 @@ func (md *MsgDock) exchangeReplyMsg() {
 		msg, _ := md.replyQueue.Poll()
 		dockMessage := msg.(*DockMessage)
 		if msg != nil {
-			dockMessage.write(dockMessage.err, dockMessage.hasUser)
+			dockMessage.writeCallBackFunc(dockMessage.err, dockMessage.hasUser)
 		}
 	}
 }
