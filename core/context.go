@@ -3,9 +3,9 @@ package core
 import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
+	"github.com/chuccp/httpPush/util"
 	"go.uber.org/zap"
 	"net/http"
-	"sync"
 	"sync/atomic"
 )
 
@@ -92,10 +92,10 @@ func (context *Context) sendNoForwardMessage(msg message.IMessage, write user.Wr
 	context.msgDock.WriteNoForwardMessage(msg, write)
 }
 func (context *Context) SendMessage(msg message.IMessage) (error, bool) {
-	waitGroup := new(sync.WaitGroup)
+	waitGroup := util.NewWaitNumGroup()
 	var err_ error
 	var hasUser_ = false
-	waitGroup.Add(1)
+	waitGroup.AddOne()
 	context.sendMessage(msg, func(err error, hasUser bool) {
 		err_ = err
 		hasUser_ = hasUser
@@ -108,10 +108,10 @@ func (context *Context) SendMessage(msg message.IMessage) (error, bool) {
 
 func (context *Context) SendGroupTextMessage(form string, groupId, msg string) int32 {
 	var num int32
-	waitGroup := new(sync.WaitGroup)
+	waitGroup := util.NewWaitNumGroup()
 	context.userStore.RangeGroupUser(groupId, func(username string) bool {
 		textMsg := message.NewTextMessage(form, username, msg)
-		waitGroup.Add(1)
+		waitGroup.AddOne()
 		context.sendNoForwardMessage(textMsg, func(err error, hasUser bool) {
 			if hasUser {
 				atomic.AddInt32(&num, 1)
@@ -125,10 +125,10 @@ func (context *Context) SendGroupTextMessage(form string, groupId, msg string) i
 }
 
 func (context *Context) SendNoForwardMessage(msg message.IMessage) (error, bool) {
-	waitGroup := new(sync.WaitGroup)
+	waitGroup := util.NewWaitNumGroup()
 	var err_ error
 	var hasUser_ = false
-	waitGroup.Add(1)
+	waitGroup.AddOne()
 	context.sendNoForwardMessage(msg, func(err error, hasUser bool) {
 		err_ = err
 		hasUser_ = hasUser

@@ -2,17 +2,29 @@ package util
 
 import (
 	"sync"
+	"sync/atomic"
 )
 
-var poolBoolChan = &sync.Pool{
-	New: func() interface{} {
-		return make(chan bool)
-	},
+type waitNumGroup struct {
+	waitGroup *sync.WaitGroup
+	num       uint32
 }
-func GetChanBool() chan bool {
-	flag := poolBoolChan.Get().(chan bool)
-	return flag
+
+func (g *waitNumGroup) AddOne() {
+	atomic.AddUint32(&g.num, 1)
+	g.waitGroup.Add(1)
 }
-func FreeChanBool(flag chan bool) {
-	poolBoolChan.Put(flag)
+
+func (g *waitNumGroup) Done() {
+	if atomic.AddUint32(&g.num, -1) >= 0 {
+		g.waitGroup.Done()
+	}
+}
+
+func (g *waitNumGroup) Wait() {
+	g.waitGroup.Wait()
+}
+
+func NewWaitNumGroup() *waitNumGroup {
+	return &waitNumGroup{waitGroup: new(sync.WaitGroup)}
 }
