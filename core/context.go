@@ -6,6 +6,7 @@ import (
 	"github.com/chuccp/httpPush/util"
 	"go.uber.org/zap"
 	"net/http"
+	"sync"
 	"sync/atomic"
 )
 
@@ -80,23 +81,34 @@ func (context *Context) DeleteUser(iUser user.IUser) bool {
 	}
 	return false
 }
-func (context *Context) sendMessage(msg message.IMessage, write user.WriteCallBackFunc) {
-	context.msgDock.WriteMessage(msg, write)
+func (context *Context) sendOnceMessage(msg message.IMessage, write user.WriteCallBackFunc) {
+	one := new(sync.Once)
+	context.msgDock.WriteMessage(msg, func(err error, hasUser bool) {
+		one.Do(func() {
+			write(err, hasUser)
+		})
+	})
 }
 
 func (context *Context) SendMessageForBack(msg message.IMessage, write user.WriteCallBackFunc) {
-	context.sendMessage(msg, write)
+
+	context.sendOnceMessage(msg, write)
 }
 
-func (context *Context) sendNoForwardMessage(msg message.IMessage, write user.WriteCallBackFunc) {
-	context.msgDock.WriteNoForwardMessage(msg, write)
+func (context *Context) sendNoForwardOnceMessage(msg message.IMessage, write user.WriteCallBackFunc) {
+	one := new(sync.Once)
+	context.msgDock.WriteNoForwardMessage(msg, func(err error, hasUser bool) {
+		one.Do(func() {
+			write(err, hasUser)
+		})
+	})
 }
 func (context *Context) SendMessage(msg message.IMessage) (error, bool) {
 	waitGroup := util.NewWaitNumGroup()
 	var err_ error
 	var hasUser_ = false
 	waitGroup.AddOne()
-	context.sendMessage(msg, func(err error, hasUser bool) {
+	context.sendOnceMessage(msg, func(err error, hasUser bool) {
 		err_ = err
 		hasUser_ = hasUser
 		waitGroup.Done()
@@ -112,7 +124,7 @@ func (context *Context) SendGroupTextMessage(form string, groupId, msg string) i
 	context.userStore.RangeGroupUser(groupId, func(username string) bool {
 		textMsg := message.NewTextMessage(form, username, msg)
 		waitGroup.AddOne()
-		context.sendNoForwardMessage(textMsg, func(err error, hasUser bool) {
+		context.sendNoForwardOnceMessage(textMsg, func(err error, hasUser bool) {
 			if hasUser {
 				atomic.AddInt32(&num, 1)
 			}
@@ -129,7 +141,7 @@ func (context *Context) SendNoForwardMessage(msg message.IMessage) (error, bool)
 	var err_ error
 	var hasUser_ = false
 	waitGroup.AddOne()
-	context.sendNoForwardMessage(msg, func(err error, hasUser bool) {
+	context.sendNoForwardOnceMessage(msg, func(err error, hasUser bool) {
 		err_ = err
 		hasUser_ = hasUser
 		waitGroup.Done()
