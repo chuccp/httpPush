@@ -21,7 +21,6 @@ type DockMessage struct {
 	InputMessage message.IMessage
 	write        user.WriteCallBackFunc
 	users        []user.IOrderUser
-	userSize     int
 	userIndex    int
 	err          error
 	hasUser      bool
@@ -62,15 +61,15 @@ func (md *MsgDock) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBa
 	if len(ius) > 0 {
 		sort.Sort(user.ByAsc(ius))
 	}
-	md.context.GetLog().Debug("已存在用户连接数", zap.Int("order.user.num", len(ius)))
-	md.sendQueue.Offer(&DockMessage{InputMessage: msg, write: writeFunc, users: us, userIndex: -1, userSize: len(us), isForward: true})
+	//md.context.GetLog().Debug("已存在用户连接数", zap.Int("order.user.num", len(ius)))
+	md.sendQueue.Offer(&DockMessage{InputMessage: msg, write: writeFunc, users: ius, userIndex: -1, isForward: true})
 }
 func (md *MsgDock) WriteNoForwardMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc) {
 	us, fg := md.userStore.GetOrderUser(msg.GetString(message.To))
 	md.context.GetLog().Debug("收到不转发信息", zap.Int("order.user.num", len(us)), zap.Bool("fa", fg))
 	if fg {
 		sort.Sort(user.ByAsc(us))
-		num := md.sendQueue.Offer(&DockMessage{InputMessage: msg, write: writeFunc, users: us, userIndex: -1, userSize: len(us), isForward: false})
+		num := md.sendQueue.Offer(&DockMessage{InputMessage: msg, write: writeFunc, users: us, userIndex: -1, isForward: false})
 		md.context.GetLog().Debug("收到不转发信息入库", zap.Int("dockMessage.userIndex", int(num)))
 	} else {
 		writeFunc(NoFoundUser, false)
@@ -79,7 +78,7 @@ func (md *MsgDock) WriteNoForwardMessage(msg message.IMessage, writeFunc user.Wr
 }
 func (md *MsgDock) writeUserMsg(dockMessage *DockMessage) {
 	dockMessage.userIndex++
-	if (dockMessage.userIndex) < dockMessage.userSize {
+	if (dockMessage.userIndex) < len(dockMessage.users) {
 		u := dockMessage.users[dockMessage.userIndex]
 		u.WriteMessage(dockMessage.InputMessage, func(err error, hasUser bool) {
 			if hasUser && err == nil {

@@ -9,16 +9,30 @@ import (
 	"time"
 )
 
+var poolCuStore = &sync.Pool{
+	New: func() interface{} {
+		return &cuStore{}
+	},
+}
+
+func getNewCuStore(username string) *cuStore {
+	flag := poolCuStore.Get().(*cuStore)
+	flag.username = username
+	t := time.Now()
+	flag.createTime = &t
+	flag.store = make(map[string]*cu)
+	return flag
+}
+func freeCuStore(cuStore *cuStore) {
+	poolCuStore.Put(cuStore)
+}
+
 type cuStore struct {
 	store      map[string]*cu
 	username   string
 	createTime *time.Time
 }
 
-func newCuStore(username string) *cuStore {
-	t := time.Now()
-	return &cuStore{store: make(map[string]*cu), username: username, createTime: &t}
-}
 func (cs *cuStore) addUser(username string, machineId string, clientOperate *ClientOperate) {
 	cu := newCu(username, machineId, clientOperate)
 	cs.store[machineId] = cu
@@ -113,7 +127,7 @@ func (us *userStore) AddUser(username string, machineId string, clientOperate *C
 	cus, ok := us.userMap.Load(username)
 	if !ok {
 		atomic.AddInt32(&us.num, 1)
-		cus := newCuStore(username)
+		cus := getNewCuStore(username)
 		cus.addUser(username, machineId, clientOperate)
 		us.userMap.Store(username, cus)
 	} else {
@@ -130,6 +144,8 @@ func (us *userStore) DeleteUser(username string, machineId string) {
 		sc := cu.(*cuStore)
 		sc.deleteUser(machineId)
 		if sc.num() == 0 {
+			us.userMap.Delete(username)
+			freeCuStore(sc)
 			atomic.AddInt32(&us.num, -1)
 		}
 	}

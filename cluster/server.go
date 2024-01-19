@@ -122,6 +122,7 @@ func (server *Server) WriteMessage(msg message.IMessage, exMachineId []string, w
 			un := t.GetString(message.To)
 			machineId, err := server.clientOperate.sendTextMsg(t, exMachineId...)
 			if err == nil {
+				server.context.GetLog().Info("本地没有用户信息，增加用户信息", zap.String("machineId", machineId))
 				server.userStore.AddUser(un, machineId, server.clientOperate)
 				writeFunc(nil, true)
 				return

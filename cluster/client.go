@@ -292,7 +292,7 @@ func (ms *ClientOperate) addNewMachine(machine *Machine) {
 }
 func (ms *ClientOperate) sendTextMsg(msg *message.TextMessage, exMachineIds ...string) (string, error) {
 	var _err_ = core.NoFoundUser
-	machineId := ""
+	machineId_ := ""
 	ms.context.GetLog().Debug("消息转发:", zap.String("toUser", msg.GetString(message.To)))
 	ms.store.eachStoreClient(func(machineId string, client *client) bool {
 		if client.HasConn() && (len(exMachineIds) == 0 || !util.ContainsInArray(exMachineIds, client.remoteMachine.MachineId)) {
@@ -301,14 +301,14 @@ func (ms *ClientOperate) sendTextMsg(msg *message.TextMessage, exMachineIds ...s
 			_err_ = err
 			if err == nil {
 				ms.context.GetLog().Debug("消息转发成功:", zap.String("toUser", msg.GetString(message.To)), zap.String("machineId", machineId))
-				machineId = client.remoteMachine.MachineId
+				machineId_ = client.remoteMachine.MachineId
 				return false
 			}
 			ms.context.GetLog().Debug("消息转发失败:", zap.String("toUser", msg.GetString(message.To)), zap.String("machineId", machineId), zap.Error(err))
 		}
 		return true
 	})
-	return machineId, _err_
+	return machineId_, _err_
 }
 func (ms *ClientOperate) Query(parameter *core.Parameter, localValue any) []any {
 	vs := make([]any, 0)
