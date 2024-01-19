@@ -7,16 +7,16 @@ import (
 
 type waitNumGroup struct {
 	waitGroup *sync.WaitGroup
-	num       uint32
+	num       int32
 }
 
 func (g *waitNumGroup) AddOne() {
-	atomic.AddUint32(&g.num, 1)
+	atomic.AddInt32(&g.num, 1)
 	g.waitGroup.Add(1)
 }
 
 func (g *waitNumGroup) Done() {
-	if atomic.AddUint32(&g.num, -1) >= 0 {
+	if atomic.AddInt32(&g.num, -1) >= 0 {
 		g.waitGroup.Done()
 	}
 }
