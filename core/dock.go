@@ -143,21 +143,46 @@ func (md *MsgDock) HandleDeleteUser(username string) {
 		md.IForward.HandleDeleteUser(username)
 	}
 }
+
+func backMsg(md *MsgDock, dm *DockMessage) {
+	go func() {
+		defer func() {
+			err := recover()
+			if err != nil {
+				md.context.GetLog().Error("反馈消息异常", zap.Any("error", err))
+			}
+		}()
+		dm.writeCallBackFunc(dm.err, dm.hasUser)
+	}()
+}
+
 func (md *MsgDock) exchangeReplyMsg() {
 	for {
 		msg, _ := md.replyQueue.Poll()
 		dockMessage := msg.(*DockMessage)
 		if msg != nil {
-			dockMessage.writeCallBackFunc(dockMessage.err, dockMessage.hasUser)
+			backMsg(md, dockMessage)
 		}
 	}
 }
+func sendMsg(md *MsgDock, dm *DockMessage) {
+	go func() {
+		defer func() {
+			err := recover()
+			if err != nil {
+				md.context.GetLog().Error("发送消息异常", zap.Any("error", err))
+			}
+		}()
+		md.writeUserMsg(dm)
+	}()
+}
+
 func (md *MsgDock) exchangeSendMsg() {
 	for {
 		msg, _ := md.sendQueue.Poll()
 		if msg != nil {
 			dm := msg.(*DockMessage)
-			md.writeUserMsg(dm)
+			sendMsg(md, dm)
 		}
 	}
 }
