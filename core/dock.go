@@ -145,15 +145,7 @@ func (md *MsgDock) HandleDeleteUser(username string) {
 }
 
 func backMsg(md *MsgDock, dm *DockMessage) {
-	go func() {
-		defer func() {
-			err := recover()
-			if err != nil {
-				md.context.GetLog().Error("反馈消息异常", zap.Any("error", err))
-			}
-		}()
-		dm.writeCallBackFunc(dm.err, dm.hasUser)
-	}()
+	dm.writeCallBackFunc(dm.err, dm.hasUser)
 }
 
 func (md *MsgDock) exchangeReplyMsg() {
@@ -166,15 +158,7 @@ func (md *MsgDock) exchangeReplyMsg() {
 	}
 }
 func sendMsg(md *MsgDock, dm *DockMessage) {
-	go func() {
-		defer func() {
-			err := recover()
-			if err != nil {
-				md.context.GetLog().Error("发送消息异常", zap.Any("error", err))
-			}
-		}()
-		md.writeUserMsg(dm)
-	}()
+	md.writeUserMsg(dm)
 }
 
 func (md *MsgDock) exchangeSendMsg() {
