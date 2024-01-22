@@ -25,3 +25,16 @@ func RecoverGo(handle func()) {
 		}
 	}()
 }
+
+func Go(handle func()) {
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				s := string(debug.Stack())
+				fmt.Printf("err=%v, stack=%s\n", err, s)
+
+			}
+		}()
+		handle()
+	}()
+}

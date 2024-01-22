@@ -6,6 +6,7 @@ import (
 	"github.com/chuccp/httpPush/util"
 	"go.uber.org/zap"
 	"net/http"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 )
@@ -33,6 +34,42 @@ func newContext(register *Register) *Context {
 func (context *Context) GetHttpPush() *HttpPush {
 	return context.httpPush
 }
+
+// RecoverGo 协程异常恢复
+func (context *Context) RecoverGo(handle func()) {
+	go func() {
+		wg := new(sync.WaitGroup)
+		for {
+			wg.Add(1)
+			go func() {
+				defer func() {
+					if err := recover(); err != nil {
+						s := string(debug.Stack())
+						context.GetLog().Error("recoverGo", zap.Any("err", err), zap.String("info", s))
+						wg.Done()
+					}
+				}()
+				handle()
+			}()
+			wg.Wait()
+		}
+	}()
+}
+
+// Go 协程异常保活，避免协程内错误导致整个系统
+func (context *Context) Go(handle func()) {
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				s := string(debug.Stack())
+				context.GetLog().Error("Go", zap.Any("err", err), zap.String("info", s))
+
+			}
+		}()
+		handle()
+	}()
+}
+
 func (context *Context) GetUserAllOrder(username string) []user.IOrderUser {
 	var us = make([]user.IOrderUser, 0)
 	us1, fa := context.userStore.GetOrderUser(username)
