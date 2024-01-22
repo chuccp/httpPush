@@ -5,6 +5,7 @@ import (
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
 	"go.uber.org/zap"
+	"runtime/debug"
 	"sort"
 	"sync"
 )
@@ -49,10 +50,34 @@ func NewMsgDock(userStore *user.Store, context *Context) *MsgDock {
 	return msgDock
 }
 func (md *MsgDock) run() {
-	go md.exchangeSendMsg()
-	go md.exchangeReplyMsg()
-}
+	recoverGo(func() {
+		md.exchangeSendMsg()
+	}, md.context)
+	recoverGo(func() {
+		md.exchangeReplyMsg()
+	}, md.context)
 
+}
+func recoverGo(handle func(), context *Context) {
+	go func() {
+		wg := new(sync.WaitGroup)
+		for {
+			wg.Add(1)
+			go func() {
+				defer func() {
+					if err := recover(); err != nil {
+						s := string(debug.Stack())
+						context.GetLog().Error("recoverGo", zap.Any("err", err), zap.String("info", s))
+						//fmt.Printf("err=%v, stack=%s\n", err, s)
+						wg.Done()
+					}
+				}()
+				handle()
+			}()
+			wg.Wait()
+		}
+	}()
+}
 func (md *MsgDock) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc) {
 	username := msg.GetString(message.To)
 	ius := make([]user.IOrderUser, 0)
