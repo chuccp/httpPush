@@ -54,13 +54,18 @@ func NewMsgDock(userStore *user.Store, context *Context) *MsgDock {
 func (md *MsgDock) run() {
 	md.context.RecoverGo(func() {
 		if md.lastSendDockMessage != nil {
-			md.lastSendDockMessage.writeCallBackFunc(errors.New("异常"), false)
+			lastSendDockMessage := md.lastSendDockMessage
+			md.lastSendDockMessage = nil
+			lastSendDockMessage.writeCallBackFunc(errors.New("系统异常"), false)
+
 		}
 		md.exchangeSendMsg()
 	})
 	md.context.RecoverGo(func() {
 		if md.lastReplyDockMessage != nil {
-			md.lastReplyDockMessage.writeCallBackFunc(errors.New("异常"), false)
+			lastReplyDockMessage := md.lastReplyDockMessage
+			md.lastReplyDockMessage = nil
+			lastReplyDockMessage.writeCallBackFunc(errors.New("系统异常"), false)
 		}
 		md.exchangeReplyMsg()
 	})
