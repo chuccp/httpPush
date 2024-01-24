@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"log"
 	"runtime/debug"
 	"sync"
 )
@@ -21,6 +22,7 @@ func RecoverGo(handle func()) {
 				}()
 				handle()
 			}()
+			log.Println("==========================")
 			wg.Wait()
 		}
 	}()

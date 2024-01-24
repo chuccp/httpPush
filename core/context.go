@@ -35,7 +35,7 @@ func (context *Context) GetHttpPush() *HttpPush {
 	return context.httpPush
 }
 
-// RecoverGo 协程异常恢复
+// RecoverGo 协程异常恢复，异常后，会重启当前协程
 func (context *Context) RecoverGo(handle func()) {
 	go func() {
 		wg := new(sync.WaitGroup)
@@ -63,7 +63,6 @@ func (context *Context) Go(handle func()) {
 			if err := recover(); err != nil {
 				s := string(debug.Stack())
 				context.GetLog().Error("Go", zap.Any("err", err), zap.String("info", s))
-
 			}
 		}()
 		handle()

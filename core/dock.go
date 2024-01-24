@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
@@ -36,11 +37,13 @@ func (m *DockMessage) writeCallBackFunc(err error, hasUser bool) {
 }
 
 type MsgDock struct {
-	IForward   IForward
-	sendQueue  *util.Queue
-	replyQueue *util.Queue
-	userStore  *user.Store
-	context    *Context
+	IForward             IForward
+	sendQueue            *util.Queue
+	replyQueue           *util.Queue
+	userStore            *user.Store
+	context              *Context
+	lastSendDockMessage  *DockMessage
+	lastReplyDockMessage *DockMessage
 }
 
 func NewMsgDock(userStore *user.Store, context *Context) *MsgDock {
@@ -50,9 +53,15 @@ func NewMsgDock(userStore *user.Store, context *Context) *MsgDock {
 }
 func (md *MsgDock) run() {
 	md.context.RecoverGo(func() {
+		if md.lastSendDockMessage != nil {
+			md.lastSendDockMessage.writeCallBackFunc(errors.New("异常"), false)
+		}
 		md.exchangeSendMsg()
 	})
 	md.context.RecoverGo(func() {
+		if md.lastReplyDockMessage != nil {
+			md.lastReplyDockMessage.writeCallBackFunc(errors.New("异常"), false)
+		}
 		md.exchangeReplyMsg()
 	})
 }
@@ -155,9 +164,9 @@ func backMsg(md *MsgDock, dm *DockMessage) {
 func (md *MsgDock) exchangeReplyMsg() {
 	for {
 		msg, _ := md.replyQueue.Poll()
-		dockMessage := msg.(*DockMessage)
+		md.lastReplyDockMessage = msg.(*DockMessage)
 		if msg != nil {
-			backMsg(md, dockMessage)
+			backMsg(md, md.lastReplyDockMessage)
 		}
 	}
 }
@@ -169,8 +178,8 @@ func (md *MsgDock) exchangeSendMsg() {
 	for {
 		msg, _ := md.sendQueue.Poll()
 		if msg != nil {
-			dm := msg.(*DockMessage)
-			sendMsg(md, dm)
+			md.lastSendDockMessage = msg.(*DockMessage)
+			sendMsg(md, md.lastSendDockMessage)
 		}
 	}
 }
