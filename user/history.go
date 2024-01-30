@@ -99,7 +99,7 @@ type TextMessageMessage struct {
 func (h *History) recordMessage(msg *message.TextMessage) {
 	h.rLock.Lock()
 	defer h.rLock.Unlock()
-	if len(h.LastMessage) > 5 {
+	if len(h.LastMessage) >= 5 {
 		h.LastMessage = h.LastMessage[1:]
 	}
 	t := time.Now()

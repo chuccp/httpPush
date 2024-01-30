@@ -106,7 +106,7 @@ func (context *Context) FlashLiveTime(iUser user.IUser) {
 func (context *Context) GetUser(userName string) ([]user.IUser, bool) {
 	return context.userStore.GetUser(userName)
 }
-func (context *Context) GetHistory(userName string) (*user.History, bool) {
+func (context *Context) GetHistory(userName string) (*user.HistoryMessage, bool) {
 	return context.userStore.GetHistory(userName)
 }
 func (context *Context) GetUserNum() int {

@@ -66,7 +66,7 @@ func (query *Query) queryHistory(parameter *core.Parameter) any {
 	var history = &History{}
 	log, fa := query.context.GetHistory(id)
 	if fa {
-		history.History = &Log{Username: log.Username, OnlineTime: util.FormatTime(log.OnlineTime), OfflineTime: util.FormatTime(log.OfflineTime)}
+		history.History = log
 	}
 	machineInfoId, ok := query.getMachineInfoId(parameter)
 	if ok {
@@ -252,13 +252,8 @@ type Conn struct {
 }
 
 type History struct {
-	Machine any
-	History *Log
-}
-type Log struct {
-	Username    string
-	OnlineTime  string
-	OfflineTime string
+	Machine string
+	History *user.HistoryMessage
 }
 
 func newConn(RemoteAddress string, LastLiveTime string, CreateTime string) *Conn {
