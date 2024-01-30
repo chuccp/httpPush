@@ -41,24 +41,40 @@ func (u *User) GetId() string {
 	return u.username + "_" + u.remoteAddress
 }
 
-func (u *User) waitMessage() {
+func messageToBytes(iMessage message.IMessage) ([]byte, error) {
+	ht := newHttpMessage(
+		iMessage.GetString(message.From),
+		iMessage.GetString(message.Msg))
+	hts := []*HttpMessage{ht}
+	data, err := json.Marshal(hts)
+	return data, err
+}
 
+func (u *User) waitMessage() {
+	u.context.FlashLiveTime(u)
 	u.context.GetLog().Debug("等待信息", zap.Int("liveTime", u.liveTime))
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(u.liveTime)*time.Second)
-	v, num, cls := u.queue.Dequeue(ctx)
+	msg, num, cls := u.queue.Dequeue(ctx)
 	u.context.GetLog().Debug("收到信息：剩余消息", zap.Int32("num", num), zap.Bool("cls", cls))
 	if cls {
 		u.writer.Write([]byte("[]"))
 	} else {
 		cancelFunc()
-		if v != nil {
-			_, err := u.writer.Write(v.([]byte))
-			if err != nil {
-				u.queue.Offer(v)
+		mg, ok := (msg).(message.IMessage)
+		if ok {
+			v, err := messageToBytes(mg)
+			if err == nil && v != nil {
+				_, err := u.writer.Write(v)
+				if err != nil {
+					u.queue.Offer(v)
+				} else {
+					u.context.RecordMessage(mg)
+				}
+			} else {
+				u.writer.Write([]byte("[]"))
 			}
-		} else {
-			u.writer.Write([]byte("[]"))
 		}
+
 	}
 }
 
@@ -76,18 +92,8 @@ func (u *User) GetUsername() string {
 }
 
 func (u *User) WriteMessage(iMessage message.IMessage, writeFunc user.WriteCallBackFunc) {
-	ht := newHttpMessage(
-		iMessage.GetString(message.From),
-		iMessage.GetString(message.Msg))
-	//ht.ExData = iMessage.GetExData()
-	hts := []*HttpMessage{ht}
-	data, err := json.Marshal(hts)
-	if err == nil {
-		u.queue.Offer(data)
-		writeFunc(nil, true)
-	} else {
-		writeFunc(err, false)
-	}
+	u.queue.Offer(iMessage)
+	writeFunc(nil, true)
 }
 
 func (u *User) Close() {}

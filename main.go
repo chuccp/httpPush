@@ -1,12 +1,13 @@
 package main
 
 import (
+	"log"
+
 	"github.com/chuccp/httpPush/api"
 	"github.com/chuccp/httpPush/cluster"
 	"github.com/chuccp/httpPush/config"
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/ex"
-	"log"
 )
 
 func main() {

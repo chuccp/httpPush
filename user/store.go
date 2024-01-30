@@ -1,6 +1,7 @@
 package user
 
 import (
+	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/util"
 	"sync"
 	"sync/atomic"
@@ -120,8 +121,15 @@ func NewStore() *Store {
 	return &Store{gMap: new(sync.Map), uMap: new(sync.Map), num: 0, rLock: new(sync.RWMutex), historyStore: NewHistoryStore()}
 }
 
-func (store *Store) GetHistory(username string) (*SignUpLog, bool) {
+func (store *Store) GetHistory(username string) (*History, bool) {
 	return store.historyStore.getUserHistory(username)
+}
+
+func (store *Store) RecordMessage(msg message.IMessage) {
+	store.historyStore.RecordMessage(msg)
+}
+func (store *Store) FlashLiveTime(user IUser) {
+	store.historyStore.FlashLiveTime(user)
 }
 
 func (store *Store) AddUser(user IUser) bool {
@@ -150,7 +158,7 @@ func (store *Store) AddUser(user IUser) bool {
 		us.add(user)
 		store.uMap.Store(username, us)
 		atomic.AddInt32(&store.num, 1)
-		store.historyStore.userOnline(user)
+		store.historyStore.userLogin(user)
 		store.rLock.Unlock()
 		return true
 	}

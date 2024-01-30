@@ -24,7 +24,11 @@ func TestWaitGroup(t *testing.T) {
 		for _, number := range numbers {
 			waitGroup.Add(1)
 			xxx(number, func() {
+
 				waitGroup.Done()
+				waitGroup.Done()
+				waitGroup.Done()
+
 			})
 		}
 	}()
