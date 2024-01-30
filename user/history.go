@@ -2,6 +2,7 @@ package user
 
 import (
 	"github.com/chuccp/httpPush/message"
+	"github.com/chuccp/httpPush/util"
 	"sync"
 	"time"
 )
@@ -15,10 +16,10 @@ func (h *HistoryStore) userLogin(user IUser) {
 	h.userStore.Store(username, newHistory(username))
 }
 
-func (h *HistoryStore) getUserHistory(username string) (*History, bool) {
+func (h *HistoryStore) getUserHistory(username string) (*HistoryMessage, bool) {
 	v, ok := h.userStore.Load(username)
 	if ok {
-		return v.(*History), true
+		return v.(*History).readMessage(), true
 	}
 	return nil, false
 }
@@ -82,6 +83,18 @@ type History struct {
 	LastMessage  []*TextMessage
 	rLock        *sync.RWMutex
 }
+type HistoryMessage struct {
+	Username     string
+	OnlineTime   string
+	OfflineTime  string
+	LastLiveTime string
+	LastMessage  []*TextMessageMessage
+}
+type TextMessageMessage struct {
+	From string
+	Msg  string
+	Time string
+}
 
 func (h *History) recordMessage(msg *message.TextMessage) {
 	h.rLock.Lock()
@@ -92,10 +105,16 @@ func (h *History) recordMessage(msg *message.TextMessage) {
 	t := time.Now()
 	h.LastMessage = append(h.LastMessage, &TextMessage{From: msg.From, Msg: msg.Msg, Time: &t})
 }
-func (h *History) readMessage() []*TextMessage {
+func (h *History) readMessage() *HistoryMessage {
 	h.rLock.RLock()
 	defer h.rLock.RUnlock()
-	return h.LastMessage
+	historyMessage := &HistoryMessage{Username: h.Username, OfflineTime: util.FormatTime(h.OfflineTime), OnlineTime: util.FormatTime(h.OnlineTime), LastLiveTime: util.FormatTime(h.LastLiveTime)}
+	var textMessageMessages = make([]*TextMessageMessage, len(h.LastMessage))
+	for i, messageMessage := range h.LastMessage {
+		textMessageMessages[i] = &TextMessageMessage{From: messageMessage.From, Msg: messageMessage.Msg, Time: util.FormatTime(messageMessage.Time)}
+	}
+	historyMessage.LastMessage = textMessageMessages
+	return historyMessage
 }
 
 type TextMessage struct {

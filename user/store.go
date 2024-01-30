@@ -121,7 +121,7 @@ func NewStore() *Store {
 	return &Store{gMap: new(sync.Map), uMap: new(sync.Map), num: 0, rLock: new(sync.RWMutex), historyStore: NewHistoryStore()}
 }
 
-func (store *Store) GetHistory(username string) (*History, bool) {
+func (store *Store) GetHistory(username string) (*HistoryMessage, bool) {
 	return store.historyStore.getUserHistory(username)
 }
 
