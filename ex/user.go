@@ -74,7 +74,6 @@ func (u *User) waitMessage() {
 				u.writer.Write([]byte("[]"))
 			}
 		}
-
 	}
 }
 
