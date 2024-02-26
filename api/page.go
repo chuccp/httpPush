@@ -1,5 +1,10 @@
 package api
 
+import (
+	"github.com/chuccp/httpPush/util"
+	"time"
+)
+
 type Page struct {
 	Num  int
 	List []*PageUser
@@ -24,6 +29,18 @@ type PageUser struct {
 	MachineAddress string
 	CreateTime     string
 	MachineId      string
+}
+type ResponseMsg struct {
+	Time   string
+	Result string
+}
+
+func NewResponseMsg(fa bool) *ResponseMsg {
+	t := time.Now()
+	if fa {
+		return &ResponseMsg{Time: util.FormatTime(&t), Result: "success"}
+	}
+	return &ResponseMsg{Time: util.FormatTime(&t), Result: "offline"}
 }
 
 type GroupMsg struct {
