@@ -235,6 +235,14 @@ func (context *Context) SetSystemInfo(key string, value any) {
 func (context *Context) GetCfgInt(section, key string) int {
 	return context.register.config.GetInt(section, key)
 }
+
+func (context *Context) GetCfgBool(section, key string) bool {
+	return context.register.config.GetBool(section, key)
+}
+func (context *Context) GetCfgBoolDefault(section, key string, defaultValue bool) bool {
+	return context.register.config.GetBoolOrDefault(section, key, defaultValue)
+}
+
 func (context *Context) addHttpRoute(pattern string, handler func(http.ResponseWriter, *http.Request)) {
 	context.httpPush.httpServer.AddRoute(pattern, handler)
 }

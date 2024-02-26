@@ -49,6 +49,7 @@ func (httpPush *HttpPush) startHttpServer() error {
 	port := httpPush.context.GetCfgInt("core", "http.port")
 	certFile := httpPush.context.GetCfgString("core", "http.certFile")
 	keyFile := httpPush.context.GetCfgString("core", "http.keyFile")
+	httpPush.context.log.Info("startHttpServer", zap.String("name", "core"), zap.Int("port", port))
 	err := httpPush.httpServer.StartAutoTLS(port, certFile, keyFile)
 	if err != nil {
 		httpPush.context.log.Error("服务启动失败", zap.String("name", "httpPush"), zap.Int("port", port), zap.Error(err))

@@ -4,6 +4,7 @@ import (
 	"gopkg.in/ini.v1"
 	"log"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -88,7 +89,7 @@ func (config *Config) GetInt(section, key string) int {
 }
 func (config *Config) GetBool(section, key string) bool {
 	v := config.GetString(section, key)
-	if v == "true" {
+	if strings.Contains(v, "true") {
 		return true
 	}
 	return false
@@ -98,7 +99,7 @@ func (config *Config) GetBoolOrDefault(section, key string, defaultValue bool) b
 	if len(v) == 0 {
 		return defaultValue
 	}
-	if v == "true" {
+	if strings.Contains(v, "true") {
 		return true
 	}
 	return false

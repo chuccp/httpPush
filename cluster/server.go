@@ -18,6 +18,7 @@ type Server struct {
 	localMachine  *Machine
 	clientOperate *ClientOperate
 	userStore     *userStore
+	isStart       bool
 }
 
 func NewServer() *Server {
@@ -28,7 +29,9 @@ func NewServer() *Server {
 	return server
 }
 func (server *Server) Start() error {
-	go server.run()
+	if server.isStart {
+		go server.run()
+	}
 	return nil
 }
 
@@ -136,45 +139,48 @@ func (server *Server) WriteMessage(msg message.IMessage, exMachineId []string, w
 }
 func (server *Server) Init(context *core.Context) {
 	server.context = context
-	context.SetForward(server)
-	machineId := server.context.GetCfgString("cluster", "machineId")
-	if len(machineId) == 0 {
-		machineId = MachineId()
-	}
-	server.context.GetLog().Info("machineId配置", zap.String("machineId", machineId))
-	localLink := server.context.GetCfgString("cluster", "local.link")
-	if len(localLink) == 0 {
-		localLink = server.GetServerHost()
-	}
-	localMachine, err := parseLink(localLink)
-	if err != nil {
-		server.context.GetLog().Panic("解析本地配置localLink失败", zap.Error(err))
-		return
-	}
-	localMachine.MachineId = machineId
-	clientOperate := NewClientOperate(server.context, localMachine)
-	remoteLinkStr := server.context.GetCfgString("cluster", "remote.link")
-	remoteLinks := strings.Split(remoteLinkStr, ",")
-	for _, remoteLink := range remoteLinks {
-		machine, err := parseLink(remoteLink)
-		if err != nil {
-			server.context.GetLog().Panic("解析本地配置remoteLink失败", zap.Error(err))
-			return
-		} else {
-			clientOperate.addConfigMachine(machine)
+	server.isStart = server.context.GetCfgBoolDefault("cluster", "start", false)
+	if server.isStart {
+		context.SetForward(server)
+		machineId := server.context.GetCfgString("cluster", "machineId")
+		if len(machineId) == 0 {
+			machineId = MachineId()
 		}
+		server.context.GetLog().Info("machineId配置", zap.String("machineId", machineId))
+		localLink := server.context.GetCfgString("cluster", "local.link")
+		if len(localLink) == 0 {
+			localLink = server.GetServerHost()
+		}
+		localMachine, err := parseLink(localLink)
+		if err != nil {
+			server.context.GetLog().Panic("解析本地配置localLink失败", zap.Error(err))
+			return
+		}
+		localMachine.MachineId = machineId
+		clientOperate := NewClientOperate(server.context, localMachine)
+		remoteLinkStr := server.context.GetCfgString("cluster", "remote.link")
+		remoteLinks := strings.Split(remoteLinkStr, ",")
+		for _, remoteLink := range remoteLinks {
+			machine, err := parseLink(remoteLink)
+			if err != nil {
+				server.context.GetLog().Panic("解析本地配置remoteLink失败", zap.Error(err))
+				return
+			} else {
+				clientOperate.addConfigMachine(machine)
+			}
+		}
+		server.localMachine = localMachine
+		server.clientOperate = clientOperate
+		server.context.RegisterHandle("machineInfoId", server.machineInfoId)
+		server.context.RegisterHandle("remoteMachineNum", server.remoteMachineNum)
+		server.context.RegisterHandle("machineAddress", server.machineAddress)
+		server.AddHttpRoute("/_cluster/initial", server.initial)
+		server.AddHttpRoute("/_cluster/deleteUser", server.deleteUser)
+		server.AddHttpRoute("/_cluster/addUser", server.addUser)
+		server.AddHttpRoute("/_cluster/queryMachineList", server.queryMachineList)
+		server.AddHttpRoute("/_cluster/query", server.query)
+		server.AddHttpRoute("/_cluster/sendTextMsg", server.sendTextMsg)
 	}
-	server.localMachine = localMachine
-	server.clientOperate = clientOperate
-	server.context.RegisterHandle("machineInfoId", server.machineInfoId)
-	server.context.RegisterHandle("remoteMachineNum", server.remoteMachineNum)
-	server.context.RegisterHandle("machineAddress", server.machineAddress)
-	server.AddHttpRoute("/_cluster/initial", server.initial)
-	server.AddHttpRoute("/_cluster/deleteUser", server.deleteUser)
-	server.AddHttpRoute("/_cluster/addUser", server.addUser)
-	server.AddHttpRoute("/_cluster/queryMachineList", server.queryMachineList)
-	server.AddHttpRoute("/_cluster/query", server.query)
-	server.AddHttpRoute("/_cluster/sendTextMsg", server.sendTextMsg)
 }
 func (server *Server) Name() string {
 

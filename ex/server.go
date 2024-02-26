@@ -13,6 +13,7 @@ type Server struct {
 	context  *core.Context
 	store    *Store
 	liveTime int
+	isStart  bool
 	rLock    *sync.RWMutex
 }
 
@@ -25,8 +26,10 @@ func NewServer() *Server {
 }
 
 func (server *Server) Start() error {
-	server.AddHttpRoute("/ex", server.ex)
-	go server.expiredCheck()
+	if server.isStart {
+		server.AddHttpRoute("/ex", server.ex)
+		go server.expiredCheck()
+	}
 	return nil
 }
 func (server *Server) ex(w http.ResponseWriter, re *http.Request) {
@@ -61,8 +64,11 @@ func (server *Server) expiredCheck() {
 }
 func (server *Server) Init(context *core.Context) {
 	server.context = context
-	server.liveTime = server.context.GetCfgInt("ex", "liveTime")
-	server.context.GetLog().Info("ex 配置", zap.Int("liveTime", server.liveTime))
+	server.isStart = server.context.GetCfgBoolDefault("ex", "start", false)
+	if server.isStart {
+		server.liveTime = server.context.GetCfgInt("ex", "liveTime")
+		server.context.GetLog().Info("ex 配置", zap.Int("liveTime", server.liveTime))
+	}
 }
 func (server *Server) Name() string {
 

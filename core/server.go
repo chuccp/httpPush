@@ -27,6 +27,7 @@ type httpServer struct {
 	certFile   string
 	keyFile    string
 	name       string
+	isStart    bool
 }
 
 func NewHttpServer(name string) IHttpServer {
@@ -56,29 +57,37 @@ func (server *httpServer) IsTls() bool {
 
 func (server *httpServer) init(context *Context) {
 	server.context = context
-	port := context.GetCfgInt(server.name, "http.port")
-	corePort := context.GetCfgInt("core", "http.port")
-	if port > 0 && corePort != port {
-		context.log.Info("服务名称与端口", zap.String("name", server.name), zap.Int("port", port))
-		server.certFile = context.GetCfgString(server.name, "http.certFile")
-		server.keyFile = context.GetCfgString(server.name, "http.keyFile")
-		server.port = port
-		server.usePort = port
-		server.httpServer = util.NewServer()
-	} else {
-		server.usePort = corePort
-		context.log.Info("服务名称与端口", zap.String("name", server.name), zap.Int("port", corePort))
+
+	server.isStart = context.GetCfgBoolDefault(server.name, "start", false)
+	context.log.Info("init", zap.String("name", server.name), zap.Bool("isStart", server.isStart))
+	if server.isStart {
+		port := context.GetCfgInt(server.name, "http.port")
+		corePort := context.GetCfgInt("core", "http.port")
+		if port > 0 && corePort != port {
+			context.log.Info("服务名称与端口", zap.String("name", server.name), zap.Int("port", port))
+			server.certFile = context.GetCfgString(server.name, "http.certFile")
+			server.keyFile = context.GetCfgString(server.name, "http.keyFile")
+			server.port = port
+			server.usePort = port
+			server.httpServer = util.NewServer()
+		} else {
+			server.usePort = corePort
+			context.log.Info("服务名称与端口", zap.String("name", server.name), zap.Int("port", corePort))
+		}
 	}
 }
 func (server *httpServer) start() error {
-	if server.port > 0 {
-		err := server.httpServer.StartAutoTLS(server.port, server.certFile, server.keyFile)
-		if err != nil {
-			server.context.log.Error("服务启动失败", zap.String("name", server.name), zap.Int("port", server.port), zap.Error(err))
-			return err
+	if server.isStart {
+		if server.port > 0 {
+			err := server.httpServer.StartAutoTLS(server.port, server.certFile, server.keyFile)
+			if err != nil {
+				server.context.log.Error("服务启动失败", zap.String("name", server.name), zap.Int("port", server.port), zap.Error(err))
+				return err
+			}
+			return nil
+		} else {
+			return nil
 		}
-		return nil
-	} else {
-		return nil
 	}
+	return nil
 }
