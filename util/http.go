@@ -31,6 +31,8 @@ func (hs *HttpServer) Start(port int) error {
 		Addr:              ":" + strconv.Itoa(port),
 		Handler:           hs.serveMux,
 		ReadHeaderTimeout: MaxReadHeaderTimeout,
+		ReadTimeout:       MaxReadHeaderTimeout,
+		IdleTimeout:       MaxReadHeaderTimeout,
 		MaxHeaderBytes:    MaxHeaderBytes,
 	}
 	hs.isTls = false
@@ -42,6 +44,8 @@ func (hs *HttpServer) StartTLS(port int, certFile, keyFile string) error {
 		Addr:              ":" + strconv.Itoa(port),
 		Handler:           hs.serveMux,
 		ReadHeaderTimeout: MaxReadHeaderTimeout,
+		ReadTimeout:       MaxReadHeaderTimeout,
+		IdleTimeout:       MaxReadHeaderTimeout,
 		MaxHeaderBytes:    MaxHeaderBytes,
 	}
 	hs.isTls = true
