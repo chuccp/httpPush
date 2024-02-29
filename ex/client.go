@@ -56,8 +56,7 @@ func (c *client) userNum() int {
 	return len(c.connMap)
 }
 func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
-	c.rLock.RLock()
-	defer c.rLock.RUnlock()
+	c.rLock.Lock()
 	t := time.Now()
 	liveTime := util.GetLiveTime(re)
 	u := NewUser(c.username, c.queue, c.context, writer, re)
@@ -76,6 +75,7 @@ func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
 		u.lastLiveTime = &t
 		u.createTime = &t
 		u.addTime = &t
+		c.rLock.Unlock()
 		c.context.AddUser(u)
 		return u
 	} else {
@@ -83,6 +83,7 @@ func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
 		uv.expiredTime = nil
 		uv.lastLiveTime = &t
 		uv.writer = writer
+		c.rLock.Unlock()
 		return uv
 	}
 
