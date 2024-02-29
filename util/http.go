@@ -3,6 +3,7 @@ package util
 import (
 	"net/http"
 	"strconv"
+	"time"
 )
 
 func NewServer() *HttpServer {
@@ -23,11 +24,14 @@ func (hs *HttpServer) AddRoute(pattern string, handler func(http.ResponseWriter,
 
 const MaxHeaderBytes = 8192
 
+const MaxReadHeaderTimeout = time.Second * 30
+
 func (hs *HttpServer) Start(port int) error {
 	srv := &http.Server{
-		Addr:           ":" + strconv.Itoa(port),
-		Handler:        hs.serveMux,
-		MaxHeaderBytes: MaxHeaderBytes,
+		Addr:              ":" + strconv.Itoa(port),
+		Handler:           hs.serveMux,
+		ReadHeaderTimeout: MaxReadHeaderTimeout,
+		MaxHeaderBytes:    MaxHeaderBytes,
 	}
 	hs.isTls = false
 	error := srv.ListenAndServe()
@@ -35,9 +39,10 @@ func (hs *HttpServer) Start(port int) error {
 }
 func (hs *HttpServer) StartTLS(port int, certFile, keyFile string) error {
 	srv := &http.Server{
-		Addr:           ":" + strconv.Itoa(port),
-		Handler:        hs.serveMux,
-		MaxHeaderBytes: MaxHeaderBytes,
+		Addr:              ":" + strconv.Itoa(port),
+		Handler:           hs.serveMux,
+		ReadHeaderTimeout: MaxReadHeaderTimeout,
+		MaxHeaderBytes:    MaxHeaderBytes,
 	}
 	hs.isTls = true
 	return srv.ListenAndServeTLS(certFile, keyFile)
