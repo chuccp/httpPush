@@ -20,10 +20,14 @@ func (hs *HttpServer) IsTls() bool {
 func (hs *HttpServer) AddRoute(pattern string, handler func(http.ResponseWriter, *http.Request)) {
 	hs.serveMux.HandleFunc(pattern, handler)
 }
+
+const MaxHeaderBytes = 8192
+
 func (hs *HttpServer) Start(port int) error {
 	srv := &http.Server{
-		Addr:    ":" + strconv.Itoa(port),
-		Handler: hs.serveMux,
+		Addr:           ":" + strconv.Itoa(port),
+		Handler:        hs.serveMux,
+		MaxHeaderBytes: MaxHeaderBytes,
 	}
 	hs.isTls = false
 	error := srv.ListenAndServe()
@@ -31,8 +35,9 @@ func (hs *HttpServer) Start(port int) error {
 }
 func (hs *HttpServer) StartTLS(port int, certFile, keyFile string) error {
 	srv := &http.Server{
-		Addr:    ":" + strconv.Itoa(port),
-		Handler: hs.serveMux,
+		Addr:           ":" + strconv.Itoa(port),
+		Handler:        hs.serveMux,
+		MaxHeaderBytes: MaxHeaderBytes,
 	}
 	hs.isTls = true
 	return srv.ListenAndServeTLS(certFile, keyFile)
