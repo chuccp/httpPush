@@ -39,13 +39,13 @@ func (query *Query) clusterInfoApi(writer http.ResponseWriter, request *http.Req
 }
 
 type MachineInfo struct {
+	Address   string
 	UserNum   int
 	MachineId string
-	Address   string
 }
 type MachineInfos struct {
-	Total int
-	List  []*MachineInfo
+	List  []*MachineInfo `json:"cluster"`
+	Total int            `json:"total"`
 }
 
 func (query *Query) clusterInfo(parameter *core.Parameter) any {
