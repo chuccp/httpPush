@@ -37,7 +37,12 @@ func (server *Server) ex(w http.ResponseWriter, re *http.Request) {
 }
 
 func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
-	cl := NewClient(server.context, re, server.liveTime)
+	cl, err := createClient(server.context, re, server.liveTime)
+	if err != nil {
+		writer.WriteHeader(404)
+		writer.Write([]byte(err.Error()))
+		return
+	}
 	server.rLock.RLock()
 	client, ok := server.store.LoadOrStore(cl)
 	if !ok {

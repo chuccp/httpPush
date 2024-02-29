@@ -26,12 +26,15 @@ const MaxHeaderBytes = 8192
 
 const MaxReadHeaderTimeout = time.Second * 30
 
+const MaxReadTimeout = time.Second * 120
+
 func (hs *HttpServer) Start(port int) error {
 	srv := &http.Server{
 		Addr:              ":" + strconv.Itoa(port),
 		Handler:           hs.serveMux,
 		ReadHeaderTimeout: MaxReadHeaderTimeout,
 		MaxHeaderBytes:    MaxHeaderBytes,
+		ReadTimeout:       MaxReadTimeout,
 	}
 	hs.isTls = false
 	error := srv.ListenAndServe()
@@ -43,6 +46,7 @@ func (hs *HttpServer) StartTLS(port int, certFile, keyFile string) error {
 		Handler:           hs.serveMux,
 		ReadHeaderTimeout: MaxReadHeaderTimeout,
 		MaxHeaderBytes:    MaxHeaderBytes,
+		ReadTimeout:       MaxReadTimeout,
 	}
 	hs.isTls = true
 	return srv.ListenAndServeTLS(certFile, keyFile)
