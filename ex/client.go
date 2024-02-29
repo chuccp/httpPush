@@ -29,18 +29,23 @@ func createClient(context *core.Context, re *http.Request, liveTime int) (*clien
 }
 func (c *client) expiredCheck() {
 	c.rLock.Lock()
-	defer c.rLock.Unlock()
 	t := time.Now()
 	keys := make([]string, 0)
+	users := make([]*User, 0)
 	for key, u := range c.connMap {
 		if u.isExpired(&t) {
 			keys = append(keys, key)
-			c.context.DeleteUser(u)
+			users = append(users, u)
 		}
 	}
 	for _, key := range keys {
 		delete(c.connMap, key)
 	}
+	c.rLock.Unlock()
+	for _, user := range users {
+		c.context.DeleteUser(user)
+	}
+
 }
 func (c *client) setExpired(user *User) {
 	c.rLock.RLock()
