@@ -5,6 +5,7 @@ import (
 	"github.com/chuccp/httpPush/util"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 	"log"
 	"os"
 	"sync"
@@ -78,12 +79,15 @@ func getEncoder() zapcore.Encoder {
 }
 
 func getFileLogWriter(path string) (zapcore.Core, error) {
-	file, err := os.Create(path)
-	if err != nil {
-		return nil, err
+	logger := &lumberjack.Logger{
+		Filename:   path,
+		MaxSize:    500, // megabytes
+		MaxBackups: 3,
+		MaxAge:     28,   //days
+		Compress:   true, // disabled by default
 	}
 	encoder := getEncoder()
-	core := zapcore.NewCore(encoder, zapcore.AddSync(file), zapcore.InfoLevel)
+	core := zapcore.NewCore(encoder, zapcore.AddSync(logger), zapcore.InfoLevel)
 	return core, nil
 }
 func getStdoutLogWriter() zapcore.Core {
