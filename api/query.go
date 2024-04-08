@@ -101,7 +101,7 @@ func (query *Query) queryUser(parameter *core.Parameter) any {
 		if fa {
 			for _, iUser := range us {
 				u.Username = iUser.GetUsername()
-				u.Conn = append(u.Conn, newConn(iUser.GetRemoteAddress(), iUser.LastLiveTime().Format(util.TimestampFormat), iUser.CreateTime().Format(util.TimestampFormat)))
+				u.Conn = append(u.Conn, newConn(iUser.GetRemoteAddress(), iUser.LastLiveTime().Format(util.TimestampFormat), iUser.CreateTime().Format(util.TimestampFormat), iUser.GetGroupIds()))
 			}
 		}
 	}
@@ -249,6 +249,7 @@ type Conn struct {
 	RemoteAddress string
 	LastLiveTime  string
 	CreateTime    string
+	GroupIds      []string
 }
 
 type History struct {
@@ -256,6 +257,6 @@ type History struct {
 	History *user.HistoryMessage
 }
 
-func newConn(RemoteAddress string, LastLiveTime string, CreateTime string) *Conn {
-	return &Conn{RemoteAddress, LastLiveTime, CreateTime}
+func newConn(RemoteAddress string, LastLiveTime string, CreateTime string, GroupIds []string) *Conn {
+	return &Conn{RemoteAddress, LastLiveTime, CreateTime, GroupIds}
 }
