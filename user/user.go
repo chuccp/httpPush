@@ -2,6 +2,7 @@ package user
 
 import (
 	"github.com/chuccp/httpPush/message"
+	"sort"
 	"time"
 )
 
@@ -35,4 +36,17 @@ type IOrderUser interface {
 	GetPriority() int
 	GetMachineId() string
 	GetOrderTime() *time.Time
+}
+
+func SortByAsc(us []IUser) []IUser {
+	ious := make([]IOrderUser, len(us))
+	for i, u := range us {
+		ious[i] = u.(IOrderUser)
+	}
+	sort.Sort(ByAsc(ious))
+	users := make([]IUser, len(us))
+	for i, user := range ious {
+		users[i] = user.(IUser)
+	}
+	return users
 }

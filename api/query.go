@@ -98,6 +98,7 @@ func (query *Query) queryUser(parameter *core.Parameter) any {
 	id := core.GetUsername(parameter)
 	if len(id) > 0 {
 		us, fa := query.context.GetUser(id)
+		us = user.SortByAsc(us)
 		if fa {
 			for _, iUser := range us {
 				u.Username = iUser.GetUsername()
