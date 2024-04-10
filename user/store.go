@@ -139,14 +139,16 @@ func (store *Store) AddUser(user IUser) bool {
 	groupIds := user.GetGroupIds()
 	if groupIds != nil {
 		for _, groupId := range groupIds {
-			gp, ok := store.gMap.Load(groupId)
-			if ok {
-				storeGroup := gp.(*StoreGroup)
-				storeGroup.AddUser(user)
-			} else {
-				storeGroup := NewStoreGroup()
-				store.gMap.Store(groupId, storeGroup)
-				storeGroup.AddUser(user)
+			if len(groupId) > 0 {
+				gp, ok := store.gMap.Load(groupId)
+				if ok {
+					storeGroup := gp.(*StoreGroup)
+					storeGroup.AddUser(user)
+				} else {
+					storeGroup := NewStoreGroup()
+					store.gMap.Store(groupId, storeGroup)
+					storeGroup.AddUser(user)
+				}
 			}
 		}
 	}
