@@ -16,7 +16,8 @@ func GetUsername(re *http.Request) string {
 func GetGroupIds(re *http.Request) []string {
 	group := GetGroupId(re)
 	if len(group) > 0 {
-		return strings.Split(group, ",")
+		v := strings.TrimSpace(strings.Trim(group, ","))
+		return strings.Split(v, ",")
 	}
 	return []string{}
 }
