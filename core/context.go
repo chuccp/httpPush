@@ -239,28 +239,6 @@ func (context *Context) Query(parameter *Parameter) any {
 	}
 	return iv
 }
-func (context *Context) SendMultiMessage(fromUser string, usernames []string, text string, f func(username string, status int)) {
-	localUser := make([]string, 0)
-	remoteLocalUser := make([]string, 0)
-	for _, v := range usernames {
-		if context.userStore.HasLocalUser(v) {
-			localUser = append(localUser, v)
-			f(v, 1)
-		} else {
-			remoteLocalUser = append(remoteLocalUser, v)
-		}
-	}
-	if len(localUser) > 0 {
-		go context.SendMultiMessageNoReplay(fromUser, localUser, text)
-	}
-	if len(remoteLocalUser) > 0 {
-		if context.msgDock.WriteMessageMultiUserMessage != nil {
-			context.msgDock.WriteMessageMultiUserMessage(fromUser, remoteLocalUser, text, f)
-		}
-	}
-
-}
-
 func (context *Context) SendMultiMessageNoReplay(fromUser string, usernames []string, text string) {
 	for _, v := range usernames {
 		msg := message.NewTextMessage(fromUser, v, text)

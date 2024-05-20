@@ -5,8 +5,6 @@ import (
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/util"
 	"net/http"
-	"strconv"
-	"strings"
 )
 
 type Server struct {
@@ -44,18 +42,14 @@ func (server *Server) sendMessage(w http.ResponseWriter, re *http.Request) {
 		w.Write([]byte("username or msg can't blank"))
 		return
 	}
-	us := strings.Split(username, ",")
-	w.Write([]byte("{"))
-	var isStart = true
-	server.context.SendMultiMessage("system", us, msg, func(username string, status int) {
-		if isStart {
-			w.Write([]byte("\"" + username + "\":" + strconv.Itoa(status)))
-			isStart = false
-		} else {
-			w.Write([]byte(",\"" + username + "\":" + strconv.Itoa(status)))
-		}
-	})
-	w.Write([]byte("}"))
+	err, b := server.context.SendTextMessage("system", username, msg)
+	if b && err == nil {
+		data, _ := json.Marshal(NewResponseMsg(true))
+		w.Write(data)
+	} else {
+		data, _ := json.Marshal(NewResponseMsg(false))
+		w.Write(data)
+	}
 }
 
 func (server *Server) root(writer http.ResponseWriter, request *http.Request) {
