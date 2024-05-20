@@ -136,7 +136,7 @@ func (query *Query) onlineUser(parameter *core.Parameter) any {
 	if size < 1 {
 		size = 10
 	}
-	index := parameter.GetInt("index")
+	index := parameter.GetIndex()
 	num := 0
 	yu := size
 	if total != 0 {

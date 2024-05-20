@@ -62,6 +62,12 @@ func (m *Parameter) GetInt(key string) int {
 	}
 	return 0
 }
+func (m *Parameter) SetIndex(index int) {
+	m.SetString("index", strconv.Itoa(index))
+}
+func (m *Parameter) GetIndex() int {
+	return m.GetInt("index")
+}
 
 func GetUsername(re *Parameter) string {
 	username := re.GetVString("id", "username")

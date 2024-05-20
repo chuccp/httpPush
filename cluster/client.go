@@ -6,7 +6,6 @@ import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/util"
 	"go.uber.org/zap"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -310,11 +309,6 @@ func (ms *ClientOperate) sendTextMsg(msg *message.TextMessage, exMachineIds ...s
 	})
 	return machineId_, _err_
 }
-func (ms *ClientOperate) queryClient(client *client, parameter *core.Parameter, localValue any, index int, f func(v any, err error)) {
-	parameter.SetString("index", strconv.Itoa(index))
-	v, err := client.query(parameter, localValue)
-	f(v, err)
-}
 func (ms *ClientOperate) Query(parameter *core.Parameter, localValue any) []any {
 	vs := make([]any, 0)
 	index := 0
@@ -324,7 +318,7 @@ func (ms *ClientOperate) Query(parameter *core.Parameter, localValue any) []any 
 			index++
 			waitGroup.AddOne()
 			ms.context.GoForIndex(index, func(index0 int) {
-				parameter.SetString("index", strconv.Itoa(index0))
+				parameter.SetIndex(index0)
 				v, err := client.query(parameter, localValue)
 				if err == nil && v != nil {
 					v1, ok := v.(*interface{})
