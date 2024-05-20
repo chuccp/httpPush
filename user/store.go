@@ -204,6 +204,14 @@ func (store *Store) GetUser(username string) ([]IUser, bool) {
 	}
 	return nil, false
 }
+func (store *Store) HasLocalUser(username string) bool {
+	v, ok := store.uMap.Load(username)
+	if ok {
+		us := v.(*StoreUser)
+		return us.num() > 0
+	}
+	return false
+}
 
 func (store *Store) GetOrderUser(username string) ([]IOrderUser, bool) {
 	v, ok := store.uMap.Load(username)
@@ -220,6 +228,15 @@ func (store *Store) RangeGroupUser(groupId string, f func(username string) bool)
 		storeGroup := gp.(*StoreGroup)
 		storeGroup.RangeUser(f)
 	}
+}
+func (store *Store) RangeAllUser(f func(username string) bool) {
+	store.uMap.Range(func(key, _ any) bool {
+		v, ok := key.(string)
+		if ok {
+			f(v)
+		}
+		return true
+	})
 }
 
 func (store *Store) QueryGroupsUser(groupIds ...string) *GroupUser {

@@ -23,3 +23,12 @@ func ContainsArray(str string, targetStr ...string) bool {
 	}
 	return contains
 }
+func EqualsAnyIgnoreCase(s string, strs ...string) bool {
+	sLower := strings.ToLower(s)
+	for _, str := range strs {
+		if sLower == strings.ToLower(str) {
+			return true
+		}
+	}
+	return false
+}

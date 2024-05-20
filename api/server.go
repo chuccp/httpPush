@@ -51,6 +51,29 @@ func (server *Server) sendMessage(w http.ResponseWriter, re *http.Request) {
 		w.Write(data)
 	}
 }
+
+//func (server *Server) sendMessage(w http.ResponseWriter, re *http.Request) {
+//	username := util.GetUsername(re)
+//	msg := util.GetMessage(re)
+//	if len(username) == 0 || len(msg) == 0 {
+//		w.WriteHeader(401)
+//		w.Write([]byte("username or msg can't blank"))
+//		return
+//	}
+//	us := strings.Split(username, ",")
+//	w.Write([]byte("{"))
+//	var isStart = true
+//	server.context.SendMultiMessage("system", us, msg, func(username string, status int) {
+//		if isStart {
+//			w.Write([]byte("\"" + username + "\":" + strconv.Itoa(status)))
+//			isStart = false
+//		} else {
+//			w.Write([]byte(",\"" + username + "\":" + strconv.Itoa(status)))
+//		}
+//	})
+//	w.Write([]byte("}"))
+//}
+
 func (server *Server) root(writer http.ResponseWriter, request *http.Request) {
 	var dm = make(map[string]interface{})
 	dm["version"] = core.VERSION

@@ -164,17 +164,31 @@ func (context *Context) SendMessage(msg message.IMessage) (error, bool) {
 func (context *Context) SendGroupTextMessage(form string, groupId, msg string) int32 {
 	var num int32
 	waitGroup := util.NewWaitNumGroup()
-	context.userStore.RangeGroupUser(groupId, func(username string) bool {
-		textMsg := message.NewTextMessage(form, username, msg)
-		waitGroup.AddOne()
-		context.sendNoForwardOnceMessage(textMsg, func(err error, hasUser bool) {
-			if hasUser {
-				atomic.AddInt32(&num, 1)
-			}
-			waitGroup.Done()
+	if util.EqualsAnyIgnoreCase(groupId, "all") {
+		context.userStore.RangeAllUser(func(username string) bool {
+			waitGroup.AddOne()
+			textMsg := message.NewTextMessage(form, username, msg)
+			context.sendNoForwardOnceMessage(textMsg, func(err error, hasUser bool) {
+				if hasUser {
+					atomic.AddInt32(&num, 1)
+				}
+				waitGroup.Done()
+			})
+			return true
 		})
-		return true
-	})
+	} else {
+		context.userStore.RangeGroupUser(groupId, func(username string) bool {
+			waitGroup.AddOne()
+			textMsg := message.NewTextMessage(form, username, msg)
+			context.sendNoForwardOnceMessage(textMsg, func(err error, hasUser bool) {
+				if hasUser {
+					atomic.AddInt32(&num, 1)
+				}
+				waitGroup.Done()
+			})
+			return true
+		})
+	}
 	waitGroup.Wait()
 	return num
 }
@@ -211,6 +225,30 @@ func (context *Context) Query(parameter *Parameter) any {
 		}
 	}
 	return iv
+}
+func (context *Context) SendMultiMessage(fromUser string, usernames []string, text string, f func(username string, status int)) {
+	localUser := make([]string, 0)
+	remoteLocalUser := make([]string, 0)
+	for _, v := range usernames {
+		if context.userStore.HasLocalUser(v) {
+			localUser = append(localUser, v)
+			f(v, 1)
+		} else {
+			remoteLocalUser = append(remoteLocalUser, v)
+		}
+	}
+	if len(localUser) > 0 {
+		go context.SendMultiMessageNoReplay(fromUser, localUser, text)
+	}
+}
+
+func (context *Context) SendMultiMessageNoReplay(fromUser string, usernames []string, text string) {
+	for _, v := range usernames {
+		msg := message.NewTextMessage(fromUser, v, text)
+		context.sendNoForwardOnceMessage(msg, func(err error, hasUser bool) {
+
+		})
+	}
 }
 
 func (context *Context) GetCfgString(section, key string) string {

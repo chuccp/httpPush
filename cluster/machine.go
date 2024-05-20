@@ -21,6 +21,12 @@ type LiteMachine struct {
 	MachineId string
 }
 
+type MultiMessage struct {
+	From   string
+	ToUser []string
+	Text   string
+}
+
 func (machine *Machine) getLiteMachine() *LiteMachine {
 	if machine.liteMachine != nil {
 		return machine.liteMachine
