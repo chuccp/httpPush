@@ -28,7 +28,9 @@ func NewServer() *Server {
 func (server *Server) Start() error {
 	if server.isStart {
 		server.AddHttpRoute("/ex", server.ex)
-		go server.expiredCheck()
+		server.context.Go(func() {
+			server.expiredCheck()
+		})
 	}
 	return nil
 }
