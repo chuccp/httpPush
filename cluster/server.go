@@ -60,7 +60,7 @@ func (server *Server) initial(w http.ResponseWriter, re *http.Request) {
 }
 
 // SendMultiMessage 接收其它机器的群发信息
-func (server *Server) SendMultiMessage(w http.ResponseWriter, re *http.Request) {
+func (server *Server) sendMultiMessage(w http.ResponseWriter, re *http.Request) {
 	var multiMessage MultiMessage
 	err := UnmarshalJsonBody(re, &multiMessage)
 	if err != nil {
@@ -68,6 +68,14 @@ func (server *Server) SendMultiMessage(w http.ResponseWriter, re *http.Request) 
 	} else {
 		server.context.SendMultiMessageNoReplay(multiMessage.From, multiMessage.ToUser, multiMessage.Text)
 	}
+}
+
+func (server *Server) WriteMessageMultiUserMessage(From string, ToUser []string, Text string, f func(username string, status int)) {
+
+	for _, username := range ToUser {
+		server.userStore.GetOrderUser(username)
+	}
+
 }
 
 func (server *Server) queryMachineList(w http.ResponseWriter, re *http.Request) {
@@ -186,7 +194,7 @@ func (server *Server) Init(context *core.Context) {
 		server.context.RegisterHandle("machineAddress", server.machineAddress)
 		server.AddHttpRoute("/_cluster/initial", server.initial)
 		server.AddHttpRoute("/_cluster/deleteUser", server.deleteUser)
-		server.AddHttpRoute("/_cluster/sendMultiMessage", server.SendMultiMessage)
+		server.AddHttpRoute("/_cluster/sendMultiMessage", server.sendMultiMessage)
 		server.AddHttpRoute("/_cluster/addUser", server.addUser)
 		server.AddHttpRoute("/_cluster/queryMachineList", server.queryMachineList)
 		server.AddHttpRoute("/_cluster/query", server.query)

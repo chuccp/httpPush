@@ -69,6 +69,19 @@ func (context *Context) Go(handle func()) {
 	}()
 }
 
+// GoForIndex  协程异常保活，避免协程内错误导致整个系统
+func (context *Context) GoForIndex(index int, handle func(ind int)) {
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				s := string(debug.Stack())
+				context.GetLog().Error("Go", zap.Any("err", err), zap.String("info", s))
+			}
+		}()
+		handle(index)
+	}()
+}
+
 func (context *Context) GetUserAllOrder(username string) []user.IOrderUser {
 	var us = make([]user.IOrderUser, 0)
 	us1, fa := context.userStore.GetOrderUser(username)
@@ -240,14 +253,18 @@ func (context *Context) SendMultiMessage(fromUser string, usernames []string, te
 	if len(localUser) > 0 {
 		go context.SendMultiMessageNoReplay(fromUser, localUser, text)
 	}
+	if len(remoteLocalUser) > 0 {
+		if context.msgDock.WriteMessageMultiUserMessage != nil {
+			context.msgDock.WriteMessageMultiUserMessage(fromUser, remoteLocalUser, text, f)
+		}
+	}
+
 }
 
 func (context *Context) SendMultiMessageNoReplay(fromUser string, usernames []string, text string) {
 	for _, v := range usernames {
 		msg := message.NewTextMessage(fromUser, v, text)
-		context.sendNoForwardOnceMessage(msg, func(err error, hasUser bool) {
-
-		})
+		context.sendNoForwardOnceMessage(msg, func(err error, hasUser bool) {})
 	}
 }
 

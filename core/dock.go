@@ -15,6 +15,7 @@ type IForward interface {
 	HandleAddUser(iUser user.IUser)
 	HandleDeleteUser(username string)
 	WriteMessage(iMessage message.IMessage, exMachineId []string, writeFunc user.WriteCallBackFunc)
+	WriteMessageMultiUserMessage(From string, ToUser []string, Text string, f func(username string, status int))
 	GetOrderUser(username string) ([]user.IOrderUser, bool)
 	Query(parameter *Parameter, localValue any) []any
 }
@@ -69,6 +70,12 @@ func (md *MsgDock) run() {
 		}
 		md.exchangeReplyMsg()
 	})
+}
+
+func (md *MsgDock) WriteMessageMultiUserMessage(From string, ToUser []string, Text string, f func(username string, status int)) {
+	if md.IForward != nil {
+		md.IForward.WriteMessageMultiUserMessage(From, ToUser, Text, f)
+	}
 }
 
 func (md *MsgDock) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc) {

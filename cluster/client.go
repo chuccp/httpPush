@@ -310,26 +310,36 @@ func (ms *ClientOperate) sendTextMsg(msg *message.TextMessage, exMachineIds ...s
 	})
 	return machineId_, _err_
 }
+func (ms *ClientOperate) queryClient(client *client, parameter *core.Parameter, localValue any, index int, f func(v any, err error)) {
+	parameter.SetString("index", strconv.Itoa(index))
+	v, err := client.query(parameter, localValue)
+	f(v, err)
+}
 func (ms *ClientOperate) Query(parameter *core.Parameter, localValue any) []any {
 	vs := make([]any, 0)
 	index := 0
+	waitGroup := util.NewWaitNumGroup()
 	ms.store.eachStoreClient(func(machineId string, client *client) bool {
 		if client.HasConn() {
 			index++
-			parameter.SetString("index", strconv.Itoa(index))
-			v, err := client.query(parameter, localValue)
-			if err == nil && v != nil {
-				v1, ok := v.(*interface{})
-				if ok {
-					vs = append(vs, *v1)
-				} else {
-					vs = append(vs, v)
+			waitGroup.AddOne()
+			ms.context.GoForIndex(index, func(index0 int) {
+				parameter.SetString("index", strconv.Itoa(index0))
+				v, err := client.query(parameter, localValue)
+				if err == nil && v != nil {
+					v1, ok := v.(*interface{})
+					if ok {
+						vs = append(vs, *v1)
+					} else {
+						vs = append(vs, v)
+					}
 				}
-
-			}
+				waitGroup.Done()
+			})
 		}
 		return true
 	})
+	waitGroup.Wait()
 	return vs
 }
 
