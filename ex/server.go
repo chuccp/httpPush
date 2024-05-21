@@ -2,6 +2,7 @@ package ex
 
 import (
 	"github.com/chuccp/httpPush/core"
+	"github.com/chuccp/httpPush/util"
 	"go.uber.org/zap"
 	"net/http"
 	"sync"
@@ -35,6 +36,7 @@ func (server *Server) Start() error {
 	return nil
 }
 func (server *Server) ex(w http.ResponseWriter, re *http.Request) {
+	util.HttpCross(w)
 	server.jack(w, re)
 }
 
