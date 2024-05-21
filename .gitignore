@@ -21,3 +21,4 @@
 go.work
 .idea/
 .idea/httpPush.iml
+.machineId
