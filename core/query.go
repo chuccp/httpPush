@@ -13,6 +13,19 @@ type Parameter struct {
 	SetFrom  url.Values
 }
 
+func copyValues(Form url.Values) url.Values {
+	to := make(url.Values)
+	for k, v := range Form {
+		to[k] = append([]string{}, v...)
+	}
+	return to
+}
+
+func (m *Parameter) CopyParameter() *Parameter {
+	parameter := &Parameter{Path: m.Path, Form: copyValues(m.Form), PostForm: copyValues(m.PostForm), SetFrom: copyValues(m.SetFrom)}
+	return parameter
+}
+
 func NewParameter(re *http.Request) *Parameter {
 	re.ParseForm()
 	path := re.URL.Path
