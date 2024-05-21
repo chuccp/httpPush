@@ -26,7 +26,7 @@ const MaxHeaderBytes = 8192
 
 const MaxReadHeaderTimeout = time.Second * 30
 
-const MaxReadTimeout = time.Second * 120
+const MaxReadTimeout = time.Minute * 10
 
 func (hs *HttpServer) Start(port int) error {
 	srv := &http.Server{
