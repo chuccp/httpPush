@@ -20,6 +20,7 @@ func (query *Query) Init() {
 	query.AddQuery("/sendGroupMsg", query.sendGroupMsg, query.sendGroupMsgApi)
 	query.AddQuery("/info_user", query.clusterInfo, query.clusterInfoApi)
 	query.AddQuery("/queryOrderInfo", query.queryOrderInfo, query.queryOrderInfoApi)
+	query.AddQuery("/queryClusterUserNum", query.queryClusterUserNum, query.queryClusterUserNumApi)
 
 }
 
@@ -230,6 +231,25 @@ func (query *Query) queryOrderInfoApi(writer http.ResponseWriter, request *http.
 			p.MachineAddress = machineAddress
 		}
 	}
+	data, _ := json.Marshal(values)
+	writer.Write(data)
+}
+
+func (query *Query) queryClusterUserNum(parameter *core.Parameter) any {
+	var clusterUserNum = &ClusterUserNum{}
+	handle, ok := query.context.GetHandle("clusterUserNum")
+	if ok {
+		value := handle(parameter)
+		machineId, _ := query.getMachineInfoId(parameter)
+		clusterUserNum.MachineId = machineId
+		clusterUserNum.UserNum = value
+	}
+	return clusterUserNum
+}
+
+func (query *Query) queryClusterUserNumApi(writer http.ResponseWriter, request *http.Request) {
+	parameter := core.NewParameter(request)
+	values := query.context.Query(parameter).([]any)
 	data, _ := json.Marshal(values)
 	writer.Write(data)
 }

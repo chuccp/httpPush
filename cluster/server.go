@@ -201,6 +201,7 @@ func (server *Server) Init(context *core.Context) {
 		server.clientOperate = clientOperate
 		server.context.RegisterHandle("machineInfoId", server.machineInfoId)
 		server.context.RegisterHandle("remoteMachineNum", server.remoteMachineNum)
+		server.context.RegisterHandle("clusterUserNum", server.clusterUserNum)
 		server.context.RegisterHandle("machineAddress", server.machineAddress)
 		server.AddHttpRoute("/_cluster/initial", server.initial)
 		server.AddHttpRoute("/_cluster/queryMachineList", server.queryMachineList)
@@ -261,4 +262,7 @@ func (server *Server) machineAddress(parameter *core.Parameter) any {
 
 func (server *Server) remoteMachineNum(parameter *core.Parameter) any {
 	return server.clientOperate.num()
+}
+func (server *Server) clusterUserNum(parameter *core.Parameter) any {
+	return server.userStore.num
 }

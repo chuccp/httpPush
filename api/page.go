@@ -53,6 +53,12 @@ type OrderUser struct {
 	MachineId string
 	OrderTime string
 }
+
+type ClusterUserNum struct {
+	UserNum   any
+	MachineId string
+}
+
 type AllOrderUser struct {
 	OrderUser      []*OrderUser
 	MachineId      string
