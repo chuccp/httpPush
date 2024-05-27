@@ -41,16 +41,20 @@ func (server *Server) ex(w http.ResponseWriter, re *http.Request) {
 }
 
 func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
-	cl, err := createClient(server.context, re, server.liveTime)
-	if err != nil {
+
+	username := util.GetUsername(re)
+	if len(username) == 0 {
 		writer.WriteHeader(404)
-		writer.Write([]byte(err.Error()))
+		writer.Write([]byte("request error"))
 		return
 	}
 	server.rLock.RLock()
-	client, ok := server.store.LoadOrStore(cl)
+	cl := getNewClient(server.context, username, server.liveTime)
+	client, ok := server.store.LoadOrStore(cl, username)
 	if !ok {
-		server.context.GetLog().Debug("新增连接", zap.String("username", cl.username), zap.String("remoteAddress", re.RemoteAddr))
+		server.context.GetLog().Debug("新增连接", zap.String("username", username), zap.String("remoteAddress", re.RemoteAddr))
+	} else {
+		freeNoUseClient(cl)
 	}
 	user := client.loadUser(writer, re)
 	server.rLock.RUnlock()
@@ -66,6 +70,7 @@ func (server *Server) expiredCheck() {
 			server.rLock.Lock()
 			if c.userNum() == 0 {
 				server.store.Delete(c.username)
+				freeClient(c)
 			}
 			server.rLock.Unlock()
 		})

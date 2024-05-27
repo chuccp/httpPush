@@ -1,7 +1,6 @@
 package ex
 
 import (
-	"errors"
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/util"
 	"net/http"
@@ -18,15 +17,32 @@ type client struct {
 	rLock    *sync.RWMutex
 }
 
-func createClient(context *core.Context, re *http.Request, liveTime int) (*client, error) {
-	username := util.GetUsername(re)
-	if len(username) == 0 {
-		return nil, errors.New("request error")
-	}
-	connMap := make(map[string]*User)
-	queue := util.NewQueue()
-	return &client{queue: queue, username: username, context: context, connMap: connMap, liveTime: liveTime, rLock: new(sync.RWMutex)}, nil
+var poolClient = &sync.Pool{
+	New: func() interface{} {
+		connMap := make(map[string]*User)
+		queue := util.NewQueue()
+		rLock := new(sync.RWMutex)
+		return &client{connMap: connMap, queue: queue, rLock: rLock}
+	},
 }
+
+func getNewClient(context *core.Context, username string, liveTime int) *client {
+	client := poolClient.Get().(*client)
+	client.username = username
+	client.context = context
+	client.liveTime = liveTime
+	return client
+}
+func freeNoUseClient(client *client) {
+	poolClient.Put(client)
+}
+func freeClient(client *client) {
+	client.connMap = make(map[string]*User)
+	client.queue = util.NewQueue()
+	client.rLock = new(sync.RWMutex)
+	poolClient.Put(client)
+}
+
 func (c *client) expiredCheck() {
 	c.rLock.Lock()
 	t := time.Now()

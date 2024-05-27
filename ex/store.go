@@ -1,6 +1,8 @@
 package ex
 
-import "sync"
+import (
+	"sync"
+)
 
 type Store struct {
 	clientMap *sync.Map
@@ -9,8 +11,8 @@ type Store struct {
 func NewStore() *Store {
 	return &Store{clientMap: new(sync.Map)}
 }
-func (s *Store) LoadOrStore(c *client) (*client, bool) {
-	v, ok := s.clientMap.LoadOrStore(c.username, c)
+func (s *Store) LoadOrStore(cl *client, username string) (*client, bool) {
+	v, ok := s.clientMap.LoadOrStore(username, cl)
 	return v.(*client), ok
 }
 
