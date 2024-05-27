@@ -52,7 +52,6 @@ func messageToBytes(iMessage message.IMessage) ([]byte, error) {
 }
 
 func (u *User) waitMessage() {
-	u.context.FlashLiveTime(u)
 	u.context.GetLog().Debug("等待信息", zap.Int("liveTime", u.liveTime))
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(u.liveTime)*time.Second)
 	msg, num, cls := u.queue.Dequeue(ctx)

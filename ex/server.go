@@ -58,6 +58,7 @@ func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
 	}
 	user := client.loadUser(writer, re)
 	server.rLock.RUnlock()
+	server.context.FlashLiveTime(user)
 	user.waitMessage()
 	client.setExpired(user)
 }
