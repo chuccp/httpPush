@@ -1,5 +1,10 @@
 package cluster
 
+import (
+	"github.com/chuccp/httpPush/message"
+	"github.com/chuccp/httpPush/user"
+)
+
 type User struct {
 	MachineId string
 	UserId    string
@@ -19,4 +24,12 @@ func successResponse() *Response {
 }
 func failResponse(msg string) *Response {
 	return &Response{Code: 500, Msg: msg}
+}
+
+type clusterSendMessage struct {
+	ous         []user.IOrderUser
+	index       int
+	msg         message.IMessage
+	exMachineId []string
+	machineId   string
 }

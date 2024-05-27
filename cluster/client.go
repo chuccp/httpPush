@@ -21,11 +21,6 @@ type client struct {
 	context       *core.Context
 }
 
-type operate struct {
-	isAdd    bool
-	username string
-}
-
 func NewClient(remoteMachine *Machine, localMachine *Machine, context *core.Context) *client {
 	return &client{request: util.NewRequest(), remoteLink: remoteMachine.Link, isHandshake: false, remoteMachine: remoteMachine, localMachine: localMachine, context: context}
 }
@@ -264,12 +259,11 @@ func (s *store) addNewClient(client *client) {
 type ClientOperate struct {
 	localMachine *Machine
 	context      *core.Context
-	userQueue    *util.Queue
 	store        *store
 }
 
 func NewClientOperate(context *core.Context, localMachine *Machine) *ClientOperate {
-	return &ClientOperate{context: context, localMachine: localMachine, userQueue: util.NewQueue(), store: newStore(localMachine, context)}
+	return &ClientOperate{context: context, localMachine: localMachine, store: newStore(localMachine, context)}
 }
 
 func (ms *ClientOperate) getClient(machineId string) (*client, bool) {
@@ -378,23 +372,6 @@ func (ms *ClientOperate) live() {
 		})
 	}
 }
-func (ms *ClientOperate) sendAddUser0(usernames ...string) {
-	ms.store.eachStoreClient(func(machineId string, client *client) bool {
-		if client.HasConn() {
-			client.sendAddUser(usernames...)
-		}
-		return true
-	})
-}
-
-func (ms *ClientOperate) sendDeleteUser0(usernames ...string) {
-	ms.store.eachStoreClient(func(machineId string, client *client) bool {
-		if client.HasConn() {
-			client.sendDeleteUser(usernames...)
-		}
-		return true
-	})
-}
 func (ms *ClientOperate) getMachineLite() []*LiteMachine {
 	lm := make([]*LiteMachine, 0)
 	ms.store.eachStoreClient(func(machineId string, c *client) bool {
@@ -406,38 +383,9 @@ func (ms *ClientOperate) getMachineLite() []*LiteMachine {
 	return lm
 }
 
-func (ms *ClientOperate) SendAddUser(username string) {
-	ms.userQueue.Offer(&operate{isAdd: true, username: username})
-}
-func (ms *ClientOperate) SendDeleteUser(username string) {
-	ms.userQueue.Offer(&operate{isAdd: false, username: username})
-}
-
-func (ms *ClientOperate) userOperate() {
-	deleteUsers := make([]string, 0)
-	addUsers := make([]string, 0)
-	for {
-		v, num := ms.userQueue.Poll()
-		op := v.(*operate)
-		if op.isAdd {
-			addUsers = append(addUsers, op.username)
-		} else {
-			deleteUsers = append(deleteUsers, op.username)
-		}
-		if num == 0 || num >= 100 {
-			if len(addUsers) > 0 {
-				ms.sendAddUser0(addUsers...)
-				addUsers = make([]string, 0)
-			}
-			if len(deleteUsers) > 0 {
-				ms.sendDeleteUser0(deleteUsers...)
-				deleteUsers = make([]string, 0)
-			}
-		}
-	}
-}
 func (ms *ClientOperate) run() {
 	ms.initial()
-	go ms.live()
-	go ms.userOperate()
+	ms.context.Go(func() {
+		ms.live()
+	})
 }

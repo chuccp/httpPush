@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Server struct {
@@ -31,12 +32,22 @@ func NewServer() *Server {
 func (server *Server) Start() error {
 	if server.isStart {
 		go server.run()
+		go server.checkUser()
 	}
 	return nil
 }
 
 func (server *Server) run() {
 	server.clientOperate.run()
+}
+func (server *Server) checkUser() {
+	for {
+
+		time.Sleep(time.Second * 5)
+		server.context.GetLog().Debug("checkUser")
+		server.userStore.ClearTimeOutUser(time.Now())
+		time.Sleep(time.Second * 5)
+	}
 }
 
 // 初始化，用于机器之间握手,客户端请求时，返回当前机器信息
@@ -101,39 +112,57 @@ func (server *Server) query(w http.ResponseWriter, re *http.Request) {
 	}
 	w.WriteHeader(500)
 }
-
-func (server *Server) HandleAddUser(iUser user.IUser) {
-	server.clientOperate.SendAddUser(iUser.GetUsername())
-}
-func (server *Server) HandleDeleteUser(username string) {
-	server.clientOperate.SendDeleteUser(username)
-}
 func (server *Server) Query(parameter *core.Parameter, localValue any) []any {
 	return server.clientOperate.Query(parameter, localValue)
 }
 
-func (server *Server) GetOrderUser(username string) ([]user.IOrderUser, bool) {
-	return server.userStore.GetOrderUser(username)
+func (server *Server) writeMessage(msg *clusterSendMessage, writeFunc user.WriteCallBackFunc) {
+	index := msg.index
+	if index < len(msg.ous) {
+		ou := msg.ous[index]
+		cu := ou.(*clientUser)
+		msg.exMachineId = append(msg.exMachineId, cu.machineId)
+		cu.WriteMessage(msg.msg, func(err error, hasUser bool) {
+			if err == nil && hasUser {
+				msg.machineId = cu.machineId
+				writeFunc(err, hasUser)
+			} else {
+				msg.index++
+				server.writeMessage(msg, writeFunc)
+			}
+		})
+	} else {
+		writeFunc(nil, false)
+	}
 }
 
-func (server *Server) WriteMessage(msg message.IMessage, exMachineId []string, writeFunc user.WriteCallBackFunc) {
+func (server *Server) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc) {
 	switch t := msg.(type) {
 	case *message.TextMessage:
 		{
-			un := t.GetString(message.To)
-			machineId, err := server.clientOperate.sendTextMsg(t, exMachineId...)
-			if err == nil {
-				server.context.GetLog().Info("本地没有用户信息，增加用户信息", zap.String("machineId", machineId))
-				server.userStore.AddUser(un, machineId, server.clientOperate)
-				writeFunc(nil, true)
-				return
-			} else {
-				writeFunc(err, false)
-				return
-			}
+			username := t.GetString(message.To)
+			orderUser := server.userStore.GetOrderUser(username)
+			clusterSendMessage := &clusterSendMessage{ous: orderUser, index: 0, msg: t, exMachineId: make([]string, 0)}
+			server.writeMessage(clusterSendMessage, func(err error, hasUser bool) {
+				if err == nil && hasUser {
+					server.userStore.RefreshUser(username, clusterSendMessage.machineId, server.clientOperate)
+					writeFunc(nil, true)
+				} else {
+					machineId, err := server.clientOperate.sendTextMsg(t, clusterSendMessage.exMachineId...)
+					if err == nil {
+						server.context.GetLog().Info("本地没有用户信息，增加用户信息", zap.String("machineId", machineId))
+						server.userStore.AddUser(username, machineId, server.clientOperate)
+						writeFunc(nil, true)
+						return
+					} else {
+						writeFunc(err, false)
+						return
+					}
+				}
+			})
 		}
 	}
-	writeFunc(nil, false)
+
 }
 func (server *Server) Init(context *core.Context) {
 	server.context = context
@@ -173,8 +202,6 @@ func (server *Server) Init(context *core.Context) {
 		server.context.RegisterHandle("remoteMachineNum", server.remoteMachineNum)
 		server.context.RegisterHandle("machineAddress", server.machineAddress)
 		server.AddHttpRoute("/_cluster/initial", server.initial)
-		server.AddHttpRoute("/_cluster/deleteUser", server.deleteUser)
-		server.AddHttpRoute("/_cluster/addUser", server.addUser)
 		server.AddHttpRoute("/_cluster/queryMachineList", server.queryMachineList)
 		server.AddHttpRoute("/_cluster/query", server.query)
 		server.AddHttpRoute("/_cluster/sendTextMsg", server.sendTextMsg)
@@ -184,28 +211,6 @@ func (server *Server) Name() string {
 
 	return "cluster"
 }
-
-func (server *Server) deleteUser(writer http.ResponseWriter, request *http.Request) {
-	var us []*User
-	err := UnmarshalJsonBody(request, &us)
-	if err == nil {
-		for _, u := range us {
-			server.context.GetLog().Debug("收到用户删除", zap.String("userId", u.UserId), zap.String("MachineId", u.MachineId))
-			server.userStore.DeleteUser(u.UserId, u.MachineId)
-		}
-	}
-}
-func (server *Server) addUser(writer http.ResponseWriter, request *http.Request) {
-	var us []*User
-	err := UnmarshalJsonBody(request, &us)
-	if err == nil {
-		for _, u := range us {
-			server.context.GetLog().Debug("收到用户添加", zap.String("userId", u.UserId), zap.String("MachineId", u.MachineId))
-			server.userStore.AddUser(u.UserId, u.MachineId, server.clientOperate)
-		}
-	}
-}
-
 func (server *Server) sendTextMsg(writer http.ResponseWriter, request *http.Request) {
 	var textMessage message.TextMessage
 	err := UnmarshalJsonBody(request, &textMessage)

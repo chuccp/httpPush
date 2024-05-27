@@ -3,6 +3,7 @@ package user
 import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/util"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -213,13 +214,21 @@ func (store *Store) HasLocalUser(username string) bool {
 	return false
 }
 
-func (store *Store) GetOrderUser(username string) ([]IOrderUser, bool) {
+func (store *Store) GetOrderUser(username string) []IOrderUser {
+	ius := make([]IOrderUser, 0)
 	v, ok := store.uMap.Load(username)
 	if ok {
 		us := v.(*StoreUser)
-		return us.getOrderUser(), true
+		ous := us.getOrderUser()
+		if len(ous) > 0 {
+			ius = append(ius, ous...)
+			if len(ius) > 0 {
+				sort.Sort(ByAsc(ius))
+			}
+			return ius
+		}
 	}
-	return nil, false
+	return ius
 }
 
 func (store *Store) RangeGroupUser(groupId string, f func(username string) bool) {

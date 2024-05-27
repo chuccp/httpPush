@@ -4,10 +4,13 @@ import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
 )
+
+const expiredTime = 10 * time.Minute
 
 var poolCuStore = &sync.Pool{
 	New: func() interface{} {
@@ -20,7 +23,7 @@ func getNewCuStore(username string) *cuStore {
 	flag.username = username
 	t := time.Now()
 	flag.createTime = &t
-	flag.store = make(map[string]*cu)
+	flag.store = make(map[string]*clientUser)
 	return flag
 }
 func freeCuStore(cuStore *cuStore) {
@@ -28,7 +31,7 @@ func freeCuStore(cuStore *cuStore) {
 }
 
 type cuStore struct {
-	store      map[string]*cu
+	store      map[string]*clientUser
 	username   string
 	createTime *time.Time
 }
@@ -37,49 +40,63 @@ func (cs *cuStore) addUser(username string, machineId string, clientOperate *Cli
 	cu := newCu(username, machineId, clientOperate)
 	cs.store[machineId] = cu
 }
+func (cs *cuStore) renewUser(username string, machineId string, clientOperate *ClientOperate) {
+	v, ok := cs.store[machineId]
+	if !ok {
+		cu := newCu(username, machineId, clientOperate)
+		cs.store[machineId] = cu
+	} else {
+		t := time.Now()
+		v.lastLiveTime = &t
+		ext := t.Add(expiredTime)
+		v.expiredTime = &ext
+	}
+}
 func (cs *cuStore) getUser() []user.IOrderUser {
 	us := make([]user.IOrderUser, 0)
-	for _, user := range cs.store {
-		us = append(us, user)
+	if len(cs.store) > 0 {
+		for _, user := range cs.store {
+			us = append(us, user)
+		}
+		sort.Sort(user.ByAsc(us))
 	}
 	return us
 
 }
-func (cs *cuStore) deleteUser(machineId string) {
-	delete(cs.store, machineId)
-}
-func (cs *cuStore) num() int {
-	return len(cs.store)
-}
 
-type cu struct {
+type clientUser struct {
 	username      string
 	machineId     string
 	priority      int
 	createTime    *time.Time
 	lastLiveTime  *time.Time
+	expiredTime   *time.Time
 	clientOperate *ClientOperate
 }
 
-func (u *cu) GetOrderTime() *time.Time {
+func (u *clientUser) isExpiredTime(now *time.Time) bool {
+	return u.expiredTime != nil && u.expiredTime.Before(*now)
+}
+
+func (u *clientUser) GetOrderTime() *time.Time {
 	if u.lastLiveTime != nil {
 		return u.lastLiveTime
 	}
 	return u.createTime
 }
 
-func (u *cu) GetMachineId() string {
+func (u *clientUser) GetMachineId() string {
 	return u.machineId
 }
 
-func (u *cu) GetId() string {
+func (u *clientUser) GetId() string {
 	return u.username + u.machineId
 }
 
-func (u *cu) GetPriority() int {
+func (u *clientUser) GetPriority() int {
 	return u.priority
 }
-func (u *cu) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc) {
+func (u *clientUser) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc) {
 	switch t := msg.(type) {
 	case *message.TextMessage:
 		{
@@ -87,8 +104,6 @@ func (u *cu) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc
 			if ok {
 				err := cl.sendTextMsg(t)
 				if err == nil {
-					t := time.Now()
-					u.lastLiveTime = &t
 					u.priority = 0
 					writeFunc(nil, true)
 					return
@@ -102,16 +117,19 @@ func (u *cu) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc
 	writeFunc(nil, false)
 }
 
-func (u *cu) GetUsername() string {
+func (u *clientUser) GetUsername() string {
 	return u.username
 }
-func (u *cu) CreateTime() string {
+func (u *clientUser) CreateTime() string {
 	return u.createTime.Format(util.TimestampFormat)
 }
-func newCu(username string, machineId string, clientOperate *ClientOperate) *cu {
-	u := &cu{username: username, machineId: machineId, clientOperate: clientOperate, priority: 0}
+func newCu(username string, machineId string, clientOperate *ClientOperate) *clientUser {
+	u := &clientUser{username: username, machineId: machineId, clientOperate: clientOperate, priority: 0}
 	tu := time.Now()
 	u.createTime = &tu
+	u.lastLiveTime = &tu
+	ext := tu.Add(expiredTime)
+	u.expiredTime = &ext
 	return u
 }
 
@@ -134,41 +152,65 @@ func (us *userStore) AddUser(username string, machineId string, clientOperate *C
 		sc := cus.(*cuStore)
 		sc.addUser(username, machineId, clientOperate)
 	}
-
 }
-func (us *userStore) DeleteUser(username string, machineId string) {
+
+func (us *userStore) RefreshUser(username string, machineId string, clientOperate *ClientOperate) {
+	us.rLock.Lock()
+	defer us.rLock.Unlock()
+	cus, ok := us.userMap.Load(username)
+	if !ok {
+		atomic.AddInt32(&us.num, 1)
+		cus := getNewCuStore(username)
+		cus.addUser(username, machineId, clientOperate)
+		us.userMap.Store(username, cus)
+	} else {
+		sc := cus.(*cuStore)
+		sc.renewUser(username, machineId, clientOperate)
+	}
+}
+
+func (us *userStore) DeleteExpiredUser(username string, now *time.Time) {
 	us.rLock.Lock()
 	defer us.rLock.Unlock()
 	cu, ok := us.userMap.Load(username)
 	if ok {
 		sc := cu.(*cuStore)
-		sc.deleteUser(machineId)
-		if sc.num() == 0 {
-			us.userMap.Delete(username)
-			freeCuStore(sc)
-			atomic.AddInt32(&us.num, -1)
+		for machineId, c := range sc.store {
+			if c.isExpiredTime(now) {
+				delete(sc.store, machineId)
+				if len(sc.store) == 0 {
+					us.userMap.Delete(username)
+					freeCuStore(sc)
+					atomic.AddInt32(&us.num, -1)
+				}
+			}
 		}
 	}
 }
+
 func (us *userStore) Num() int32 {
 	return us.num
 }
-func (us *userStore) GetOrderUser(username string) ([]user.IOrderUser, bool) {
+
+func (us *userStore) ClearTimeOutUser(now time.Time) {
+	us.userMap.Range(func(key, value interface{}) bool {
+		cu := value.(*cuStore)
+		us.DeleteExpiredUser(cu.username, &now)
+		return true
+	})
+}
+
+func (us *userStore) GetOrderUser(username string) []user.IOrderUser {
 	us.rLock.RLock()
 	defer us.rLock.RUnlock()
 	cvs, ok := us.userMap.Load(username)
 	if ok {
 		sc := cvs.(*cuStore)
-		return sc.getUser(), true
+		return sc.getUser()
 	}
-	return nil, ok
+	u := make([]user.IOrderUser, 0)
+	return u
 }
-func (us *userStore) EachUsers(f func(key string, value *cu) bool) {
-	us.userMap.Range(func(key, value interface{}) bool {
-		return f(key.(string), value.(*cu))
-	})
-}
-
 func newUserStore() *userStore {
 	return &userStore{userMap: new(sync.Map), rLock: new(sync.RWMutex)}
 }

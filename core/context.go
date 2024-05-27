@@ -82,19 +82,8 @@ func (context *Context) GoForIndex(index int, handle func(ind int)) {
 	}()
 }
 
-func (context *Context) GetUserAllOrder(username string) []user.IOrderUser {
-	var us = make([]user.IOrderUser, 0)
-	us1, fa := context.userStore.GetOrderUser(username)
-	if fa && us1 != nil {
-		us = append(us, us1...)
-	}
-	if context.msgDock.IForward != nil {
-		us2, fa := context.msgDock.IForward.GetOrderUser(username)
-		if fa && us2 != nil {
-			us = append(us, us2...)
-		}
-	}
-	return us
+func (context *Context) GetUserOrder(username string) []user.IOrderUser {
+	return context.userStore.GetOrderUser(username)
 }
 func (context *Context) GetLog() *zap.Logger {
 	return context.log
@@ -105,7 +94,6 @@ func (context *Context) SetForward(forward IForward) {
 func (context *Context) AddUser(iUser user.IUser) {
 	if context.userStore.AddUser(iUser) {
 		context.log.Info("新增用户", zap.String("username", iUser.GetUsername()), zap.String("remoteAddress", iUser.GetRemoteAddress()))
-		context.msgDock.HandleAddUser(iUser)
 	}
 }
 
@@ -132,7 +120,6 @@ func (context *Context) RangeUser(f func(username string, user *user.StoreUser) 
 func (context *Context) DeleteUser(iUser user.IUser) bool {
 	if context.userStore.DeleteUser(iUser) {
 		context.log.Info("用户离线", zap.String("username", iUser.GetUsername()), zap.String("remoteAddress", iUser.GetRemoteAddress()))
-		context.msgDock.HandleDeleteUser(iUser.GetUsername())
 		return true
 	}
 	return false

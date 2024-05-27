@@ -6,7 +6,6 @@ import (
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
 	"net/http"
-	"sort"
 )
 
 type Query struct {
@@ -207,8 +206,7 @@ func (query *Query) sendGroupMsgApi(writer http.ResponseWriter, request *http.Re
 
 func (query *Query) queryOrderInfo(parameter *core.Parameter) any {
 	userId := parameter.GetVString("userId", "username", "id")
-	us := query.context.GetUserAllOrder(userId)
-	sort.Sort(user.ByAsc(us))
+	us := query.context.GetUserOrder(userId)
 	allOrderUser := NewAllOrderUser()
 	machineInfoId, ok := query.getMachineInfoId(parameter)
 	if ok {
