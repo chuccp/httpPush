@@ -163,13 +163,11 @@ func (us *userStore) RefreshUser(username string, machineId string, clientOperat
 	defer us.rLock.Unlock()
 	cus, ok := us.userMap.Load(username)
 	if !ok {
-		us.context.GetLog().Debug("RefreshUser-AddUser", zap.String("username", username), zap.Int("us.num", int(us.num)))
 		atomic.AddInt32(&us.num, 1)
 		cus := getNewCuStore(username)
 		cus.addUser(username, machineId, clientOperate)
 		us.userMap.Store(username, cus)
 	} else {
-		us.context.GetLog().Debug("RefreshUser", zap.String("username", username), zap.Int("us.num", int(us.num)))
 		sc := cus.(*cuStore)
 		sc.renewUser(username, machineId, clientOperate)
 	}
@@ -202,7 +200,6 @@ func (us *userStore) DeleteExpiredUser(username string, now *time.Time) {
 		sc := cu.(*cuStore)
 		for machineId, c := range sc.store {
 			if c.isExpiredTime(now) {
-				us.context.GetLog().Debug("DeleteExpiredUser", zap.String("username", username))
 				delete(sc.store, machineId)
 				if len(sc.store) == 0 {
 					us.userMap.Delete(username)
