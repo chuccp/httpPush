@@ -27,6 +27,7 @@ type User struct {
 	expiredTime   *time.Time
 	groupIds      []string
 	context       *core.Context
+	id            string
 }
 type HttpMessage struct {
 	From string
@@ -38,7 +39,7 @@ func newHttpMessage(from string, body string) *HttpMessage {
 }
 
 func (u *User) GetId() string {
-	return u.username + "_" + u.remoteAddress
+	return u.id
 }
 
 func messageToBytes(iMessage message.IMessage) ([]byte, error) {
@@ -122,8 +123,8 @@ func (u *User) GetMachineId() string {
 func (u *User) GetOrderTime() *time.Time {
 	return u.lastLiveTime
 }
-func NewUser(username string, queue *util.Queue, context *core.Context, writer http.ResponseWriter, re *http.Request) *User {
-	u := &User{username: username, context: context, queue: queue, writer: writer, remoteAddress: re.RemoteAddr}
+func NewUser(username string, id string, queue *util.Queue, context *core.Context, writer http.ResponseWriter, re *http.Request) *User {
+	u := &User{username: username, id: id, context: context, queue: queue, writer: writer, remoteAddress: re.RemoteAddr}
 	u.groupIds = util.GetGroupIds(re)
 	return u
 }

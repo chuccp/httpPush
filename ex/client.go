@@ -77,21 +77,22 @@ func (c *client) userNum() int {
 	return len(c.connMap)
 }
 func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
+	liveTime := util.GetLiveTime(re)
+	id := getId(c.username, re)
+	if liveTime <= 0 {
+		if c.liveTime > 0 {
+			liveTime = c.liveTime
+		} else {
+			liveTime = 20
+		}
+	}
 	c.rLock.Lock()
 	t := time.Now()
-	liveTime := util.GetLiveTime(re)
-	u := NewUser(c.username, c.queue, c.context, writer, re)
-	if liveTime > 0 {
-		u.liveTime = liveTime
-	} else if c.liveTime > 0 {
-		u.liveTime = c.liveTime
-	} else {
-		u.liveTime = 20
-	}
-	u.expiredTime = nil
-	id := u.GetId()
 	uv, ok := c.connMap[id]
 	if !ok {
+		u := NewUser(c.username, id, c.queue, c.context, writer, re)
+		u.expiredTime = nil
+		u.liveTime = liveTime
 		c.connMap[id] = u
 		u.lastLiveTime = &t
 		u.createTime = &t
@@ -100,7 +101,7 @@ func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
 		c.context.AddUser(u)
 		return u
 	} else {
-		uv.liveTime = u.liveTime
+		uv.liveTime = liveTime
 		uv.expiredTime = nil
 		uv.lastLiveTime = &t
 		uv.writer = writer
@@ -108,4 +109,7 @@ func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
 		return uv
 	}
 
+}
+func getId(username string, re *http.Request) string {
+	return username + "_" + re.RemoteAddr
 }
