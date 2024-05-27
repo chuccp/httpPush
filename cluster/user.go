@@ -176,18 +176,20 @@ func (us *userStore) RefreshUser(username string, machineId string, clientOperat
 }
 
 func (us *userStore) DeleteUser(username string, machineIds []string) {
-	us.rLock.Lock()
-	defer us.rLock.Unlock()
-	cus, ok := us.userMap.Load(username)
-	if ok {
-		sc := cus.(*cuStore)
-		for _, machineId := range machineIds {
-			delete(sc.store, machineId)
-		}
-		if len(sc.store) == 0 {
-			us.userMap.Delete(username)
-			freeCuStore(sc)
-			atomic.AddInt32(&us.num, -1)
+	if len(machineIds) > 0 {
+		us.rLock.Lock()
+		defer us.rLock.Unlock()
+		cus, ok := us.userMap.Load(username)
+		if ok {
+			sc := cus.(*cuStore)
+			for _, machineId := range machineIds {
+				delete(sc.store, machineId)
+			}
+			if len(sc.store) == 0 {
+				us.userMap.Delete(username)
+				freeCuStore(sc)
+				atomic.AddInt32(&us.num, -1)
+			}
 		}
 	}
 }
