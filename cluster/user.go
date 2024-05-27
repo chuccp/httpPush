@@ -1,9 +1,11 @@
 package cluster
 
 import (
+	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
+	"go.uber.org/zap"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -137,6 +139,7 @@ type userStore struct {
 	userMap *sync.Map
 	num     int32
 	rLock   *sync.RWMutex
+	context *core.Context
 }
 
 func (us *userStore) AddUser(username string, machineId string, clientOperate *ClientOperate) {
@@ -144,6 +147,7 @@ func (us *userStore) AddUser(username string, machineId string, clientOperate *C
 	defer us.rLock.Unlock()
 	cus, ok := us.userMap.Load(username)
 	if !ok {
+		us.context.GetLog().Debug("AddUser", zap.String("username", username), zap.Int("us.num", int(us.num)))
 		atomic.AddInt32(&us.num, 1)
 		cus := getNewCuStore(username)
 		cus.addUser(username, machineId, clientOperate)
@@ -159,13 +163,32 @@ func (us *userStore) RefreshUser(username string, machineId string, clientOperat
 	defer us.rLock.Unlock()
 	cus, ok := us.userMap.Load(username)
 	if !ok {
+		us.context.GetLog().Debug("RefreshUser-AddUser", zap.String("username", username), zap.Int("us.num", int(us.num)))
 		atomic.AddInt32(&us.num, 1)
 		cus := getNewCuStore(username)
 		cus.addUser(username, machineId, clientOperate)
 		us.userMap.Store(username, cus)
 	} else {
+		us.context.GetLog().Debug("RefreshUser", zap.String("username", username), zap.Int("us.num", int(us.num)))
 		sc := cus.(*cuStore)
 		sc.renewUser(username, machineId, clientOperate)
+	}
+}
+
+func (us *userStore) DeleteUser(username string, machineIds []string) {
+	us.rLock.Lock()
+	defer us.rLock.Unlock()
+	cus, ok := us.userMap.Load(username)
+	if ok {
+		sc := cus.(*cuStore)
+		for _, machineId := range machineIds {
+			delete(sc.store, machineId)
+		}
+		if len(sc.store) == 0 {
+			us.userMap.Delete(username)
+			freeCuStore(sc)
+			atomic.AddInt32(&us.num, -1)
+		}
 	}
 }
 
@@ -177,6 +200,7 @@ func (us *userStore) DeleteExpiredUser(username string, now *time.Time) {
 		sc := cu.(*cuStore)
 		for machineId, c := range sc.store {
 			if c.isExpiredTime(now) {
+				us.context.GetLog().Debug("DeleteExpiredUser", zap.String("username", username))
 				delete(sc.store, machineId)
 				if len(sc.store) == 0 {
 					us.userMap.Delete(username)
@@ -211,6 +235,6 @@ func (us *userStore) GetOrderUser(username string) []user.IOrderUser {
 	u := make([]user.IOrderUser, 0)
 	return u
 }
-func newUserStore() *userStore {
-	return &userStore{userMap: new(sync.Map), rLock: new(sync.RWMutex)}
+func newUserStore(context *core.Context) *userStore {
+	return &userStore{userMap: new(sync.Map), rLock: new(sync.RWMutex), context: context}
 }

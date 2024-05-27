@@ -26,7 +26,6 @@ func NewServer() *Server {
 	server := &Server{}
 	httpServer := core.NewHttpServer(server.Name())
 	server.IHttpServer = httpServer
-	server.userStore = newUserStore()
 	return server
 }
 func (server *Server) Start() error {
@@ -148,6 +147,7 @@ func (server *Server) WriteMessage(msg message.IMessage, writeFunc user.WriteCal
 					server.userStore.RefreshUser(username, clusterSendMessage.machineId, server.clientOperate)
 					writeFunc(nil, true)
 				} else {
+					server.userStore.DeleteUser(username, clusterSendMessage.exMachineId)
 					machineId, err := server.clientOperate.sendTextMsg(t, clusterSendMessage.exMachineId...)
 					if err == nil {
 						server.context.GetLog().Info("本地没有用户信息，增加用户信息", zap.String("machineId", machineId))
@@ -166,6 +166,7 @@ func (server *Server) WriteMessage(msg message.IMessage, writeFunc user.WriteCal
 }
 func (server *Server) Init(context *core.Context) {
 	server.context = context
+	server.userStore = newUserStore(context)
 	server.isStart = server.context.GetCfgBoolDefault("cluster", "start", false)
 	if server.isStart {
 		context.SetForward(server)
