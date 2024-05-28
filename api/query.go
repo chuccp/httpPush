@@ -97,6 +97,7 @@ func (query *Query) queryUser(parameter *core.Parameter) any {
 	u.Conn = make([]*Conn, 0)
 	id := core.GetUsername(parameter)
 	if len(id) > 0 {
+		u.CreateTime = util.FormatTime(query.context.GetUserCreateTime(id))
 		us, fa := query.context.GetUser(id)
 		us = user.SortByAsc(us)
 		if fa {
@@ -260,9 +261,10 @@ func NewQuery(context *core.Context, server core.IHttpServer) *Query {
 }
 
 type User struct {
-	Username string
-	Conn     []*Conn
-	Machine  any
+	Username   string
+	Conn       []*Conn
+	Machine    any
+	CreateTime string
 }
 type Conn struct {
 	RemoteAddress string

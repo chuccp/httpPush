@@ -9,6 +9,7 @@ import (
 	"runtime/debug"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type systemInfo map[string]any
@@ -106,6 +107,9 @@ func (context *Context) FlashLiveTime(iUser user.IUser) {
 
 func (context *Context) GetUser(userName string) ([]user.IUser, bool) {
 	return context.userStore.GetUser(userName)
+}
+func (context *Context) GetUserCreateTime(userName string) *time.Time {
+	return context.userStore.GetUserCreateTime(userName)
 }
 func (context *Context) GetHistory(userName string) (*user.HistoryMessage, bool) {
 	return context.userStore.GetHistory(userName)

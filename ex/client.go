@@ -85,24 +85,24 @@ func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
 	c.rLock.Lock()
 	t := time.Now()
 	uv, ok := c.connMap[id]
-	u := NewUser(c.username, id, c.queue, c.context, writer, re)
-	u.liveTime = liveTime
-	//expiredTime := t.Add(time.Duration(liveTime)*time.Second + defaultExpiredTime)
-	//u.expiredTime = &expiredTime
-	u.lastLiveTime = &t
-	c.connMap[id] = u
 	if !ok {
+		u := NewUser(c.username, id, c.queue, c.context, writer, re)
+		u.expiredTime = nil
+		u.liveTime = liveTime
+		u.lastLiveTime = &t
 		u.createTime = &t
 		u.addTime = &t
+		c.connMap[id] = u
 		c.rLock.Unlock()
 		c.context.AddUser(u)
 		return u
 	} else {
-		u.createTime = uv.createTime
-		u.addTime = uv.addTime
-		c.connMap[id] = u
+		uv.liveTime = liveTime
+		uv.expiredTime = nil
+		uv.lastLiveTime = &t
+		uv.writer = writer
 		c.rLock.Unlock()
-		return u
+		return uv
 	}
 
 }

@@ -50,7 +50,7 @@ func messageToBytes(iMessage message.IMessage) ([]byte, error) {
 	return data, err
 }
 
-func (u *User) setExpired() {
+func (u *User) RefreshExpired() {
 	t := time.Now()
 	u.last = &t
 	tm := t.Add(expiredTime)
@@ -60,7 +60,6 @@ func (u *User) setExpired() {
 func (u *User) waitMessage() {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(u.liveTime)*time.Second)
 	msg, _, cls := u.queue.Dequeue(ctx)
-	u.setExpired()
 	if cls {
 		u.writer.Write([]byte("[]"))
 	} else {

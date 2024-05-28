@@ -60,6 +60,7 @@ func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
 	server.rLock.RUnlock()
 	server.context.FlashLiveTime(user)
 	user.waitMessage()
+	user.RefreshExpired()
 }
 
 func (server *Server) expiredCheck() {

@@ -205,6 +205,16 @@ func (store *Store) GetUser(username string) ([]IUser, bool) {
 	}
 	return nil, false
 }
+
+func (store *Store) GetUserCreateTime(username string) *time.Time {
+	v, ok := store.uMap.Load(username)
+	if ok {
+		us := v.(*StoreUser)
+		return us.createTime
+	}
+	return nil
+}
+
 func (store *Store) HasLocalUser(username string) bool {
 	v, ok := store.uMap.Load(username)
 	if ok {
