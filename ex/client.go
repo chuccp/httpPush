@@ -87,6 +87,8 @@ func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
 	uv, ok := c.connMap[id]
 	u := NewUser(c.username, id, c.queue, c.context, writer, re)
 	u.liveTime = liveTime
+	//expiredTime := t.Add(time.Duration(liveTime)*time.Second + defaultExpiredTime)
+	//u.expiredTime = &expiredTime
 	u.lastLiveTime = &t
 	c.connMap[id] = u
 	if !ok {
