@@ -7,7 +7,6 @@ import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
-	"go.uber.org/zap"
 	"net/http"
 	"time"
 )
@@ -51,11 +50,17 @@ func messageToBytes(iMessage message.IMessage) ([]byte, error) {
 	return data, err
 }
 
+func (u *User) setExpired() {
+	t := time.Now()
+	u.last = &t
+	tm := t.Add(expiredTime)
+	u.expiredTime = &tm
+}
+
 func (u *User) waitMessage() {
-	u.context.GetLog().Debug("等待信息", zap.Int("liveTime", u.liveTime))
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(u.liveTime)*time.Second)
-	msg, num, cls := u.queue.Dequeue(ctx)
-	u.context.GetLog().Debug("收到信息：剩余消息", zap.Int32("num", num), zap.Bool("cls", cls))
+	msg, _, cls := u.queue.Dequeue(ctx)
+	u.setExpired()
 	if cls {
 		u.writer.Write([]byte("[]"))
 	} else {

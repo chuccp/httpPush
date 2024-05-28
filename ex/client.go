@@ -8,6 +8,9 @@ import (
 	"time"
 )
 
+const expiredTime = 5 * time.Second
+const defaultExpiredTime = 2 * expiredTime
+
 type client struct {
 	username string
 	context  *core.Context
@@ -49,6 +52,7 @@ func (c *client) expiredCheck() {
 	keys := make([]string, 0)
 	users := make([]*User, 0)
 	for key, u := range c.connMap {
+		//c.context.GetLog().Debug("expiredCheck", zap.String("expiredTime", util.FormatTime(u.expiredTime)))
 		if u.isExpired(&t) {
 			keys = append(keys, key)
 			users = append(users, u)
@@ -62,14 +66,6 @@ func (c *client) expiredCheck() {
 		c.context.DeleteUser(user)
 	}
 
-}
-func (c *client) setExpired(user *User) {
-	c.rLock.RLock()
-	defer c.rLock.RUnlock()
-	t := time.Now()
-	user.last = &t
-	tm := t.Add(5 * time.Second)
-	user.expiredTime = &tm
 }
 func (c *client) userNum() int {
 	c.rLock.RLock()
@@ -89,24 +85,22 @@ func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
 	c.rLock.Lock()
 	t := time.Now()
 	uv, ok := c.connMap[id]
+	u := NewUser(c.username, id, c.queue, c.context, writer, re)
+	u.liveTime = liveTime
+	u.lastLiveTime = &t
+	c.connMap[id] = u
 	if !ok {
-		u := NewUser(c.username, id, c.queue, c.context, writer, re)
-		u.expiredTime = nil
-		u.liveTime = liveTime
-		c.connMap[id] = u
-		u.lastLiveTime = &t
 		u.createTime = &t
 		u.addTime = &t
 		c.rLock.Unlock()
 		c.context.AddUser(u)
 		return u
 	} else {
-		uv.liveTime = liveTime
-		uv.expiredTime = nil
-		uv.lastLiveTime = &t
-		uv.writer = writer
+		u.createTime = uv.createTime
+		u.addTime = uv.addTime
+		c.connMap[id] = u
 		c.rLock.Unlock()
-		return uv
+		return u
 	}
 
 }

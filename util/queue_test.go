@@ -1,22 +1,33 @@
 package util
 
 import (
+	"os"
+	"os/signal"
+	"syscall"
 	"testing"
-	"time"
 )
 
 func Test2Queue(t *testing.T) {
-	sendQueue := NewQueue()
+
+	queue := NewQueue()
+
+	go func() {
+
+		queue.Offer(1)
+		queue.Offer(1)
+		queue.Offer(1)
+		queue.Offer(1)
+		queue.Offer(1)
+
+	}()
 
 	go func() {
 		for {
-			v, num := sendQueue.Poll()
+			v, num := queue.Poll()
 			t.Log(v, num)
 		}
 	}()
-
-	sendQueue.Offer("111")
-	sendQueue.Offer("111")
-
-	time.Sleep(time.Second * 5)
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGBUS)
+	<-sig
 }
