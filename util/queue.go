@@ -39,9 +39,8 @@ func (queue *Queue) Dequeue(ctx context.Context) (value interface{}, num int32, 
 		if num > 0 {
 			ele := queue.list.Front()
 			queue.list.Remove(ele)
-			num = queue.list.Len()
 			queue.lock.Unlock()
-			return ele.Value, int32(num), false
+			return ele.Value, int32(num - 1), false
 		} else {
 			queue.waitNum++
 			queue.lock.Unlock()
@@ -76,9 +75,8 @@ func (queue *Queue) Poll() (value interface{}, num int32) {
 		if num > 0 {
 			ele := queue.list.Front()
 			queue.list.Remove(ele)
-			num = queue.list.Len()
 			queue.lock.Unlock()
-			return ele.Value, int32(num)
+			return ele.Value, int32(num - 1)
 		} else {
 			queue.waitNum++
 			queue.lock.Unlock()
