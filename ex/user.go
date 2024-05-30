@@ -71,8 +71,6 @@ func (u *User) waitMessage() {
 				_, err := u.writer.Write(v)
 				if err != nil {
 					u.queue.Offer(v)
-				} else {
-					u.context.RecordMessage(mg)
 				}
 			} else {
 				u.writer.Write([]byte("[]"))

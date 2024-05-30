@@ -15,7 +15,6 @@ type Query struct {
 
 func (query *Query) Init() {
 	query.AddQuery("/queryUser", query.queryUser, query.queryUserApi)
-	query.AddQuery("/queryHistory", query.queryHistory, query.queryHistoryApi)
 	query.AddQuery("/onlineUser", query.onlineUser, query.onlineUserApi)
 	query.AddQuery("/sendGroupMsg", query.sendGroupMsg, query.sendGroupMsgApi)
 	query.AddQuery("/info_user", query.clusterInfo, query.clusterInfoApi)
@@ -59,27 +58,6 @@ func (query *Query) clusterInfo(parameter *core.Parameter) any {
 func (query *Query) AddQuery(handleName string, handle core.RegisterHandle, handler func(http.ResponseWriter, *http.Request)) {
 	query.context.RegisterHandle(handleName, handle)
 	query.server.AddHttpRoute(handleName, handler)
-}
-
-func (query *Query) queryHistory(parameter *core.Parameter) any {
-	id := core.GetUsername(parameter)
-	var history = &History{}
-	log, fa := query.context.GetHistory(id)
-	if fa {
-		history.History = log
-	}
-	machineInfoId, ok := query.getMachineInfoId(parameter)
-	if ok {
-		history.Machine = machineInfoId
-	}
-	return history
-}
-
-func (query *Query) queryHistoryApi(writer http.ResponseWriter, request *http.Request) {
-	parameter := core.NewParameter(request)
-	value := query.context.Query(parameter)
-	data, _ := json.Marshal(value)
-	writer.Write(data)
 }
 
 func (query *Query) queryUserApi(w http.ResponseWriter, re *http.Request) {
