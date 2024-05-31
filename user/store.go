@@ -53,6 +53,7 @@ func (u *StoreUser) getOrderUser() []IOrderUser {
 	for _, user := range u.store {
 		us = append(us, user)
 	}
+	sort.Sort(ByAsc(us))
 	return us
 }
 func (u *StoreUser) num() int {
@@ -210,20 +211,12 @@ func (store *Store) HasLocalUser(username string) bool {
 }
 
 func (store *Store) GetOrderUser(username string) []IOrderUser {
-	ius := make([]IOrderUser, 0)
 	v, ok := store.uMap.Load(username)
 	if ok {
 		us := v.(*StoreUser)
-		ous := us.getOrderUser()
-		if len(ous) > 0 {
-			ius = append(ius, ous...)
-			if len(ius) > 0 {
-				sort.Sort(ByAsc(ius))
-			}
-			return ius
-		}
+		return us.getOrderUser()
 	}
-	return ius
+	return make([]IOrderUser, 0)
 }
 
 func (store *Store) RangeGroupUser(groupId string, f func(username string) bool) {
