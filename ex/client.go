@@ -14,7 +14,7 @@ const defaultExpiredTime = 2 * expiredTime
 type client struct {
 	username string
 	context  *core.Context
-	connMap  map[string]*User
+	connMap  *util.SliceMap[*User]
 	queue    *util.Queue
 	liveTime int
 	rLock    *sync.RWMutex
@@ -29,7 +29,7 @@ var poolClient = &sync.Pool{
 func getNewClient(context *core.Context, username string, liveTime int) *client {
 	client := poolClient.Get().(*client)
 	if client.liveTime > 0 {
-		client.connMap = make(map[string]*User)
+		client.connMap = new(util.SliceMap[*User])
 		client.queue = util.GetQueue()
 		client.rLock = new(sync.RWMutex)
 	}
@@ -56,15 +56,15 @@ func (c *client) expiredCheck() {
 	t := time.Now()
 	keys := make([]string, 0)
 	users := make([]*User, 0)
-	for key, u := range c.connMap {
-		//c.context.GetLog().Debug("expiredCheck", zap.String("expiredTime", util.FormatTime(u.expiredTime)))
+
+	c.connMap.Each(func(key string, u *User) {
 		if u.isExpired(&t) {
 			keys = append(keys, key)
 			users = append(users, u)
 		}
-	}
+	})
 	for _, key := range keys {
-		delete(c.connMap, key)
+		c.connMap.Delete(key)
 	}
 	c.rLock.Unlock()
 	for _, user := range users {
@@ -75,7 +75,7 @@ func (c *client) expiredCheck() {
 func (c *client) userNum() int {
 	c.rLock.RLock()
 	defer c.rLock.RUnlock()
-	return len(c.connMap)
+	return c.connMap.Len()
 }
 func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
 	liveTime := util.GetLiveTime(re)
@@ -89,7 +89,7 @@ func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
 	}
 	c.rLock.Lock()
 	t := time.Now()
-	uv, ok := c.connMap[id]
+	uv, ok := c.connMap.Get(id)
 	if !ok {
 		u := NewUser(c.username, id, c.queue, c.context, writer, re)
 		u.expiredTime = nil
@@ -97,7 +97,7 @@ func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
 		u.lastLiveTime = &t
 		u.createTime = &t
 		u.addTime = &t
-		c.connMap[id] = u
+		c.connMap.Put(id, u)
 		c.rLock.Unlock()
 		c.context.AddUser(u)
 		return u

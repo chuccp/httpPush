@@ -12,9 +12,9 @@ func TestName(t *testing.T) {
 
 	for {
 		ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
-		_, m, flag := queue.Dequeue(ctx)
+		v, flag := queue.Dequeue(ctx)
 		if flag {
-			log.Println(m)
+			log.Println(v)
 		} else {
 			cancelFunc()
 		}

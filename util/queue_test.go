@@ -23,8 +23,8 @@ func Test2Queue(t *testing.T) {
 
 	go func() {
 		for {
-			v, num := queue.Poll()
-			t.Log(v, num)
+			v := queue.Poll()
+			t.Log(v)
 		}
 	}()
 	sig := make(chan os.Signal, 1)

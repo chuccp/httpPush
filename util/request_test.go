@@ -2,7 +2,6 @@ package util
 
 import (
 	"fmt"
-	"go.uber.org/zap/buffer"
 	"io/ioutil"
 	"net/http"
 	"reflect"
@@ -41,6 +40,6 @@ func TestName0000(t *testing.T) {
 	fmt.Println(string(body))
 }
 func TestName03232(t *testing.T) {
-	buffer.NewPool()
+	//bytes.Buffer{}
 
 }
