@@ -51,9 +51,7 @@ func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
 	server.rLock.RLock()
 	cl := getNewClient(server.context, username, server.liveTime)
 	client, ok := server.store.LoadOrStore(cl, username)
-	if !ok {
-		server.context.GetLog().Debug("新增连接", zap.String("username", username), zap.String("remoteAddress", re.RemoteAddr))
-	} else {
+	if ok {
 		freeNoUseClient(cl)
 	}
 	user := client.loadUser(writer, re)
