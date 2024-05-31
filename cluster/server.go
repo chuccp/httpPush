@@ -41,9 +41,7 @@ func (server *Server) run() {
 }
 func (server *Server) checkUser() {
 	for {
-
 		time.Sleep(time.Second * 5)
-		server.context.GetLog().Debug("checkUser")
 		server.userStore.ClearTimeOutUser(time.Now())
 		time.Sleep(time.Second * 5)
 	}
