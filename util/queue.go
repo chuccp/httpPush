@@ -29,14 +29,14 @@ func (queue *Queue) Offer(value interface{}) error {
 	}
 	return err
 }
-func (queue *Queue) Dequeue(ctx context.Context) (value interface{}, err error, hasClose bool) {
+func (queue *Queue) Dequeue(ctx context.Context) (value interface{}, hasClose bool) {
 
 	for {
 		queue.lock.Lock()
 		v, err := queue.sliceQueue.Read()
 		if err == nil {
 			queue.lock.Unlock()
-			return v, err, false
+			return v, false
 		} else {
 			queue.waitNum++
 			queue.lock.Unlock()
@@ -58,19 +58,19 @@ func (queue *Queue) Dequeue(ctx context.Context) (value interface{}, err error, 
 			}()
 			fa := <-queue.flag
 			if !fa {
-				return nil, nil, true
+				return nil, true
 			}
 		}
 	}
 
 }
-func (queue *Queue) Poll() (value interface{}, err error) {
+func (queue *Queue) Poll() (value interface{}) {
 	for {
 		queue.lock.Lock()
 		v, err := queue.sliceQueue.Read()
 		if err == nil {
 			queue.lock.Unlock()
-			return v, err
+			return v
 		} else {
 			queue.waitNum++
 			queue.lock.Unlock()

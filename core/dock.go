@@ -146,7 +146,7 @@ func backMsg(md *MsgDock, dm *DockMessage) {
 
 func (md *MsgDock) exchangeReplyMsg() {
 	for {
-		msg, _ := md.replyQueue.Poll()
+		msg := md.replyQueue.Poll()
 		md.lastReplyDockMessage = msg.(*DockMessage)
 		if msg != nil {
 			backMsg(md, md.lastReplyDockMessage)
@@ -159,7 +159,7 @@ func sendMsg(md *MsgDock, dm *DockMessage) {
 
 func (md *MsgDock) exchangeSendMsg() {
 	for {
-		msg, _ := md.sendQueue.Poll()
+		msg := md.sendQueue.Poll()
 		if msg != nil {
 			md.lastSendDockMessage = msg.(*DockMessage)
 			sendMsg(md, md.lastSendDockMessage)
