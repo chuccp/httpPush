@@ -44,7 +44,10 @@ func freeNoUseClient(client *client) {
 }
 func freeClient(client *client) {
 	client.liveTime = 20
+	client.connMap = nil
+	client.rLock = nil
 	util.FreeQueue(client.queue)
+	client.queue = nil
 	poolClient.Put(client)
 }
 
