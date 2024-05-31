@@ -33,9 +33,8 @@ func (queue *Queue) Dequeue(ctx context.Context) (value interface{}, err error, 
 
 	for {
 		queue.lock.Lock()
-		num := queue.sliceQueue.Len()
-		if num > 0 {
-			v, err := queue.sliceQueue.Read()
+		v, err := queue.sliceQueue.Read()
+		if err == nil {
 			queue.lock.Unlock()
 			return v, err, false
 		} else {
@@ -68,11 +67,10 @@ func (queue *Queue) Dequeue(ctx context.Context) (value interface{}, err error, 
 func (queue *Queue) Poll() (value interface{}, err error) {
 	for {
 		queue.lock.Lock()
-		num := queue.sliceQueue.Len()
-		if num > 0 {
-			ele, err := queue.sliceQueue.Read()
+		v, err := queue.sliceQueue.Read()
+		if err == nil {
 			queue.lock.Unlock()
-			return ele, err
+			return v, err
 		} else {
 			queue.waitNum++
 			queue.lock.Unlock()
