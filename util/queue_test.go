@@ -14,10 +14,10 @@ func Test2Queue(t *testing.T) {
 	go func() {
 
 		queue.Offer(1)
-		queue.Offer(1)
-		queue.Offer(1)
-		queue.Offer(1)
-		queue.Offer(1)
+		queue.Offer(2)
+		queue.Offer(3)
+		queue.Offer(4)
+		queue.Offer(5)
 
 	}()
 

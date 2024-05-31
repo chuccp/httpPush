@@ -22,27 +22,29 @@ type client struct {
 
 var poolClient = &sync.Pool{
 	New: func() interface{} {
-		connMap := make(map[string]*User)
-		queue := util.NewQueue()
-		rLock := new(sync.RWMutex)
-		return &client{connMap: connMap, queue: queue, rLock: rLock}
+		return &client{liveTime: 20}
 	},
 }
 
 func getNewClient(context *core.Context, username string, liveTime int) *client {
 	client := poolClient.Get().(*client)
+	if client.liveTime > 0 {
+		client.connMap = make(map[string]*User)
+		client.queue = util.GetQueue()
+		client.rLock = new(sync.RWMutex)
+	}
 	client.username = username
 	client.context = context
 	client.liveTime = liveTime
 	return client
 }
 func freeNoUseClient(client *client) {
+	client.liveTime = -1
 	poolClient.Put(client)
 }
 func freeClient(client *client) {
-	client.connMap = make(map[string]*User)
-	client.queue = util.NewQueue()
-	client.rLock = new(sync.RWMutex)
+	client.liveTime = 20
+	util.FreeQueue(client.queue)
 	poolClient.Put(client)
 }
 

@@ -2,10 +2,10 @@ package util
 
 import (
 	"fmt"
+	"go.uber.org/zap/buffer"
 	"io/ioutil"
 	"net/http"
 	"reflect"
-	"sync/atomic"
 	"testing"
 )
 
@@ -41,7 +41,6 @@ func TestName0000(t *testing.T) {
 	fmt.Println(string(body))
 }
 func TestName03232(t *testing.T) {
-	var num int32 = 1
+	buffer.NewPool()
 
-	t.Log(atomic.CompareAndSwapInt32(&num, 0, 1))
 }

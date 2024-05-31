@@ -69,14 +69,21 @@ func (md *MsgDock) run() {
 func (md *MsgDock) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc) {
 	username := msg.GetString(message.To)
 	us := md.userStore.GetOrderUser(username)
-	md.sendQueue.Offer(&DockMessage{InputMessage: msg, write: writeFunc, users: us, userIndex: -1, isForward: true})
+	err := md.sendQueue.Offer(&DockMessage{InputMessage: msg, write: writeFunc, users: us, userIndex: -1, isForward: true})
+	if err != nil {
+		md.context.GetLog().Debug("WriteMessage", zap.Error(err))
+		writeFunc(err, false)
+	}
 }
 func (md *MsgDock) WriteNoForwardMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc) {
 	us := md.userStore.GetOrderUser(msg.GetString(message.To))
 	md.context.GetLog().Debug("收到不转发信息", zap.Int("order.user.num", len(us)), zap.Bool("fa", len(us) > 0))
 	if len(us) > 0 {
-		num := md.sendQueue.Offer(&DockMessage{InputMessage: msg, write: writeFunc, users: us, userIndex: -1, isForward: false})
-		md.context.GetLog().Debug("收到不转发信息入库", zap.Int("dockMessage.userIndex", int(num)))
+		err := md.sendQueue.Offer(&DockMessage{InputMessage: msg, write: writeFunc, users: us, userIndex: -1, isForward: false})
+		if err != nil {
+			md.context.GetLog().Debug("WriteNoForwardMessage", zap.Error(err))
+			writeFunc(err, false)
+		}
 	} else {
 		writeFunc(NoFoundUser, false)
 	}
@@ -92,7 +99,13 @@ func (md *MsgDock) writeUserMsg(dockMessage *DockMessage) {
 				md.replyMessage(dockMessage)
 			} else {
 				dockMessage.err = err
-				md.sendQueue.Offer(dockMessage)
+				err := md.sendQueue.Offer(dockMessage)
+				if err != nil {
+					md.context.GetLog().Debug("writeUserMsg", zap.Error(err))
+					dockMessage.hasUser = hasUser
+					dockMessage.err = err
+					md.replyMessage(dockMessage)
+				}
 			}
 		})
 	} else {
@@ -116,7 +129,10 @@ func (md *MsgDock) writeUserMsg(dockMessage *DockMessage) {
 }
 
 func (md *MsgDock) replyMessage(msg *DockMessage) {
-	md.replyQueue.Offer(msg)
+	err := md.replyQueue.Offer(msg)
+	if err != nil {
+		md.context.GetLog().Debug("replyMessage", zap.Error(err))
+	}
 }
 func (md *MsgDock) Query(parameter *Parameter, localValue any) []any {
 	if md.IForward != nil {

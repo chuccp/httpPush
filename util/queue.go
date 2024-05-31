@@ -1,27 +1,25 @@
 package util
 
 import (
-	"container/list"
 	"context"
 	"errors"
 	"sync"
 )
 
 type Queue struct {
-	list    *list.List
-	lock    *sync.RWMutex
-	waitNum int32
-	flag    chan bool
+	sliceQueue *SliceQueue
+	lock       *sync.RWMutex
+	waitNum    int32
+	flag       chan bool
 }
 
 func NewQueue() *Queue {
-	return &Queue{list: list.New(), lock: new(sync.RWMutex), flag: make(chan bool)}
+	return &Queue{sliceQueue: new(SliceQueue), lock: new(sync.RWMutex), flag: make(chan bool)}
 }
 
-func (queue *Queue) Offer(value interface{}) (nu int32) {
+func (queue *Queue) Offer(value interface{}) error {
 	queue.lock.Lock()
-	queue.list.PushBack(value)
-	num := queue.list.Len()
+	err := queue.sliceQueue.Write(value)
 	if queue.waitNum > 0 {
 		queue.waitNum--
 		queue.lock.Unlock()
@@ -29,18 +27,17 @@ func (queue *Queue) Offer(value interface{}) (nu int32) {
 	} else {
 		queue.lock.Unlock()
 	}
-	return int32(num)
+	return err
 }
-func (queue *Queue) Dequeue(ctx context.Context) (value interface{}, num int32, hasClose bool) {
+func (queue *Queue) Dequeue(ctx context.Context) (value interface{}, err error, hasClose bool) {
 
 	for {
 		queue.lock.Lock()
-		num := queue.list.Len()
+		num := queue.sliceQueue.Len()
 		if num > 0 {
-			ele := queue.list.Front()
-			queue.list.Remove(ele)
+			v, err := queue.sliceQueue.Read()
 			queue.lock.Unlock()
-			return ele.Value, int32(num - 1), false
+			return v, err, false
 		} else {
 			queue.waitNum++
 			queue.lock.Unlock()
@@ -62,25 +59,43 @@ func (queue *Queue) Dequeue(ctx context.Context) (value interface{}, num int32, 
 			}()
 			fa := <-queue.flag
 			if !fa {
-				return nil, 0, true
+				return nil, nil, true
 			}
 		}
 	}
 
 }
-func (queue *Queue) Poll() (value interface{}, num int32) {
+func (queue *Queue) Poll() (value interface{}, err error) {
 	for {
 		queue.lock.Lock()
-		num := queue.list.Len()
+		num := queue.sliceQueue.Len()
 		if num > 0 {
-			ele := queue.list.Front()
-			queue.list.Remove(ele)
+			ele, err := queue.sliceQueue.Read()
 			queue.lock.Unlock()
-			return ele.Value, int32(num - 1)
+			return ele, err
 		} else {
 			queue.waitNum++
 			queue.lock.Unlock()
 			<-queue.flag
 		}
 	}
+}
+
+var poolQueue = &sync.Pool{
+	New: func() interface{} {
+		return &Queue{}
+	},
+}
+
+func GetQueue() *Queue {
+	queue := poolQueue.Get().(*Queue)
+	queue.sliceQueue = GetSliceQueue()
+	queue.lock = new(sync.RWMutex)
+	queue.flag = make(chan bool)
+	queue.waitNum = 0
+	return queue
+}
+func FreeQueue(queue *Queue) {
+	FreeSliceQueue(queue.sliceQueue)
+	poolQueue.Put(queue)
 }
