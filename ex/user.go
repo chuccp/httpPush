@@ -59,21 +59,25 @@ func (u *User) RefreshExpired() {
 
 func (u *User) waitMessage() {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(u.liveTime)*time.Second)
-	msg, _, cls := u.queue.Dequeue(ctx)
+	msg, err, cls := u.queue.Dequeue(ctx)
 	if cls {
 		u.writer.Write([]byte("[]"))
 	} else {
 		cancelFunc()
-		mg, ok := (msg).(message.IMessage)
-		if ok {
-			v, err := messageToBytes(mg)
-			if err == nil && v != nil {
-				_, err := u.writer.Write(v)
-				if err != nil {
-					u.queue.Offer(v)
+		if err != nil {
+			u.writer.Write([]byte("[]"))
+		} else {
+			mg, ok := (msg).(message.IMessage)
+			if ok {
+				v, err := messageToBytes(mg)
+				if err == nil && v != nil {
+					_, err := u.writer.Write(v)
+					if err != nil {
+						u.queue.Offer(v)
+					}
+				} else {
+					u.writer.Write([]byte("[]"))
 				}
-			} else {
-				u.writer.Write([]byte("[]"))
 			}
 		}
 	}
