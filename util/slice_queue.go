@@ -12,7 +12,7 @@ const (
 	opRead    readOp = -1
 	opInvalid readOp = 0
 )
-const smallBufferSize = 64
+const sliceSmallBufferSize = 64
 
 var ErrTooLarge = errors.New("sliceQueue: too large")
 var errNegativeRead = errors.New("sliceQueue: reader returned negative count from Read")
@@ -47,8 +47,8 @@ func (b *SliceQueue) grow(n int) int {
 	if i, ok := b.tryGrowByReslice(n); ok {
 		return i
 	}
-	if b.buf == nil && n <= smallBufferSize {
-		b.buf = make([]any, n, smallBufferSize)
+	if b.buf == nil && n <= sliceSmallBufferSize {
+		b.buf = make([]any, n, sliceSmallBufferSize)
 		return 0
 	}
 	c := cap(b.buf)

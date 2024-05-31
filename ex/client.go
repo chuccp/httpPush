@@ -29,7 +29,7 @@ var poolClient = &sync.Pool{
 func getNewClient(context *core.Context, username string, liveTime int) *client {
 	client := poolClient.Get().(*client)
 	if client.liveTime > 0 {
-		client.connMap = new(util.SliceMap[*User])
+		client.connMap = GetSliceMap()
 		client.queue = util.GetQueue()
 		client.rLock = new(sync.RWMutex)
 	}
@@ -43,11 +43,12 @@ func freeNoUseClient(client *client) {
 	poolClient.Put(client)
 }
 func freeClient(client *client) {
-	client.liveTime = 20
-	client.connMap = nil
-	client.rLock = nil
+	FreeSliceMap(client.connMap)
 	util.FreeQueue(client.queue)
+	client.liveTime = 20
+	client.rLock = nil
 	client.queue = nil
+	client.connMap = nil
 	poolClient.Put(client)
 }
 
@@ -113,4 +114,19 @@ func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
 }
 func getId(username string, re *http.Request) string {
 	return username + "_" + re.RemoteAddr
+}
+
+var poolSliceMap = &sync.Pool{
+	New: func() interface{} {
+		return new(util.SliceMap[*User])
+	},
+}
+
+func GetSliceMap() *util.SliceMap[*User] {
+	sliceMap := poolSliceMap.Get().(*util.SliceMap[*User])
+	sliceMap.Reset()
+	return sliceMap
+}
+func FreeSliceMap(sliceMap *util.SliceMap[*User]) {
+	poolSliceMap.Put(sliceMap)
 }

@@ -4,6 +4,8 @@ import (
 	"io"
 )
 
+const mapSmallBufferSize = 4
+
 type kv[V any] struct {
 	key   string
 	value V
@@ -38,8 +40,8 @@ func (b *SliceMap[V]) grow(n int) int {
 	if i, ok := b.tryGrowByReslice(n); ok {
 		return i
 	}
-	if b.buf == nil && n <= smallBufferSize {
-		b.buf = make([]*kv[V], n, smallBufferSize)
+	if b.buf == nil && n <= mapSmallBufferSize {
+		b.buf = make([]*kv[V], n, mapSmallBufferSize)
 		return 0
 	}
 	c := cap(b.buf)
