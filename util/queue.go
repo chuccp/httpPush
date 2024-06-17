@@ -11,10 +11,11 @@ type CancelContext struct {
 	ctx           context.Context
 	ctxCancelFunc context.CancelFunc
 	close         *atomic.Bool
+	once          *sync.Once
 }
 
 func NewCancelContext() *CancelContext {
-	cc := &CancelContext{}
+	cc := &CancelContext{once: new(sync.Once)}
 	cc.ctx, cc.ctxCancelFunc = context.WithCancel(context.Background())
 	cc.close = new(atomic.Bool)
 	cc.close.Store(false)
@@ -31,12 +32,17 @@ func (c *CancelContext) Wait() {
 }
 func (c *CancelContext) Cancel() {
 	if !c.close.Load() {
-		c.ctxCancelFunc()
+		c.cancel()
 	}
 }
+
+func (c *CancelContext) cancel() {
+	c.once.Do(c.ctxCancelFunc)
+}
+
 func (c *CancelContext) Close() {
 	if c.close.CompareAndSwap(false, true) {
-		c.ctxCancelFunc()
+		c.cancel()
 	}
 }
 func (c *CancelContext) Err() error {
