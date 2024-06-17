@@ -1,8 +1,6 @@
 package util
 
 import (
-	"log"
-	"runtime"
 	"strconv"
 	"testing"
 )
@@ -12,17 +10,12 @@ func BenchmarkName(b *testing.B) {
 
 	}
 }
-func BenchmarkNameMap(t *testing.B) {
-	for i := 0; i < 10000; i++ {
-		sliceMap := new(SliceMap[string])
-
-		for i := 0; i < 2; i++ {
-			sliceMap.Put(strconv.Itoa(i), strconv.Itoa(i))
-		}
-	}
-	var ms runtime.MemStats
-	runtime.ReadMemStats(&ms)
-	log.Printf("Alloc:%d(bytes) HeapIdle:%d(bytes) HeapReleased:%d(bytes)", ms.Alloc, ms.HeapIdle, ms.HeapReleased)
+func TestFreeQueueAAA(t *testing.T) {
+	sliceMap := new(SliceMap[string])
+	sliceMap.Put("111", "111")
+	sliceMap.Put("222", "222")
+	sliceMap.Put("333", "333")
+	sliceMap.Delete("222")
 
 }
 func BenchmarkNameMap2(t *testing.B) {
@@ -47,8 +40,8 @@ func BenchmarkNameMap2(t *testing.B) {
 	2024/05/31 14:56:48 Alloc:294192(bytes) HeapIdle:3088384(bytes) HeapReleased:301
 	4656(bytes)
 	*/
-
-	var ms runtime.MemStats
-	runtime.ReadMemStats(&ms)
-	log.Printf("Alloc:%d(bytes) HeapIdle:%d(bytes) HeapReleased:%d(bytes)", ms.Alloc, ms.HeapIdle, ms.HeapReleased)
+	//
+	//var ms runtime.MemStats
+	//runtime.ReadMemStats(&ms)
+	//log.Printf("Alloc:%d(bytes) HeapIdle:%d(bytes) HeapReleased:%d(bytes)", ms.Alloc, ms.HeapIdle, ms.HeapReleased)
 }

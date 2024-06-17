@@ -11,6 +11,8 @@ import (
 const expiredTime = 5 * time.Second
 const defaultExpiredTime = 2 * expiredTime
 
+const liveTime = 5 * time.Second
+
 type client struct {
 	username string
 	context  *core.Context
@@ -71,7 +73,16 @@ func (c *client) expiredCheck() {
 	for _, user := range users {
 		c.context.DeleteUser(user)
 	}
-
+}
+func (c *client) writeCheck() {
+	c.rLock.RLock()
+	defer c.rLock.RUnlock()
+	t := time.Now()
+	c.connMap.Each(func(key string, u *User) {
+		if u.isWriteLive(&t) {
+			u.writeLive()
+		}
+	})
 }
 func (c *client) userNum() int {
 	c.rLock.RLock()
@@ -95,6 +106,7 @@ func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
 		u := NewUser(c.username, id, c.queue, c.context, writer, re)
 		u.expiredTime = nil
 		u.liveTime = liveTime
+		u.writeLiveTime = nil
 		u.lastLiveTime = &t
 		u.createTime = &t
 		u.addTime = &t
@@ -106,6 +118,7 @@ func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
 		uv.liveTime = liveTime
 		uv.expiredTime = nil
 		uv.lastLiveTime = &t
+		uv.writeLiveTime = nil
 		uv.writer = writer
 		c.rLock.Unlock()
 		return uv

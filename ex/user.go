@@ -1,7 +1,6 @@
 package ex
 
 import (
-	"context"
 	"encoding/json"
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/message"
@@ -24,9 +23,13 @@ type User struct {
 	last          *time.Time
 	queue         *util.Queue
 	expiredTime   *time.Time
-	groupIds      []string
-	context       *core.Context
-	id            string
+
+	writeLiveTime *time.Time
+
+	groupIds          []string
+	context           *core.Context
+	id                string
+	userCancelContext *util.CancelContext
 }
 type HttpMessage struct {
 	From string
@@ -58,12 +61,15 @@ func (u *User) RefreshExpired() {
 }
 
 func (u *User) waitMessage() {
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(u.liveTime)*time.Second)
-	msg, cls := u.queue.Dequeue(ctx)
-	if cls {
+	writeLiveTime := time.Now().Add(liveTime)
+	u.writeLiveTime = &writeLiveTime
+	u.userCancelContext = util.NewCancelContext()
+	msg, hasClose := u.queue.DequeueWithCanceled(u.userCancelContext)
+	u.writeLiveTime = nil
+	if hasClose {
 		u.writer.Write([]byte("[]"))
 	} else {
-		cancelFunc()
+		u.userCancelContext.Close()
 		mg, ok := (msg).(message.IMessage)
 		if ok {
 			v, err := messageToBytes(mg)
@@ -76,13 +82,25 @@ func (u *User) waitMessage() {
 				u.writer.Write([]byte("[]"))
 			}
 		}
-
 	}
 }
-
+func (u *User) writeLive() {
+	if u.userCancelContext != nil {
+		u.userCancelContext.Cancel()
+	}
+}
 func (u *User) isExpired(now *time.Time) bool {
 	if u.expiredTime != nil {
 		if u.expiredTime.Before(*now) {
+			return true
+		}
+	}
+	return false
+}
+
+func (u *User) isWriteLive(now *time.Time) bool {
+	if u.writeLiveTime != nil {
+		if u.writeLiveTime.Before(*now) {
 			return true
 		}
 	}

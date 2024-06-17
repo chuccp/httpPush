@@ -89,6 +89,12 @@ func (b *SliceMap[V]) Each(f func(string, V)) {
 		f(c.key, c.value)
 	}
 }
+func (b *SliceMap[V]) EachIndex(f func(int, string, V)) {
+	cs := b.buf[b.off:]
+	for index, c := range cs {
+		f(index, c.key, c.value)
+	}
+}
 func (b *SliceMap[V]) Get(key string) (V, bool) {
 	if b.empty() {
 		return b.v, false
@@ -120,6 +126,18 @@ func (b *SliceMap[V]) Delete(key string) {
 func (b *SliceMap[V]) Put(key string, value V) error {
 	return b.write(&kv[V]{key: key, value: value})
 }
+
+func (b *SliceMap[V]) PutOrReplace(key string, value V) error {
+	cs := b.buf[b.off:]
+	for index, c := range cs {
+		if c.key == key {
+			cs[index].value = value
+			return nil
+		}
+	}
+	return b.Put(key, value)
+}
+
 func (b *SliceMap[V]) write(c *kv[V]) error {
 	b.lastRead = opInvalid
 	m, ok := b.tryGrowByReslice(1)

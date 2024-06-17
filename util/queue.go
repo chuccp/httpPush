@@ -4,7 +4,47 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 )
+
+type CancelContext struct {
+	ctx           context.Context
+	ctxCancelFunc context.CancelFunc
+	close         *atomic.Bool
+}
+
+func NewCancelContext() *CancelContext {
+	cc := &CancelContext{}
+	cc.ctx, cc.ctxCancelFunc = context.WithCancel(context.Background())
+	cc.close = new(atomic.Bool)
+	cc.close.Store(false)
+	return cc
+}
+
+var CloseExceeded error = closeExceededError{}
+
+type closeExceededError struct{}
+
+func (closeExceededError) Error() string { return "context close exceeded" }
+func (c *CancelContext) Wait() {
+	<-c.ctx.Done()
+}
+func (c *CancelContext) Cancel() {
+	if !c.close.Load() {
+		c.ctxCancelFunc()
+	}
+}
+func (c *CancelContext) Close() {
+	if c.close.CompareAndSwap(false, true) {
+		c.ctxCancelFunc()
+	}
+}
+func (c *CancelContext) Err() error {
+	if c.close.Load() {
+		return CloseExceeded
+	}
+	return c.ctx.Err()
+}
 
 type Queue struct {
 	sliceQueue *SliceQueue
@@ -62,7 +102,39 @@ func (queue *Queue) Dequeue(ctx context.Context) (value interface{}, hasClose bo
 			}
 		}
 	}
-
+}
+func (queue *Queue) DequeueWithCanceled(ctx *CancelContext) (value interface{}, hasClose bool) {
+	for {
+		queue.lock.Lock()
+		v, err := queue.sliceQueue.Read()
+		if err == nil {
+			queue.lock.Unlock()
+			return v, false
+		} else {
+			queue.waitNum++
+			queue.lock.Unlock()
+			go func() {
+				ctx.Wait()
+				queue.lock.Lock()
+				err := ctx.Err()
+				if errors.Is(err, context.Canceled) {
+					if queue.waitNum > 0 {
+						queue.waitNum--
+						queue.lock.Unlock()
+						queue.flag <- false
+					} else {
+						queue.lock.Unlock()
+					}
+				} else {
+					queue.lock.Unlock()
+				}
+			}()
+			fa := <-queue.flag
+			if !fa {
+				return nil, true
+			}
+		}
+	}
 }
 func (queue *Queue) Poll() (value interface{}) {
 	for {

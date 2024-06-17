@@ -30,7 +30,7 @@ func (server *Server) Start() error {
 	if server.isStart {
 		server.AddHttpRoute("/ex", server.ex)
 		server.context.Go(func() {
-			server.expiredCheck()
+			server.loop()
 		})
 	}
 	return nil
@@ -60,10 +60,12 @@ func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
 	user.RefreshExpired()
 }
 
-func (server *Server) expiredCheck() {
+func (server *Server) loop() {
 	for {
 		time.Sleep(time.Second * 2)
 		server.store.RangeClient(func(c *client) {
+			c.writeCheck()
+			//过期检查
 			c.expiredCheck()
 			server.rLock.Lock()
 			if c.userNum() == 0 {
@@ -74,6 +76,7 @@ func (server *Server) expiredCheck() {
 		})
 	}
 }
+
 func (server *Server) Init(context *core.Context) {
 	server.context = context
 	server.isStart = server.context.GetCfgBoolDefault("ex", "start", false)
