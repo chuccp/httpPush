@@ -123,8 +123,8 @@ func (context *Context) DeleteUser(iUser user.IUser) bool {
 }
 
 func (context *Context) SendLocalMessage(msg message.IMessage) (err error, fa bool) {
-	waitGroup := util.NewWaitNumGroup()
-	waitGroup.AddOne()
+	waitGroup := new(sync.WaitGroup)
+	waitGroup.Add(1)
 	context.sendPool.Submit(func() {
 		fa, err = context.msgDock.WriteLocalMessage(msg)
 		waitGroup.Done()
@@ -134,8 +134,8 @@ func (context *Context) SendLocalMessage(msg message.IMessage) (err error, fa bo
 }
 
 func (context *Context) SendMessage(msg message.IMessage) (err error, fa bool) {
-	waitGroup := util.NewWaitNumGroup()
-	waitGroup.AddOne()
+	waitGroup := new(sync.WaitGroup)
+	waitGroup.Add(1)
 	context.sendPool.Submit(func() {
 		fa, err = context.msgDock.SendMessage(msg)
 		waitGroup.Done()
