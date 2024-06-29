@@ -22,13 +22,13 @@ type Context struct {
 	msgDock       *MsgDock
 	handleFuncMap map[string]RegisterHandle
 	log           *zap.Logger
-	pool          *ants.Pool
+	sendPool      *ants.Pool
 }
 
 func newContext(register *Register) *Context {
 	pool, _ := ants.NewPool(50)
 	context := &Context{register: register, systemInfo: make(systemInfo)}
-	context.pool = pool
+	context.sendPool = pool
 	context.httpPush = newHttpPush(context)
 	context.userStore = user.NewStore()
 	context.msgDock = NewMsgDock(context.userStore, context)
@@ -125,7 +125,7 @@ func (context *Context) DeleteUser(iUser user.IUser) bool {
 func (context *Context) SendLocalMessage(msg message.IMessage) (err error, fa bool) {
 	waitGroup := util.NewWaitNumGroup()
 	waitGroup.AddOne()
-	context.pool.Submit(func() {
+	context.sendPool.Submit(func() {
 		fa, err = context.msgDock.WriteLocalMessage(msg)
 		waitGroup.Done()
 	})
@@ -136,7 +136,7 @@ func (context *Context) SendLocalMessage(msg message.IMessage) (err error, fa bo
 func (context *Context) SendMessage(msg message.IMessage) (err error, fa bool) {
 	waitGroup := util.NewWaitNumGroup()
 	waitGroup.AddOne()
-	context.pool.Submit(func() {
+	context.sendPool.Submit(func() {
 		fa, err = context.msgDock.SendMessage(msg)
 		waitGroup.Done()
 	})
@@ -149,7 +149,7 @@ func (context *Context) SendGroupTextMessage(form string, groupId, msg string) i
 	if util.EqualsAnyIgnoreCase(groupId, "all") {
 		context.userStore.RangeAllUser(func(username string) bool {
 			textMsg := message.NewTextMessage(form, username, msg)
-			_, fa := context.SendLocalMessage(textMsg)
+			fa, _ := context.msgDock.WriteLocalMessage(textMsg)
 			if fa {
 				num++
 			}
@@ -158,7 +158,7 @@ func (context *Context) SendGroupTextMessage(form string, groupId, msg string) i
 	} else {
 		context.userStore.RangeGroupUser(groupId, func(username string) bool {
 			textMsg := message.NewTextMessage(form, username, msg)
-			_, fa := context.SendLocalMessage(textMsg)
+			fa, _ := context.msgDock.WriteLocalMessage(textMsg)
 			if fa {
 				num++
 			}
