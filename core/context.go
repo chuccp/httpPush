@@ -134,7 +134,7 @@ func (context *Context) SendLocalMessage(msg message.IMessage) (err error, fa bo
 		return err1, false
 	}
 	waitGroup.Wait()
-	return nil, false
+	return
 }
 
 func (context *Context) SendMessage(msg message.IMessage) (err error, fa bool) {
