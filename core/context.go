@@ -27,7 +27,7 @@ type Context struct {
 }
 
 func newContext(register *Register) *Context {
-	pool, _ := ants.NewPool(100)
+	pool, _ := ants.NewPool(1000)
 	context := &Context{register: register, systemInfo: make(systemInfo)}
 	context.pool = pool
 	context.httpPush = newHttpPush(context)
@@ -144,7 +144,7 @@ func (context *Context) sendNoForwardOnceMessage(msg message.IMessage, write use
 	})
 }
 
-func (context *Context) SendMessage2(msg message.IMessage) (fa bool, err error) {
+func (context *Context) SendMessage2(msg message.IMessage) (err error, fa bool) {
 	waitGroup := util.NewWaitNumGroup()
 	waitGroup.AddOne()
 	context.pool.Submit(func() {
@@ -218,7 +218,7 @@ func (context *Context) SendNoForwardMessage(msg message.IMessage) (error, bool)
 }
 func (context *Context) SendTextMessage(from string, to string, msg string) (error, bool) {
 	textMsg := message.NewTextMessage(from, to, msg)
-	return context.SendMessage(textMsg)
+	return context.SendMessage2(textMsg)
 }
 func (context *Context) Query(parameter *Parameter) any {
 	iv := make([]any, 0)
