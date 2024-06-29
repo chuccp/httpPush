@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"runtime/debug"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -32,6 +31,7 @@ func newContext(register *Register) *Context {
 	context.pool = pool
 	context.httpPush = newHttpPush(context)
 	context.userStore = user.NewStore()
+	context.msgDock = NewMsgDock(context.userStore, context)
 	context.handleFuncMap = make(map[string]RegisterHandle)
 	return context
 }
@@ -121,30 +121,19 @@ func (context *Context) DeleteUser(iUser user.IUser) bool {
 	}
 	return false
 }
-func (context *Context) sendOnceMessage(msg message.IMessage, write user.WriteCallBackFunc) {
-	one := new(sync.Once)
-	context.msgDock.WriteMessage(msg, func(err error, hasUser bool) {
-		one.Do(func() {
-			write(err, hasUser)
-		})
+
+func (context *Context) SendLocalMessage(msg message.IMessage) (err error, fa bool) {
+	waitGroup := util.NewWaitNumGroup()
+	waitGroup.AddOne()
+	context.pool.Submit(func() {
+		fa, err = context.msgDock.WriteLocalMessage(msg)
+		waitGroup.Done()
 	})
+	waitGroup.Wait()
+	return nil, false
 }
 
-func (context *Context) SendMessageForBack(msg message.IMessage, write user.WriteCallBackFunc) {
-
-	context.sendOnceMessage(msg, write)
-}
-
-func (context *Context) sendNoForwardOnceMessage(msg message.IMessage, write user.WriteCallBackFunc) {
-	one := new(sync.Once)
-	context.msgDock.WriteNoForwardMessage(msg, func(err error, hasUser bool) {
-		one.Do(func() {
-			write(err, hasUser)
-		})
-	})
-}
-
-func (context *Context) SendMessage2(msg message.IMessage) (err error, fa bool) {
+func (context *Context) SendMessage(msg message.IMessage) (err error, fa bool) {
 	waitGroup := util.NewWaitNumGroup()
 	waitGroup.AddOne()
 	context.pool.Submit(func() {
@@ -155,70 +144,33 @@ func (context *Context) SendMessage2(msg message.IMessage) (err error, fa bool) 
 	return
 }
 
-func (context *Context) SendMessage(msg message.IMessage) (error, bool) {
-	waitGroup := util.NewWaitNumGroup()
-	var err_ error
-	var hasUser_ = false
-	waitGroup.AddOne()
-	context.sendOnceMessage(msg, func(err error, hasUser bool) {
-		err_ = err
-		hasUser_ = hasUser
-		waitGroup.Done()
-	})
-	waitGroup.Wait()
-	return err_, hasUser_
-
-}
-
 func (context *Context) SendGroupTextMessage(form string, groupId, msg string) int32 {
 	var num int32
-	waitGroup := util.NewWaitNumGroup()
 	if util.EqualsAnyIgnoreCase(groupId, "all") {
 		context.userStore.RangeAllUser(func(username string) bool {
-			waitGroup.AddOne()
 			textMsg := message.NewTextMessage(form, username, msg)
-			context.sendNoForwardOnceMessage(textMsg, func(err error, hasUser bool) {
-				if hasUser {
-					atomic.AddInt32(&num, 1)
-				}
-				waitGroup.Done()
-			})
+			_, fa := context.SendLocalMessage(textMsg)
+			if fa {
+				num++
+			}
 			return true
 		})
 	} else {
 		context.userStore.RangeGroupUser(groupId, func(username string) bool {
-			waitGroup.AddOne()
 			textMsg := message.NewTextMessage(form, username, msg)
-			context.sendNoForwardOnceMessage(textMsg, func(err error, hasUser bool) {
-				if hasUser {
-					atomic.AddInt32(&num, 1)
-				}
-				waitGroup.Done()
-			})
+			_, fa := context.SendLocalMessage(textMsg)
+			if fa {
+				num++
+			}
 			return true
 		})
 	}
-	waitGroup.Wait()
 	return num
 }
 
-func (context *Context) SendNoForwardMessage(msg message.IMessage) (error, bool) {
-	waitGroup := util.NewWaitNumGroup()
-	var err_ error
-	var hasUser_ = false
-	waitGroup.AddOne()
-	context.sendNoForwardOnceMessage(msg, func(err error, hasUser bool) {
-		err_ = err
-		hasUser_ = hasUser
-		waitGroup.Done()
-	})
-	waitGroup.Wait()
-	return err_, hasUser_
-
-}
 func (context *Context) SendTextMessage(from string, to string, msg string) (error, bool) {
 	textMsg := message.NewTextMessage(from, to, msg)
-	return context.SendMessage2(textMsg)
+	return context.SendMessage(textMsg)
 }
 func (context *Context) Query(parameter *Parameter) any {
 	iv := make([]any, 0)
@@ -234,12 +186,6 @@ func (context *Context) Query(parameter *Parameter) any {
 		}
 	}
 	return iv
-}
-func (context *Context) SendMultiMessageNoReplay(fromUser string, usernames []string, text string) {
-	for _, v := range usernames {
-		msg := message.NewTextMessage(fromUser, v, text)
-		context.sendNoForwardOnceMessage(msg, func(err error, hasUser bool) {})
-	}
 }
 
 func (context *Context) GetCfgString(section, key string) string {
