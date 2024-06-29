@@ -118,7 +118,26 @@ func (u *clientUser) WriteMessage(msg message.IMessage, writeFunc user.WriteCall
 	}
 	writeFunc(nil, false)
 }
+func (u *clientUser) WriteSyncMessage(iMessage message.IMessage) (fa bool, err error) {
 
+	switch t := iMessage.(type) {
+	case *message.TextMessage:
+		{
+			cl, ok := u.clientOperate.getClient(u.machineId)
+			if ok {
+				err = cl.sendTextMsg(t)
+				if err == nil {
+					u.priority = 0
+					return true, nil
+				}
+			}
+		}
+	}
+	if u.priority < 5 {
+		u.priority = u.priority + 1
+	}
+	return false, core.NoFoundUser
+}
 func (u *clientUser) GetUsername() string {
 	return u.username
 }
@@ -173,7 +192,7 @@ func (us *userStore) RefreshUser(username string, machineId string, clientOperat
 	}
 }
 
-func (us *userStore) DeleteUser(username string, machineIds []string) {
+func (us *userStore) DeleteUser(username string, machineIds ...string) {
 	if len(machineIds) > 0 {
 		us.rLock.Lock()
 		defer us.rLock.Unlock()

@@ -12,6 +12,7 @@ import (
 // IForward 集群使用/*
 type IForward interface {
 	WriteMessage(iMessage message.IMessage, writeFunc user.WriteCallBackFunc)
+	WriteSyncMessage(iMessage message.IMessage) (bool, error)
 	Query(parameter *Parameter, localValue any) []any
 }
 
@@ -71,10 +72,33 @@ func (md *MsgDock) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBa
 	us := md.userStore.GetOrderUser(username)
 	err := md.sendQueue.Offer(&DockMessage{InputMessage: msg, write: writeFunc, users: us, userIndex: -1, isForward: true})
 	if err != nil {
-		md.context.GetLog().Debug("WriteMessage", zap.Error(err))
+		md.context.GetLog().Error("WriteMessage", zap.Error(err))
 		writeFunc(err, false)
 	}
 }
+
+func (md *MsgDock) WriteLocalMessage(msg message.IMessage) (bool, error) {
+	username := msg.GetString(message.To)
+	us := md.userStore.GetOrderUser(username)
+	var err error
+	var fa bool
+	for _, u := range us {
+		fa, err = u.WriteSyncMessage(msg)
+		if fa {
+			return true, nil
+		}
+	}
+	return fa, err
+}
+
+func (md *MsgDock) SendMessage(msg message.IMessage) (bool, error) {
+	fa, _ := md.WriteLocalMessage(msg)
+	if fa {
+		return true, nil
+	}
+	return md.IForward.WriteSyncMessage(msg)
+}
+
 func (md *MsgDock) WriteNoForwardMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc) {
 	us := md.userStore.GetOrderUser(msg.GetString(message.To))
 	md.context.GetLog().Debug("收到不转发信息", zap.Int("order.user.num", len(us)), zap.Bool("fa", len(us) > 0))
@@ -101,10 +125,8 @@ func (md *MsgDock) writeUserMsg(dockMessage *DockMessage) {
 				dockMessage.err = err
 				err := md.sendQueue.Offer(dockMessage)
 				if err != nil {
-					md.context.GetLog().Debug("writeUserMsg", zap.Error(err))
-					dockMessage.hasUser = hasUser
-					dockMessage.err = err
-					md.replyMessage(dockMessage)
+					md.context.GetLog().Error("writeUserMsg", zap.Error(err))
+					dockMessage.write(err, false)
 				}
 			}
 		})

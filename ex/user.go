@@ -115,6 +115,10 @@ func (u *User) WriteMessage(iMessage message.IMessage, writeFunc user.WriteCallB
 	u.queue.Offer(iMessage)
 	writeFunc(nil, true)
 }
+func (u *User) WriteSyncMessage(iMessage message.IMessage) (bool, error) {
+	u.queue.Offer(iMessage)
+	return true, nil
+}
 
 func (u *User) Close() {}
 

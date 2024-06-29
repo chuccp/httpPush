@@ -133,6 +133,37 @@ func (server *Server) writeMessage(msg *clusterSendMessage, writeFunc user.Write
 	}
 }
 
+func (server *Server) WriteSyncMessage(iMessage message.IMessage) (fa bool, err error) {
+	switch t := iMessage.(type) {
+	case *message.TextMessage:
+		{
+			username := t.GetString(message.To)
+			orderUser := server.userStore.GetOrderUser(username)
+			exMachineIds := make([]string, 0)
+			for _, iOrderUser := range orderUser {
+				cu := iOrderUser.(*clientUser)
+				fa, err = cu.WriteSyncMessage(iMessage)
+				if fa {
+					server.userStore.RefreshUser(username, cu.machineId, server.clientOperate)
+					return
+				} else {
+					exMachineIds = append(exMachineIds, cu.machineId)
+					server.userStore.DeleteUser(username, cu.machineId)
+				}
+			}
+			machineId, err := server.clientOperate.sendTextMsg(t, exMachineIds...)
+			if err == nil {
+				server.context.GetLog().Info("本地没有用户信息，增加用户信息", zap.String("machineId", machineId))
+				server.userStore.AddUser(username, machineId, server.clientOperate)
+				return true, nil
+			} else {
+				return false, err
+			}
+		}
+	}
+	return false, core.NoFoundUser
+}
+
 func (server *Server) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc) {
 	switch t := msg.(type) {
 	case *message.TextMessage:
@@ -145,7 +176,7 @@ func (server *Server) WriteMessage(msg message.IMessage, writeFunc user.WriteCal
 					server.userStore.RefreshUser(username, clusterSendMessage.machineId, server.clientOperate)
 					writeFunc(nil, true)
 				} else {
-					server.userStore.DeleteUser(username, clusterSendMessage.exMachineId)
+					server.userStore.DeleteUser(username, clusterSendMessage.exMachineId...)
 					machineId, err := server.clientOperate.sendTextMsg(t, clusterSendMessage.exMachineId...)
 					if err == nil {
 						server.context.GetLog().Info("本地没有用户信息，增加用户信息", zap.String("machineId", machineId))

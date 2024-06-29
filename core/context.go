@@ -4,6 +4,7 @@ import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
+	"github.com/panjf2000/ants/v2"
 	"go.uber.org/zap"
 	"net/http"
 	"runtime/debug"
@@ -22,13 +23,15 @@ type Context struct {
 	msgDock       *MsgDock
 	handleFuncMap map[string]RegisterHandle
 	log           *zap.Logger
+	pool          *ants.Pool
 }
 
 func newContext(register *Register) *Context {
+	pool, _ := ants.NewPool(100)
 	context := &Context{register: register, systemInfo: make(systemInfo)}
+	context.pool = pool
 	context.httpPush = newHttpPush(context)
 	context.userStore = user.NewStore()
-	context.msgDock = NewMsgDock(context.userStore, context)
 	context.handleFuncMap = make(map[string]RegisterHandle)
 	return context
 }
@@ -140,6 +143,18 @@ func (context *Context) sendNoForwardOnceMessage(msg message.IMessage, write use
 		})
 	})
 }
+
+func (context *Context) SendMessage2(msg message.IMessage) (fa bool, err error) {
+	waitGroup := util.NewWaitNumGroup()
+	waitGroup.AddOne()
+	context.pool.Submit(func() {
+		fa, err = context.msgDock.SendMessage(msg)
+		waitGroup.Done()
+	})
+	waitGroup.Wait()
+	return
+}
+
 func (context *Context) SendMessage(msg message.IMessage) (error, bool) {
 	waitGroup := util.NewWaitNumGroup()
 	var err_ error
