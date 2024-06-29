@@ -110,11 +110,6 @@ func (u *User) isWriteLive(now *time.Time) bool {
 func (u *User) GetUsername() string {
 	return u.username
 }
-
-func (u *User) WriteMessage(iMessage message.IMessage, writeFunc user.WriteCallBackFunc) {
-	u.queue.Offer(iMessage)
-	writeFunc(nil, true)
-}
 func (u *User) WriteSyncMessage(iMessage message.IMessage) (bool, error) {
 	u.queue.Offer(iMessage)
 	return true, nil

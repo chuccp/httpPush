@@ -26,7 +26,7 @@ type Context struct {
 }
 
 func newContext(register *Register) *Context {
-	pool, _ := ants.NewPool(1000)
+	pool, _ := ants.NewPool(50)
 	context := &Context{register: register, systemInfo: make(systemInfo)}
 	context.pool = pool
 	context.httpPush = newHttpPush(context)
