@@ -31,8 +31,6 @@ func (a ByAsc) Less(i, j int) bool {
 }
 
 type IOrderUser interface {
-	// WriteMessage 异步，代码里面不能阻塞
-	WriteMessage(iMessage message.IMessage, writeFunc WriteCallBackFunc)
 	WriteSyncMessage(iMessage message.IMessage) (bool, error)
 	GetPriority() int
 	GetMachineId() string

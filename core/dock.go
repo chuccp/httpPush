@@ -8,7 +8,6 @@ import (
 
 // IForward 集群使用/*
 type IForward interface {
-	WriteMessage(iMessage message.IMessage, writeFunc user.WriteCallBackFunc)
 	WriteSyncMessage(iMessage message.IMessage) (bool, error)
 	Query(parameter *Parameter, localValue any) []any
 }
@@ -22,12 +21,6 @@ type DockMessage struct {
 	hasUser      bool
 	isForward    bool
 	once         sync.Once
-}
-
-func (m *DockMessage) writeCallBackFunc(err error, hasUser bool) {
-	m.once.Do(func() {
-		m.write(err, hasUser)
-	})
 }
 
 type MsgDock struct {

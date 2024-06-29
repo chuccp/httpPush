@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/message"
-	"github.com/chuccp/httpPush/user"
 	"go.uber.org/zap"
 	"net/http"
 	"strconv"
@@ -112,27 +111,6 @@ func (server *Server) query(w http.ResponseWriter, re *http.Request) {
 func (server *Server) Query(parameter *core.Parameter, localValue any) []any {
 	return server.clientOperate.Query(parameter, localValue)
 }
-
-func (server *Server) writeMessage(msg *clusterSendMessage, writeFunc user.WriteCallBackFunc) {
-	index := msg.index
-	if index < len(msg.ous) {
-		ou := msg.ous[index]
-		cu := ou.(*clientUser)
-		msg.exMachineId = append(msg.exMachineId, cu.machineId)
-		cu.WriteMessage(msg.msg, func(err error, hasUser bool) {
-			if err == nil && hasUser {
-				msg.machineId = cu.machineId
-				writeFunc(err, hasUser)
-			} else {
-				msg.index++
-				server.writeMessage(msg, writeFunc)
-			}
-		})
-	} else {
-		writeFunc(nil, false)
-	}
-}
-
 func (server *Server) WriteSyncMessage(iMessage message.IMessage) (fa bool, err error) {
 	switch t := iMessage.(type) {
 	case *message.TextMessage:
@@ -162,36 +140,6 @@ func (server *Server) WriteSyncMessage(iMessage message.IMessage) (fa bool, err 
 		}
 	}
 	return false, core.NoFoundUser
-}
-
-func (server *Server) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc) {
-	switch t := msg.(type) {
-	case *message.TextMessage:
-		{
-			username := t.GetString(message.To)
-			orderUser := server.userStore.GetOrderUser(username)
-			clusterSendMessage := &clusterSendMessage{ous: orderUser, index: 0, msg: t, exMachineId: make([]string, 0)}
-			server.writeMessage(clusterSendMessage, func(err error, hasUser bool) {
-				if err == nil && hasUser {
-					server.userStore.RefreshUser(username, clusterSendMessage.machineId, server.clientOperate)
-					writeFunc(nil, true)
-				} else {
-					server.userStore.DeleteUser(username, clusterSendMessage.exMachineId...)
-					machineId, err := server.clientOperate.sendTextMsg(t, clusterSendMessage.exMachineId...)
-					if err == nil {
-						server.context.GetLog().Info("本地没有用户信息，增加用户信息", zap.String("machineId", machineId))
-						server.userStore.AddUser(username, machineId, server.clientOperate)
-						writeFunc(nil, true)
-						return
-					} else {
-						writeFunc(err, false)
-						return
-					}
-				}
-			})
-		}
-	}
-
 }
 func (server *Server) Init(context *core.Context) {
 	server.context = context

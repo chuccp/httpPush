@@ -98,26 +98,6 @@ func (u *clientUser) GetId() string {
 func (u *clientUser) GetPriority() int {
 	return u.priority
 }
-func (u *clientUser) WriteMessage(msg message.IMessage, writeFunc user.WriteCallBackFunc) {
-	switch t := msg.(type) {
-	case *message.TextMessage:
-		{
-			cl, ok := u.clientOperate.getClient(u.machineId)
-			if ok {
-				err := cl.sendTextMsg(t)
-				if err == nil {
-					u.priority = 0
-					writeFunc(nil, true)
-					return
-				}
-			}
-		}
-	}
-	if u.priority < 5 {
-		u.priority = u.priority + 1
-	}
-	writeFunc(nil, false)
-}
 func (u *clientUser) WriteSyncMessage(iMessage message.IMessage) (fa bool, err error) {
 
 	switch t := iMessage.(type) {
