@@ -283,25 +283,23 @@ func (ms *ClientOperate) addNewMachine(machine *Machine) {
 	ms.store.addNewClient(client)
 
 }
-func (ms *ClientOperate) sendTextMsg(msg *message.TextMessage, exMachineIds ...string) (string, error) {
-	var _err_ = core.NoFoundUser
-	machineId_ := ""
+func (ms *ClientOperate) sendTextMsg(msg *message.TextMessage, exMachineIds ...string) (machineId string, err error) {
+	err = core.NoFoundUser
 	ms.context.GetLog().Debug("消息转发:", zap.String("toUser", msg.GetString(message.To)))
 	ms.store.eachStoreClient(func(machineId string, client *client) bool {
 		if client.HasConn() && (len(exMachineIds) == 0 || !util.ContainsInArray(exMachineIds, client.remoteMachine.MachineId)) {
 			ms.context.GetLog().Debug("消息转发:", zap.String("toUser", msg.GetString(message.To)), zap.String("remoteLink", client.remoteLink), zap.String("machineId", machineId))
-			err := client.sendTextMsg(msg)
-			_err_ = err
+			err = client.sendTextMsg(msg)
 			if err == nil {
 				ms.context.GetLog().Debug("消息转发成功:", zap.String("toUser", msg.GetString(message.To)), zap.String("machineId", machineId))
-				machineId_ = client.remoteMachine.MachineId
+				machineId = client.remoteMachine.MachineId
 				return false
 			}
 			ms.context.GetLog().Debug("消息转发失败:", zap.String("toUser", msg.GetString(message.To)), zap.String("machineId", machineId), zap.Error(err))
 		}
 		return true
 	})
-	return machineId_, _err_
+	return
 }
 func (ms *ClientOperate) Query(parameter *core.Parameter, localValue any) []any {
 	vs := make([]any, 0)

@@ -121,6 +121,7 @@ func (server *Server) WriteSyncMessage(iMessage message.IMessage) (fa bool, err 
 			for _, iOrderUser := range orderUser {
 				cu := iOrderUser.(*clientUser)
 				fa, err = cu.WriteSyncMessage(iMessage)
+				server.context.GetLog().Debug("WriteSyncMessage", zap.Bool("fa", fa), zap.Error(err))
 				if fa {
 					server.userStore.RefreshUser(username, cu.machineId, server.clientOperate)
 					return
@@ -131,7 +132,7 @@ func (server *Server) WriteSyncMessage(iMessage message.IMessage) (fa bool, err 
 			}
 			machineId, err := server.clientOperate.sendTextMsg(t, exMachineIds...)
 			if err == nil {
-				server.context.GetLog().Info("本地没有用户信息，增加用户信息", zap.String("machineId", machineId))
+				server.context.GetLog().Debug("本地没有用户信息，增加用户信息", zap.String("machineId", machineId))
 				server.userStore.AddUser(username, machineId, server.clientOperate)
 				return true, nil
 			} else {
