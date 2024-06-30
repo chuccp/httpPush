@@ -152,6 +152,14 @@ func (context *Context) SendMessage(msg message.IMessage) (err error, fa bool) {
 	return
 }
 
+func (context *Context) SendAsyncMessage(msg message.IMessage, write user.WriteCallBackFunc) (err error) {
+	err1 := context.sendPool.Submit(func() {
+		fa, err := context.msgDock.SendMessage(msg)
+		write(err, fa)
+	})
+	return err1
+}
+
 func (context *Context) SendGroupTextMessage(form string, groupId, msg string) int32 {
 	var num int32
 	if util.EqualsAnyIgnoreCase(groupId, "all") {
