@@ -3,7 +3,6 @@ package core
 import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
-	"sync"
 )
 
 // IForward 集群使用/*
@@ -12,23 +11,10 @@ type IForward interface {
 	Query(parameter *Parameter, localValue any) []any
 }
 
-type DockMessage struct {
-	InputMessage message.IMessage
-	write        user.WriteCallBackFunc
-	users        []user.IOrderUser
-	userIndex    int
-	err          error
-	hasUser      bool
-	isForward    bool
-	once         sync.Once
-}
-
 type MsgDock struct {
-	IForward             IForward
-	userStore            *user.Store
-	context              *Context
-	lastSendDockMessage  *DockMessage
-	lastReplyDockMessage *DockMessage
+	IForward  IForward
+	userStore *user.Store
+	context   *Context
 }
 
 func NewMsgDock(userStore *user.Store, context *Context) *MsgDock {
