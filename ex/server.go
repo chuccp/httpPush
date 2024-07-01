@@ -4,6 +4,7 @@ import (
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/util"
 	"go.uber.org/zap"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -62,7 +63,10 @@ func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
 
 func (server *Server) loop() {
 	for {
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Second * 1)
+		start := time.Now().UnixMilli()
+		log.Println(start)
+
 		server.store.RangeClient(func(c *client) {
 			//过期检查
 			c.expiredCheck()
@@ -73,6 +77,8 @@ func (server *Server) loop() {
 			}
 			server.rLock.Unlock()
 		})
+		end := time.Now().UnixMilli()
+		log.Println(end - start)
 	}
 }
 

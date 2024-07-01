@@ -10,7 +10,7 @@ import (
 
 const expiredTime = 5 * time.Second
 
-const defaultLiveTime = 18
+const defaultLiveTime = 15
 
 type client struct {
 	username string
