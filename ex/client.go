@@ -63,9 +63,6 @@ func (c *client) expiredCheck() {
 			keys = append(keys, key)
 			users = append(users, u)
 		}
-		//else if u.isWriteLive(&t) {
-		//	u.writeLive()
-		//}
 	})
 	for _, key := range keys {
 		c.connMap.Delete(key)

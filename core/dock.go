@@ -22,7 +22,7 @@ func NewMsgDock(userStore *user.Store, context *Context) *MsgDock {
 	return msgDock
 }
 
-func (md *MsgDock) WriteLocalMessage(msg message.IMessage) (bool, error) {
+func (md *MsgDock) SendLocalMessage(msg message.IMessage) (bool, error) {
 	username := msg.GetString(message.To)
 	us := md.userStore.GetOrderUser(username)
 	var err error
@@ -37,7 +37,7 @@ func (md *MsgDock) WriteLocalMessage(msg message.IMessage) (bool, error) {
 }
 
 func (md *MsgDock) SendMessage(msg message.IMessage) (bool, error) {
-	fa, _ := md.WriteLocalMessage(msg)
+	fa, _ := md.SendLocalMessage(msg)
 	if fa {
 		return true, nil
 	}

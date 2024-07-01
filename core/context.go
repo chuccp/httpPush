@@ -126,7 +126,7 @@ func (context *Context) SendLocalMessage(msg message.IMessage) (err error, fa bo
 	waitGroup := new(sync.WaitGroup)
 	waitGroup.Add(1)
 	err1 := context.sendPool.Submit(func() {
-		fa, err = context.msgDock.WriteLocalMessage(msg)
+		fa, err = context.msgDock.SendLocalMessage(msg)
 		waitGroup.Done()
 	})
 	if err1 != nil {
@@ -165,7 +165,7 @@ func (context *Context) SendGroupTextMessage(form string, groupId, msg string) i
 	if util.EqualsAnyIgnoreCase(groupId, "all") {
 		context.userStore.RangeAllUser(func(username string) bool {
 			textMsg := message.NewTextMessage(form, username, msg)
-			fa, _ := context.msgDock.WriteLocalMessage(textMsg)
+			fa, _ := context.msgDock.SendLocalMessage(textMsg)
 			if fa {
 				num++
 			}
@@ -174,7 +174,7 @@ func (context *Context) SendGroupTextMessage(form string, groupId, msg string) i
 	} else {
 		context.userStore.RangeGroupUser(groupId, func(username string) bool {
 			textMsg := message.NewTextMessage(form, username, msg)
-			fa, _ := context.msgDock.WriteLocalMessage(textMsg)
+			fa, _ := context.msgDock.SendLocalMessage(textMsg)
 			if fa {
 				num++
 			}
