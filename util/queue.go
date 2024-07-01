@@ -1,56 +1,9 @@
 package util
 
 import (
-	"context"
 	"github.com/rfyiamcool/go-timewheel"
 	"sync"
-	"sync/atomic"
 )
-
-type CancelContext struct {
-	ctx           context.Context
-	ctxCancelFunc context.CancelFunc
-	close         *atomic.Bool
-	once          *sync.Once
-}
-
-func NewCancelContext() *CancelContext {
-	cc := &CancelContext{once: new(sync.Once)}
-	cc.ctx, cc.ctxCancelFunc = context.WithCancel(context.Background())
-	cc.close = new(atomic.Bool)
-	cc.close.Store(false)
-	return cc
-}
-
-var CloseExceeded error = closeExceededError{}
-
-type closeExceededError struct{}
-
-func (closeExceededError) Error() string { return "context close exceeded" }
-func (c *CancelContext) Wait() {
-	<-c.ctx.Done()
-}
-func (c *CancelContext) Cancel() {
-	if !c.close.Load() {
-		c.cancel()
-	}
-}
-
-func (c *CancelContext) cancel() {
-	c.once.Do(c.ctxCancelFunc)
-}
-
-func (c *CancelContext) Close() {
-	if c.close.CompareAndSwap(false, true) {
-		c.cancel()
-	}
-}
-func (c *CancelContext) Err() error {
-	if c.close.Load() {
-		return CloseExceeded
-	}
-	return c.ctx.Err()
-}
 
 type Queue struct {
 	sliceQueue *SliceQueue
