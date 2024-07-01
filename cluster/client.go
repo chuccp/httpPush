@@ -285,7 +285,7 @@ func (ms *ClientOperate) addNewMachine(machine *Machine) {
 }
 func (ms *ClientOperate) sendTextMsg(msg *message.TextMessage, exMachineIds ...string) (rMachineId string, err error) {
 	err = core.NoFoundUser
-	ms.context.GetLog().Debug("消息转发:", zap.String("toUser", msg.GetString(message.To)))
+	ms.context.GetLog().Debug("消息转发:", zap.String("toUser", msg.GetString(message.To)), zap.Any("exMachineIds", exMachineIds))
 	ms.store.eachStoreClient(func(machineId string, client *client) bool {
 		rMachineId = machineId
 		if client.HasConn() && (len(exMachineIds) == 0 || !util.ContainsInArray(exMachineIds, client.remoteMachine.MachineId)) {
