@@ -127,6 +127,8 @@ func (queue *Queue) DequeueTimer(timer *timewheel.Timer) (value interface{}, has
 			queue.lock.Unlock()
 			fa := <-queue.flag
 			if !fa {
+				timer.Stop()
+				close(timer.C)
 				return nil, false
 			}
 		}
