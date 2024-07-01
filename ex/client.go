@@ -59,11 +59,12 @@ func (c *client) expiredCheck() {
 	t := time.Now()
 	keys := make([]string, 0)
 	users := make([]*User, 0)
-
 	c.connMap.Each(func(key string, u *User) {
 		if u.isExpired(&t) {
 			keys = append(keys, key)
 			users = append(users, u)
+		} else if u.isWriteLive(&t) {
+			u.writeLive()
 		}
 	})
 	for _, key := range keys {

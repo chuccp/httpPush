@@ -64,7 +64,6 @@ func (server *Server) loop() {
 	for {
 		time.Sleep(time.Second * 2)
 		server.store.RangeClient(func(c *client) {
-			c.writeCheck()
 			//过期检查
 			c.expiredCheck()
 			server.rLock.Lock()
