@@ -3,6 +3,7 @@ package util
 import (
 	"context"
 	"errors"
+	"github.com/rfyiamcool/go-timewheel"
 	"sync"
 	"sync/atomic"
 )
@@ -50,6 +51,28 @@ func (c *CancelContext) Err() error {
 		return CloseExceeded
 	}
 	return c.ctx.Err()
+}
+
+type CancelTimer struct {
+	timer *timewheel.Timer
+	close *atomic.Bool
+}
+
+func (c *CancelTimer) Wait() bool {
+	fa := <-c.timer.C
+	c.close.Swap(true)
+	return fa
+}
+
+func (c *CancelTimer) Stop() {
+	c.timer.Stop()
+	close(c.timer.C)
+}
+
+func NewCancelTimer(timer *timewheel.Timer) *CancelTimer {
+	close := new(atomic.Bool)
+	close.Store(false)
+	return &CancelTimer{timer: timer, close: close}
 }
 
 type Queue struct {
@@ -109,6 +132,40 @@ func (queue *Queue) Dequeue(ctx context.Context) (value interface{}, hasClose bo
 		}
 	}
 }
+
+func (queue *Queue) DequeueTimer(timer *timewheel.Timer) (value interface{}, hasClose bool) {
+	for {
+		queue.lock.Lock()
+		v, err := queue.sliceQueue.Read()
+		if err == nil {
+			queue.lock.Unlock()
+			return v, false
+		} else {
+			queue.waitNum++
+			queue.lock.Unlock()
+			go func() {
+				timeFa := <-timer.C
+				queue.lock.Lock()
+				if timeFa {
+					if queue.waitNum > 0 {
+						queue.waitNum--
+						queue.lock.Unlock()
+						queue.flag <- false
+					} else {
+						queue.lock.Unlock()
+					}
+				} else {
+					queue.lock.Unlock()
+				}
+			}()
+			fa := <-queue.flag
+			if !fa {
+				return nil, true
+			}
+		}
+	}
+}
+
 func (queue *Queue) DequeueWithCanceled(ctx *CancelContext) (value interface{}, hasClose bool) {
 	for {
 		queue.lock.Lock()

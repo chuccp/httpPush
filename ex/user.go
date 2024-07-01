@@ -6,6 +6,7 @@ import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
+	"github.com/rfyiamcool/go-timewheel"
 	"net/http"
 	"time"
 )
@@ -60,16 +61,14 @@ func (u *User) RefreshExpired() {
 	u.expiredTime = &tm
 }
 
-func (u *User) waitMessage() {
-	writeLiveTime := time.Now().Add(time.Duration(u.liveTime) * time.Second)
-	u.writeLiveTime = &writeLiveTime
-	u.userCancelContext = util.NewCancelContext()
-	msg, hasClose := u.queue.DequeueWithCanceled(u.userCancelContext)
-	u.writeLiveTime = nil
+func (u *User) waitMessage(tw *timewheel.TimeWheel) {
+	timer := tw.NewTimer(time.Duration(u.liveTime) * time.Second)
+	msg, hasClose := u.queue.DequeueTimer(timer)
 	if hasClose {
 		u.writer.Write([]byte("[]"))
 	} else {
-		u.userCancelContext.Close()
+		timer.Stop()
+		close(timer.C)
 		mg, ok := (msg).(message.IMessage)
 		if ok {
 			v, err := messageToBytes(mg)

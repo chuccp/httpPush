@@ -3,6 +3,7 @@ package ex
 import (
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/util"
+	"github.com/rfyiamcool/go-timewheel"
 	"go.uber.org/zap"
 	"net/http"
 	"sync"
@@ -16,6 +17,7 @@ type Server struct {
 	liveTime int
 	isStart  bool
 	rLock    *sync.RWMutex
+	tw       *timewheel.TimeWheel
 }
 
 func NewServer() *Server {
@@ -23,12 +25,18 @@ func NewServer() *Server {
 	httpServer := core.NewHttpServer(server.Name())
 	server.IHttpServer = httpServer
 	server.rLock = new(sync.RWMutex)
+	tw, err := timewheel.NewTimeWheel(1*time.Second, 360)
+	if err != nil {
+		panic(err)
+	}
+	server.tw = tw
 	return server
 }
 
 func (server *Server) Start() error {
 	if server.isStart {
 		server.AddHttpRoute("/ex", server.ex)
+		server.tw.Start()
 		server.context.Go(func() {
 			server.loop()
 		})
@@ -56,7 +64,7 @@ func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
 	}
 	user := client.loadUser(writer, re)
 	server.rLock.RUnlock()
-	user.waitMessage()
+	user.waitMessage(server.tw)
 	user.RefreshExpired()
 }
 
