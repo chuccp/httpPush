@@ -9,9 +9,8 @@ import (
 )
 
 const expiredTime = 5 * time.Second
-const defaultExpiredTime = 2 * expiredTime
 
-const liveTime = 5 * time.Second
+const defaultLiveTime = 18
 
 type client struct {
 	username string
@@ -87,7 +86,7 @@ func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
 		if c.liveTime > 0 {
 			liveTime = c.liveTime
 		} else {
-			liveTime = 20
+			liveTime = defaultLiveTime
 		}
 	}
 	c.rLock.Lock()

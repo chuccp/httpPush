@@ -61,7 +61,7 @@ func (u *User) RefreshExpired() {
 }
 
 func (u *User) waitMessage() {
-	writeLiveTime := time.Now().Add(liveTime)
+	writeLiveTime := time.Now().Add(time.Duration(u.liveTime) * time.Second)
 	u.writeLiveTime = &writeLiveTime
 	u.userCancelContext = util.NewCancelContext()
 	msg, hasClose := u.queue.DequeueWithCanceled(u.userCancelContext)
