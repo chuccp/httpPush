@@ -4,7 +4,6 @@ import (
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/util"
 	"go.uber.org/zap"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -65,8 +64,6 @@ func (server *Server) loop() {
 	for {
 		time.Sleep(time.Second * 1)
 		start := time.Now().UnixMilli()
-		log.Println(start)
-
 		server.store.RangeClient(func(c *client) {
 			//过期检查
 			c.expiredCheck()
@@ -78,7 +75,9 @@ func (server *Server) loop() {
 			server.rLock.Unlock()
 		})
 		end := time.Now().UnixMilli()
-		log.Println(end - start)
+		if end-start > 3000 {
+			server.context.GetLog().Info("扫描时长", zap.Int64("loopTime", end-start))
+		}
 	}
 }
 
