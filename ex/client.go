@@ -75,16 +75,6 @@ func (c *client) expiredCheck() {
 		c.context.DeleteUser(user)
 	}
 }
-func (c *client) writeCheck() {
-	c.rLock.RLock()
-	defer c.rLock.RUnlock()
-	t := time.Now()
-	c.connMap.Each(func(key string, u *User) {
-		if u.isWriteLive(&t) {
-			u.writeLive()
-		}
-	})
-}
 func (c *client) userNum() int {
 	c.rLock.RLock()
 	defer c.rLock.RUnlock()
