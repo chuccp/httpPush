@@ -2,7 +2,6 @@ package util
 
 import (
 	"context"
-	"errors"
 	"github.com/rfyiamcool/go-timewheel"
 	"sync"
 	"sync/atomic"
@@ -98,118 +97,38 @@ func (queue *Queue) Offer(value interface{}) error {
 	}
 	return err
 }
-func (queue *Queue) Dequeue(ctx context.Context) (value interface{}, hasClose bool) {
 
+func (queue *Queue) DequeueTimer(timer *timewheel.Timer) (value interface{}, hasValue bool) {
+	go func() {
+		timeFa := <-timer.C
+		queue.lock.Lock()
+		if timeFa {
+			if queue.waitNum > 0 {
+				queue.waitNum--
+				queue.lock.Unlock()
+				queue.flag <- false
+			} else {
+				queue.lock.Unlock()
+			}
+		} else {
+			queue.lock.Unlock()
+		}
+	}()
 	for {
 		queue.lock.Lock()
 		v, err := queue.sliceQueue.Read()
 		if err == nil {
 			queue.lock.Unlock()
-			return v, false
+			timer.Stop()
+			close(timer.C)
+			return v, true
 		} else {
 			queue.waitNum++
 			queue.lock.Unlock()
-			go func() {
-				<-ctx.Done()
-				queue.lock.Lock()
-				err := ctx.Err()
-				if errors.Is(err, context.DeadlineExceeded) {
-					if queue.waitNum > 0 {
-						queue.waitNum--
-						queue.lock.Unlock()
-						queue.flag <- false
-					} else {
-						queue.lock.Unlock()
-					}
-				} else {
-					queue.lock.Unlock()
-				}
-			}()
 			fa := <-queue.flag
 			if !fa {
-				return nil, true
+				return nil, false
 			}
-		}
-	}
-}
-
-func (queue *Queue) DequeueTimer(timer *timewheel.Timer) (value interface{}, hasClose bool) {
-	for {
-		queue.lock.Lock()
-		v, err := queue.sliceQueue.Read()
-		if err == nil {
-			queue.lock.Unlock()
-			return v, false
-		} else {
-			queue.waitNum++
-			queue.lock.Unlock()
-			go func() {
-				timeFa := <-timer.C
-				queue.lock.Lock()
-				if timeFa {
-					if queue.waitNum > 0 {
-						queue.waitNum--
-						queue.lock.Unlock()
-						queue.flag <- false
-					} else {
-						queue.lock.Unlock()
-					}
-				} else {
-					queue.lock.Unlock()
-				}
-			}()
-			fa := <-queue.flag
-			if !fa {
-				return nil, true
-			}
-		}
-	}
-}
-
-func (queue *Queue) DequeueWithCanceled(ctx *CancelContext) (value interface{}, hasClose bool) {
-	for {
-		queue.lock.Lock()
-		v, err := queue.sliceQueue.Read()
-		if err == nil {
-			queue.lock.Unlock()
-			return v, false
-		} else {
-			queue.waitNum++
-			queue.lock.Unlock()
-			go func() {
-				ctx.Wait()
-				queue.lock.Lock()
-				err := ctx.Err()
-				if errors.Is(err, context.Canceled) {
-					if queue.waitNum > 0 {
-						queue.waitNum--
-						queue.lock.Unlock()
-						queue.flag <- false
-					} else {
-						queue.lock.Unlock()
-					}
-				} else {
-					queue.lock.Unlock()
-				}
-			}()
-			fa := <-queue.flag
-			if !fa {
-				return nil, true
-			}
-		}
-	}
-}
-func (queue *Queue) Poll() (value interface{}) {
-	for {
-		queue.lock.Lock()
-		v, err := queue.sliceQueue.Read()
-		if err == nil {
-			queue.lock.Unlock()
-			return v
-		} else {
-			queue.waitNum++
-			queue.lock.Unlock()
-			<-queue.flag
 		}
 	}
 }
