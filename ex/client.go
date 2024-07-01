@@ -23,7 +23,7 @@ type client struct {
 
 var poolClient = &sync.Pool{
 	New: func() interface{} {
-		return &client{liveTime: 20}
+		return &client{liveTime: defaultLiveTime}
 	},
 }
 
@@ -46,7 +46,7 @@ func freeNoUseClient(client *client) {
 func freeClient(client *client) {
 	FreeSliceMap(client.connMap)
 	util.FreeQueue(client.queue)
-	client.liveTime = 20
+	client.liveTime = defaultLiveTime
 	client.rLock = nil
 	client.queue = nil
 	client.connMap = nil
