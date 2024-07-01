@@ -27,10 +27,9 @@ type User struct {
 
 	writeLiveTime *time.Time
 
-	groupIds          []string
-	context           *core.Context
-	id                string
-	userCancelContext *util.CancelContext
+	groupIds []string
+	context  *core.Context
+	id       string
 }
 type HttpMessage struct {
 	From string
@@ -79,11 +78,6 @@ func (u *User) waitMessage(tw *timewheel.TimeWheel) {
 				u.writer.Write([]byte("[]"))
 			}
 		}
-	}
-}
-func (u *User) writeLive() {
-	if u.userCancelContext != nil {
-		u.userCancelContext.Cancel()
 	}
 }
 func (u *User) isExpired(now *time.Time) bool {
