@@ -52,37 +52,11 @@ func (c *CancelContext) Err() error {
 	return c.ctx.Err()
 }
 
-type CancelTimer struct {
-	timer *timewheel.Timer
-	close *atomic.Bool
-}
-
-func (c *CancelTimer) Wait() bool {
-	fa := <-c.timer.C
-	c.close.Swap(true)
-	return fa
-}
-
-func (c *CancelTimer) Stop() {
-	c.timer.Stop()
-	close(c.timer.C)
-}
-
-func NewCancelTimer(timer *timewheel.Timer) *CancelTimer {
-	close := new(atomic.Bool)
-	close.Store(false)
-	return &CancelTimer{timer: timer, close: close}
-}
-
 type Queue struct {
 	sliceQueue *SliceQueue
 	lock       *sync.RWMutex
 	waitNum    int32
 	flag       chan bool
-}
-
-func NewQueue() *Queue {
-	return &Queue{sliceQueue: new(SliceQueue), lock: new(sync.RWMutex), flag: make(chan bool)}
 }
 
 func (queue *Queue) Offer(value interface{}) error {
