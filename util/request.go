@@ -68,9 +68,9 @@ type Request struct {
 func NewRequest() *Request {
 	retryTransport := &RetryTransport{
 		Transport: http.DefaultTransport,
-		Retries:   3,
+		Retries:   2,
 	}
-	ct := http.Client{Timeout: time.Second * 10, Transport: retryTransport}
+	ct := http.Client{Timeout: time.Second * 2, Transport: retryTransport}
 	return &Request{client: &ct, netBreak: &netBreak{isBreak: false}}
 }
 

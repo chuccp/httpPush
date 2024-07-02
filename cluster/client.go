@@ -54,51 +54,29 @@ func (client *client) queryList() ([]*LiteMachine, error) {
 }
 
 func (client *client) query(parameter *core.Parameter, localValue any) (any, error) {
-	path := client.remoteMachine.Link + "/_cluster/query"
 	marshal, err := json.Marshal(parameter)
 	if err == nil {
-		call, err := client.request.Call(path, marshal)
-		if err == nil {
-			m := util.NewPtr(localValue)
-			if len(call) == 0 {
-				return m, nil
-			}
-			err = json.Unmarshal(call, m)
-			if err == nil {
-				return m, nil
-			} else {
-				return nil, err
-			}
-		} else {
-			return nil, err
-		}
+		return client.queryByJson(marshal, localValue)
 	}
 	return nil, err
 }
 
-func (client *client) sendAddUser(usernames ...string) {
-	path := client.remoteMachine.Link + "/_cluster/addUser"
-	us := make([]*User, len(usernames))
-	for index, username := range usernames {
-		u := NewUser(client.localMachine.MachineId, username)
-		us[index] = u
-	}
-	marshal, err := json.Marshal(us)
+func (client *client) queryByJson(marshal []byte, localValue any) (any, error) {
+	path := client.remoteMachine.Link + "/_cluster/query"
+	call, err := client.request.Call(path, marshal)
 	if err == nil {
-		client.request.JustCall(path, marshal)
-	}
-}
-
-func (client *client) sendDeleteUser(usernames ...string) {
-	path := client.remoteMachine.Link + "/_cluster/deleteUser"
-	us := make([]*User, len(usernames))
-	for index, username := range usernames {
-		u := NewUser(client.localMachine.MachineId, username)
-		us[index] = u
-	}
-	marshal, err := json.Marshal(us)
-	if err == nil {
-		client.request.JustCall(path, marshal)
+		m := util.NewPtr(localValue)
+		if len(call) == 0 {
+			return m, nil
+		}
+		err = json.Unmarshal(call, m)
+		if err == nil {
+			return m, nil
+		} else {
+			return nil, err
+		}
+	} else {
+		return nil, err
 	}
 }
 func (client *client) sendTextMsg(msg *message.TextMessage) error {
@@ -305,23 +283,37 @@ func (ms *ClientOperate) sendTextMsg(msg *message.TextMessage, exMachineIds ...s
 func (ms *ClientOperate) Query(parameter *core.Parameter, localValue any) []any {
 	vs := make([]any, 0)
 	index := 0
+	waitGroup := new(sync.WaitGroup)
+	var lock sync.Mutex
 	ms.store.eachStoreClient(func(machineId string, client *client) bool {
 		if client.HasConn() {
 			index++
 			parameter.SetIndex(index)
-			v, err := client.query(parameter, localValue)
-			ms.context.GetLog().Debug("query", zap.Error(err), zap.Any("value", v))
-			if err == nil && v != nil {
-				v1, ok := v.(*interface{})
-				if ok {
-					vs = append(vs, *v1)
-				} else {
-					vs = append(vs, v)
-				}
+			data, err := json.Marshal(parameter)
+			if err == nil {
+				waitGroup.Add(1)
+				go func(json []byte) {
+					defer waitGroup.Done()
+					v, err := client.queryByJson(json, localValue)
+					ms.context.GetLog().Debug("query", zap.Error(err), zap.Any("value", v))
+					if err == nil && v != nil {
+						v1, ok := v.(*interface{})
+						if ok {
+							lock.Lock()
+							vs = append(vs, *v1)
+							lock.Unlock()
+						} else {
+							lock.Lock()
+							vs = append(vs, v)
+							lock.Unlock()
+						}
+					}
+				}(data)
 			}
 		}
 		return true
 	})
+	waitGroup.Wait()
 	return vs
 }
 
