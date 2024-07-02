@@ -27,7 +27,7 @@ func NewServer() *Server {
 	httpServer := core.NewHttpServer(server.Name())
 	server.IHttpServer = httpServer
 	server.rLock = new(sync.RWMutex)
-	tw, err := timewheel.NewTimeWheel(1*time.Second, 360)
+	tw, err := timewheel.NewTimeWheel(3*time.Second, 360)
 	if err != nil {
 		panic(err)
 	}
