@@ -3,6 +3,7 @@ package ex
 import (
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/util"
+	"github.com/panjf2000/ants/v2"
 	"github.com/rfyiamcool/go-timewheel"
 	"go.uber.org/zap"
 	"net/http"
@@ -18,6 +19,7 @@ type Server struct {
 	isStart  bool
 	rLock    *sync.RWMutex
 	tw       *timewheel.TimeWheel
+	waitPool *ants.Pool
 }
 
 func NewServer() *Server {
@@ -26,6 +28,10 @@ func NewServer() *Server {
 	server.IHttpServer = httpServer
 	server.rLock = new(sync.RWMutex)
 	tw, err := timewheel.NewTimeWheel(1*time.Second, 360)
+	if err != nil {
+		panic(err)
+	}
+	server.waitPool, err = ants.NewPool(-1)
 	if err != nil {
 		panic(err)
 	}
@@ -64,7 +70,7 @@ func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
 	}
 	user := client.loadUser(writer, re)
 	server.rLock.RUnlock()
-	user.waitMessage(server.tw)
+	user.waitMessage(server.tw, server.waitPool)
 	user.RefreshExpired()
 }
 

@@ -1,6 +1,7 @@
 package util
 
 import (
+	"github.com/panjf2000/ants/v2"
 	"github.com/rfyiamcool/go-timewheel"
 	"sync"
 )
@@ -25,8 +26,8 @@ func (queue *Queue) Offer(value interface{}) error {
 	return err
 }
 
-func (queue *Queue) DequeueTimer(timer *timewheel.Timer) (value interface{}, hasValue bool) {
-	go func() {
+func (queue *Queue) DequeueTimer(timer *timewheel.Timer, waitPool *ants.Pool) (value interface{}, hasValue bool) {
+	waitPool.Submit(func() {
 		timeFa := <-timer.C
 		queue.lock.Lock()
 		if timeFa {
@@ -40,7 +41,7 @@ func (queue *Queue) DequeueTimer(timer *timewheel.Timer) (value interface{}, has
 		} else {
 			queue.lock.Unlock()
 		}
-	}()
+	})
 	for {
 		queue.lock.Lock()
 		v, err := queue.sliceQueue.Read()

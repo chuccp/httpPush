@@ -6,6 +6,7 @@ import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
+	"github.com/panjf2000/ants/v2"
 	"github.com/rfyiamcool/go-timewheel"
 	"net/http"
 	"time"
@@ -60,9 +61,9 @@ func (u *User) RefreshExpired() {
 	u.expiredTime = &tm
 }
 
-func (u *User) waitMessage(tw *timewheel.TimeWheel) {
+func (u *User) waitMessage(tw *timewheel.TimeWheel, waitPool *ants.Pool) {
 	timer := tw.NewTimer(time.Duration(u.liveTime) * time.Second)
-	msg, hasValue := u.queue.DequeueTimer(timer)
+	msg, hasValue := u.queue.DequeueTimer(timer, waitPool)
 	if !hasValue {
 		u.writer.Write([]byte("[]"))
 	} else {
