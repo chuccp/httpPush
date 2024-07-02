@@ -63,6 +63,37 @@ func (queue *Queue) DequeueTimer(timer *timewheel.Timer, waitPool *ants.Pool) (v
 	}
 }
 
+func (queue *Queue) DequeueTimer2(timer *timewheel.Timer) (value interface{}, hasValue bool) {
+	for {
+		queue.lock.Lock()
+		v, err := queue.sliceQueue.Read()
+		if err == nil {
+			queue.lock.Unlock()
+			timer.Stop()
+			close(timer.C)
+			return v, true
+		} else {
+			queue.waitNum++
+			queue.lock.Unlock()
+			select {
+			case <-queue.flag:
+			case <-timer.C:
+				queue.lock.Lock()
+				if queue.waitNum > 0 {
+					queue.waitNum--
+					queue.lock.Unlock()
+				} else {
+					queue.lock.Unlock()
+				}
+				timer.Stop()
+				close(timer.C)
+				return nil, false
+
+			}
+		}
+	}
+}
+
 var poolQueue = &sync.Pool{
 	New: func() interface{} {
 		return &Queue{}

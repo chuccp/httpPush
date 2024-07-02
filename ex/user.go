@@ -63,7 +63,7 @@ func (u *User) RefreshExpired() {
 
 func (u *User) waitMessage(tw *timewheel.TimeWheel, waitPool *ants.Pool) {
 	timer := tw.NewTimer(time.Duration(u.liveTime) * time.Second)
-	msg, hasValue := u.queue.DequeueTimer(timer, waitPool)
+	msg, hasValue := u.queue.DequeueTimer2(timer)
 	if !hasValue {
 		u.writer.Write([]byte("[]"))
 	} else {
