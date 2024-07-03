@@ -263,17 +263,21 @@ func (query *Query) queryTimeWheelLog(parameter *core.Parameter) any {
 	MachineInfoId, ok := query.getMachineInfoId(parameter)
 	if ok {
 		pageTimeWheelLog.MachineId = MachineInfoId
-		machineAddress, ok := query.getMachineAddress(pageTimeWheelLog.MachineId, parameter)
-		if ok {
-			pageTimeWheelLog.MachineAddress = machineAddress
-		}
+
 	}
-	return pageTimeWheelLog
+	return &pageTimeWheelLog
 }
 
 func (query *Query) queryTimeWheelLogApi(writer http.ResponseWriter, request *http.Request) {
 	parameter := core.NewParameter(request)
 	values := query.context.Query(parameter).([]any)
+	for _, value := range values {
+		p := value.(*PageTimeWheelLog)
+		machineAddress, ok := query.getMachineAddress(p.MachineId, parameter)
+		if ok {
+			p.MachineAddress = machineAddress
+		}
+	}
 	data, _ := json.Marshal(values)
 	writer.Write(data)
 }
