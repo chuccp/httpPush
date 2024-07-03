@@ -51,7 +51,7 @@ func (b *bucket) len() int {
 
 type Timer struct {
 	C       <-chan bool
-	c       chan bool
+	c       chan<- bool
 	isClose int32
 }
 
