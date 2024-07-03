@@ -31,7 +31,7 @@ func NewServer() *Server {
 		panic(err)
 	}
 	server.waitPool = waitPool
-	server.tw = util.NewTimeWheel(1, 180)
+	server.tw = util.NewTimeWheel(2, 180)
 	return server
 }
 
