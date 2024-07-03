@@ -100,11 +100,11 @@ func (tw *TimeWheel) getBucketsByIndex(index int32) *bucket {
 }
 
 func (tw *TimeWheel) addLog(num int, startTime *time.Time, endTime *time.Time) {
-	tw.timeWheelLog[tw.logIndex] = &TimeWheelLog{Num: num, StartTime: startTime, EndTime: endTime}
-	tw.logIndex++
 	if tw.logIndex >= logNum {
 		tw.logIndex = 0
 	}
+	tw.timeWheelLog[tw.logIndex] = &TimeWheelLog{Num: num, StartTime: startTime, EndTime: endTime}
+	tw.logIndex++
 }
 
 func (tw *TimeWheel) scheduler() {
