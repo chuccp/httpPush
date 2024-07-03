@@ -130,7 +130,14 @@ func (query *Query) onlineUser(parameter *core.Parameter) any {
 	if num > 0 {
 		query.context.RangeUser(func(username string, user *user.StoreUser) bool {
 			num--
-			pageUsers = append(pageUsers, &PageUser{UserName: username, MachineId: machineInfoId, CreateTime: user.GetCreateTime()})
+			pageUser := &PageUser{UserName: username, MachineId: machineInfoId, CreateTime: user.GetCreateTime()}
+			us, fa := query.context.GetUser(username)
+			if fa {
+				for _, iUser := range us {
+					pageUser.Conn = append(pageUser.Conn, newConn(iUser.GetRemoteAddress(), iUser.LastLiveTime().Format(util.TimestampFormat), iUser.CreateTime().Format(util.TimestampFormat), iUser.GetGroupIds()))
+				}
+			}
+			pageUsers = append(pageUsers, pageUser)
 			return num > 0
 		})
 	}

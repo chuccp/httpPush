@@ -29,6 +29,7 @@ type PageUser struct {
 	MachineAddress string
 	CreateTime     string
 	MachineId      string
+	Conn           []*Conn
 }
 type ResponseMsg struct {
 	Time   string
