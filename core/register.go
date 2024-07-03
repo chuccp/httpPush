@@ -60,7 +60,7 @@ func (httpPush *HttpPush) startHttpServer() error {
 }
 
 const (
-	VERSION = "0.1.10"
+	VERSION = "0.2.1"
 )
 
 func initLogger(path string) (*zap.Logger, error) {
