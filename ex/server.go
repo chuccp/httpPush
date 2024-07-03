@@ -4,7 +4,6 @@ import (
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/util"
 	"github.com/panjf2000/ants/v2"
-	"github.com/rfyiamcool/go-timewheel"
 	"go.uber.org/zap"
 	"net/http"
 	"sync"
@@ -18,7 +17,7 @@ type Server struct {
 	liveTime int
 	isStart  bool
 	rLock    *sync.RWMutex
-	tw       *timewheel.TimeWheel
+	tw       *util.TimeWheel
 	waitPool *ants.Pool
 }
 
@@ -27,22 +26,18 @@ func NewServer() *Server {
 	httpServer := core.NewHttpServer(server.Name())
 	server.IHttpServer = httpServer
 	server.rLock = new(sync.RWMutex)
-	tw, err := timewheel.NewTimeWheel(3*time.Second, 360)
+	waitPool, err := ants.NewPool(-1)
 	if err != nil {
 		panic(err)
 	}
-	server.waitPool, err = ants.NewPool(-1)
-	if err != nil {
-		panic(err)
-	}
-	server.tw = tw
+	server.waitPool = waitPool
+	server.tw = util.NewTimeWheel(3, 120)
 	return server
 }
 
 func (server *Server) Start() error {
 	if server.isStart {
 		server.AddHttpRoute("/ex", server.ex)
-		server.tw.Start()
 		server.context.Go(func() {
 			server.loop()
 		})
