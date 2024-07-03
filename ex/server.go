@@ -48,7 +48,9 @@ func (server *Server) ex(w http.ResponseWriter, re *http.Request) {
 	util.HttpCross(w)
 	server.jack(w, re)
 }
-
+func (server *Server) GetTimeWheelLog(parameter *core.Parameter) any {
+	return server.tw.GetLog()
+}
 func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
 
 	username := util.GetUsername(re)
@@ -87,6 +89,7 @@ func (server *Server) loop() {
 
 func (server *Server) Init(context *core.Context) {
 	server.context = context
+	server.context.RegisterHandle("getTimeWheelLog", server.GetTimeWheelLog)
 	server.isStart = server.context.GetCfgBoolDefault("ex", "start", false)
 	if server.isStart {
 		server.liveTime = server.context.GetCfgInt("ex", "liveTime")

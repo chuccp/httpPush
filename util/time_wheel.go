@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+const logNum = 4
+
 // TimeWheel 单圈时间轮，只用于特定场景  ，timer 最大时间不能超过 tick*bucketsNum
 type TimeWheel struct {
 	tick            int32
@@ -19,6 +21,15 @@ type TimeWheel struct {
 
 	// 取消函数
 	cancel context.CancelFunc
+
+	timeWheelLog []*TimeWheelLog
+	logIndex     int
+}
+
+type TimeWheelLog struct {
+	Num       int
+	StartTime *time.Time
+	EndTime   *time.Time
 }
 
 type bucket struct {
@@ -65,6 +76,9 @@ func (t *Timer) Close() {
 	atomic.StoreInt32(&t.isClose, 1)
 	close(t.c)
 }
+func (tw *TimeWheel) GetLog() []*TimeWheelLog {
+	return tw.timeWheelLog
+}
 func (tw *TimeWheel) NewTimer(tickSeconds int32) *Timer {
 	index := tickSeconds / tw.tick
 	y := tickSeconds % tw.tick
@@ -84,9 +98,20 @@ func (tw *TimeWheel) NewTimer(tickSeconds int32) *Timer {
 func (tw *TimeWheel) getBucketsByIndex(index int32) *bucket {
 	return tw.buckets[index]
 }
+
+func (tw *TimeWheel) addLog(num int, startTime *time.Time, endTime *time.Time) {
+	tw.timeWheelLog[tw.logIndex] = &TimeWheelLog{Num: num, StartTime: startTime, EndTime: endTime}
+	tw.logIndex++
+	if tw.logIndex >= logNum {
+		tw.logIndex = 0
+	}
+}
+
 func (tw *TimeWheel) scheduler() {
 	index := tw.readerIndex
 	sq := tw.getBucketsByIndex(index)
+	startTime := time.Now()
+	num := sq.len()
 	for {
 		tm, err := sq.read()
 		if err != nil {
@@ -95,10 +120,14 @@ func (tw *TimeWheel) scheduler() {
 			} else {
 				tw.readerIndex++
 			}
-			return
+			break
 		} else {
 			tm.run()
 		}
+	}
+	if num > 0 {
+		endTime := time.Now()
+		tw.addLog(num, &startTime, &endTime)
 	}
 }
 func (tw *TimeWheel) run() {
@@ -125,6 +154,8 @@ func NewTimeWheel(tickSeconds int32, bucketsNum int32) *TimeWheel {
 	for i := 0; i < int(bucketsNum); i++ {
 		timeWheel.buckets[i] = &bucket{queue: new(SliceQueue), lock: new(sync.Mutex)}
 	}
+	timeWheel.timeWheelLog = make([]*TimeWheelLog, logNum)
+	timeWheel.logIndex = 0
 	go timeWheel.run()
 	return timeWheel
 }

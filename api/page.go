@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/chuccp/httpPush/util"
+	"strings"
 	"time"
 )
 
@@ -64,6 +65,30 @@ type AllOrderUser struct {
 	OrderUser      []*OrderUser
 	MachineId      string
 	MachineAddress string
+}
+type TimeWheelLogsByAsc []*TimeWheelLog
+
+func (p TimeWheelLogsByAsc) Len() int {
+	return len(p)
+}
+func (p TimeWheelLogsByAsc) Swap(i, j int) {
+	p[i], p[j] = p[j], p[i]
+}
+func (p TimeWheelLogsByAsc) Less(i, j int) bool {
+	return strings.Compare(p[i].StartTime, p[j].StartTime) < 0
+}
+
+type PageTimeWheelLog struct {
+	MachineAddress string
+	MachineId      string
+	TimeWheelLogs  []*TimeWheelLog
+}
+
+type TimeWheelLog struct {
+	Num       int
+	Cha       int
+	StartTime string
+	EndTime   string
 }
 
 func NewAllOrderUser() *AllOrderUser {

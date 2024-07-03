@@ -6,6 +6,7 @@ import (
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
 	"net/http"
+	"sort"
 )
 
 type Query struct {
@@ -19,6 +20,9 @@ func (query *Query) Init() {
 	query.AddQuery("/sendGroupMsg", query.sendGroupMsg, query.sendGroupMsgApi)
 	query.AddQuery("/info_user", query.clusterInfo, query.clusterInfoApi)
 	query.AddQuery("/queryOrderInfo", query.queryOrderInfo, query.queryOrderInfoApi)
+
+	query.AddQuery("/queryTimeWheelLog", query.queryTimeWheelLog, query.queryTimeWheelLogApi)
+
 	query.AddQuery("/queryClusterUserNum", query.queryClusterUserNum, query.queryClusterUserNumApi)
 
 }
@@ -234,6 +238,40 @@ func (query *Query) queryClusterUserNum(parameter *core.Parameter) any {
 }
 
 func (query *Query) queryClusterUserNumApi(writer http.ResponseWriter, request *http.Request) {
+	parameter := core.NewParameter(request)
+	values := query.context.Query(parameter).([]any)
+	data, _ := json.Marshal(values)
+	writer.Write(data)
+}
+
+func (query *Query) queryTimeWheelLog(parameter *core.Parameter) any {
+	var pageTimeWheelLog PageTimeWheelLog
+	vtimeWheelLogs := make([]*TimeWheelLog, 0)
+	handle, ok := query.context.GetHandle("getTimeWheelLog")
+	if ok {
+		value := handle(parameter)
+		timeWheelLogs := value.([]*util.TimeWheelLog)
+		for _, log := range timeWheelLogs {
+			if log != nil && log.Num > 0 {
+				cha := log.EndTime.UnixMilli() - log.StartTime.UnixMilli()
+				vtimeWheelLogs = append(vtimeWheelLogs, &TimeWheelLog{Num: log.Num, Cha: int(cha), StartTime: util.FormatTimeMillisecond(log.StartTime), EndTime: util.FormatTimeMillisecond(log.EndTime)})
+			}
+		}
+	}
+	sort.Sort(TimeWheelLogsByAsc(vtimeWheelLogs))
+	pageTimeWheelLog.TimeWheelLogs = vtimeWheelLogs
+	MachineInfoId, ok := query.getMachineInfoId(parameter)
+	if ok {
+		pageTimeWheelLog.MachineId = MachineInfoId
+		machineAddress, ok := query.getMachineAddress(pageTimeWheelLog.MachineId, parameter)
+		if ok {
+			pageTimeWheelLog.MachineAddress = machineAddress
+		}
+	}
+	return pageTimeWheelLog
+}
+
+func (query *Query) queryTimeWheelLogApi(writer http.ResponseWriter, request *http.Request) {
 	parameter := core.NewParameter(request)
 	values := query.context.Query(parameter).([]any)
 	data, _ := json.Marshal(values)

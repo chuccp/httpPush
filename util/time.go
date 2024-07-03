@@ -18,3 +18,11 @@ func FormatTime(tm *time.Time) string {
 	return tm.Format(TimestampFormat)
 }
 
+var TimestampFormat2 = "2006-01-02 15:04:05.000"
+
+func FormatTimeMillisecond(tm *time.Time) string {
+	if tm == nil {
+		return ""
+	}
+	return tm.Format(TimestampFormat2)
+}
