@@ -7,10 +7,10 @@ import (
 )
 
 func TestAAAAAAA(t *testing.T) {
-	tw := NewTimeWheel(1, 10)
+	tw := NewTimeWheel(3, 10)
 
 	for {
-		timer := tw.NewTimer(2)
+		timer := tw.NewTimer(4)
 		go func() {
 			<-timer.C
 		}()
