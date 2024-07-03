@@ -2,7 +2,6 @@ package util
 
 import (
 	"context"
-	"log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -79,7 +78,6 @@ func (tw *TimeWheel) NewTimer(tickSeconds int32) *Timer {
 	}
 	c := make(chan bool, 1)
 	timer := &Timer{C: c, c: c, isClose: 0}
-	log.Println("tickSeconds", tickSeconds, "vIndex:", vIndex, "readerIndex:", readerIndex)
 	tw.addTimer(vIndex, timer)
 	return timer
 }
