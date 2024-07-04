@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-const logNum = 4
+const logNum = 10
 
 // TimeWheel 单圈时间轮，只用于特定场景  ，timer 最大时间不能超过 tick*bucketsNum
 type TimeWheel struct {
