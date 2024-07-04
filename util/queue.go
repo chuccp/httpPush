@@ -85,6 +85,7 @@ func (queue *Queue) DequeueTimer2(timer *Timer, waitPool *ants.Pool) (value inte
 					} else {
 						queue.lock.Unlock()
 					}
+					timer.Close()
 					return nil, false
 				}
 			}
