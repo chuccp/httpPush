@@ -7,13 +7,12 @@ import (
 )
 
 func TestAAAAAAA(t *testing.T) {
-	tw := NewTimeWheel(3, 10)
 
 	for {
-		timer := tw.NewTimer(4)
-		go func() {
-			<-timer.C
-		}()
+		fa := make(chan bool)
+		close(fa)
+		fa <- true
+
 		time.Sleep(time.Second * 1)
 	}
 

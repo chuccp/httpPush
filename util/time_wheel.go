@@ -68,13 +68,13 @@ type Timer struct {
 
 func (t *Timer) run() {
 	if atomic.CompareAndSwapInt32(&t.isClose, 0, 1) {
-		t.c <- true
+		close(t.c)
 	}
 }
-
 func (t *Timer) Close() {
-	atomic.StoreInt32(&t.isClose, 1)
-	close(t.c)
+	if atomic.CompareAndSwapInt32(&t.isClose, 0, 1) {
+		close(t.c)
+	}
 }
 func (tw *TimeWheel) GetLog() []*TimeWheelLog {
 	return tw.timeWheelLog
