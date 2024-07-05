@@ -6,7 +6,6 @@ import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
-	"github.com/panjf2000/ants/v2"
 	"net/http"
 	"time"
 )
@@ -60,9 +59,9 @@ func (u *User) RefreshExpired() {
 	u.expiredTime = &tm
 }
 
-func (u *User) waitMessage(tw *util.TimeWheel, waitPool *ants.Pool) {
+func (u *User) waitMessage(tw *util.TimeWheel) {
 	timer := tw.NewTimer(int32(u.liveTime))
-	msg, hasValue := u.queue.DequeueTimer2(timer, waitPool)
+	msg, hasValue := u.queue.DequeueTimer(timer)
 	if !hasValue {
 		u.writer.Write([]byte("[]"))
 	} else {

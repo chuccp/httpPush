@@ -1,7 +1,6 @@
 package util
 
 import (
-	"github.com/panjf2000/ants/v2"
 	"sync"
 )
 
@@ -24,43 +23,7 @@ func (queue *Queue) Offer(value interface{}) error {
 	}
 	return err
 }
-
-func (queue *Queue) DequeueTimer(timer *Timer, waitPool *ants.Pool) (value interface{}, hasValue bool) {
-	waitPool.Submit(func() {
-		timeFa := <-timer.C
-		queue.lock.Lock()
-		if timeFa {
-			if queue.waitNum > 0 {
-				queue.waitNum--
-				queue.lock.Unlock()
-				queue.flag <- false
-			} else {
-				queue.lock.Unlock()
-			}
-		} else {
-			queue.lock.Unlock()
-		}
-	})
-	for {
-		queue.lock.Lock()
-		v, err := queue.sliceQueue.Read()
-		if err == nil {
-			queue.lock.Unlock()
-			timer.Close()
-			return v, true
-		} else {
-			queue.waitNum++
-			queue.lock.Unlock()
-			fa := <-queue.flag
-			if !fa {
-				timer.Close()
-				return nil, false
-			}
-		}
-	}
-}
-
-func (queue *Queue) DequeueTimer2(timer *Timer, waitPool *ants.Pool) (value interface{}, hasValue bool) {
+func (queue *Queue) DequeueTimer(timer *Timer) (value interface{}, hasValue bool) {
 	for {
 		queue.lock.Lock()
 		v, err := queue.sliceQueue.Read()
