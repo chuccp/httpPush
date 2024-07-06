@@ -55,6 +55,7 @@ func (server *Server) sendMessage(w http.ResponseWriter, re *http.Request) {
 func (server *Server) root(writer http.ResponseWriter, request *http.Request) {
 	var dm = make(map[string]interface{})
 	dm["version"] = core.VERSION
+	dm["startTime"] = server.context.GetStartTime()
 	data, _ := json.Marshal(dm)
 	writer.Write(data)
 }

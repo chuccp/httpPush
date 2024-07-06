@@ -23,17 +23,22 @@ type Context struct {
 	handleFuncMap map[string]RegisterHandle
 	log           *zap.Logger
 	sendPool      *ants.Pool
+	startTime     *time.Time
 }
 
 func newContext(register *Register) *Context {
 	pool, _ := ants.NewPool(50)
-	context := &Context{register: register, systemInfo: make(systemInfo)}
+	st := time.Now()
+	context := &Context{register: register, systemInfo: make(systemInfo), startTime: &st}
 	context.sendPool = pool
 	context.httpPush = newHttpPush(context)
 	context.userStore = user.NewStore()
 	context.msgDock = NewMsgDock(context.userStore, context)
 	context.handleFuncMap = make(map[string]RegisterHandle)
 	return context
+}
+func (context *Context) GetStartTime() string {
+	return util.FormatTimeMillisecond(context.startTime)
 }
 func (context *Context) GetHttpPush() *HttpPush {
 	return context.httpPush
