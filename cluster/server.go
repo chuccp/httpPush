@@ -29,8 +29,12 @@ func NewServer() *Server {
 }
 func (server *Server) Start() error {
 	if server.isStart {
-		go server.run()
-		go server.checkUser()
+		server.context.RecoverGo(func() {
+			server.run()
+		})
+		server.context.RecoverGo(func() {
+			server.checkUser()
+		})
 	}
 	return nil
 }
