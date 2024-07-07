@@ -6,9 +6,11 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
-	"log"
 	"os"
+	"os/signal"
+	"strings"
 	"sync"
+	"syscall"
 )
 
 type Register struct {
@@ -63,8 +65,8 @@ const (
 	VERSION = "0.2.1"
 )
 
-func initLogger(path string) (*zap.Logger, error) {
-	writeFileCore, err := getFileLogWriter(path)
+func initLogger(path string, consoleLevel string) (*zap.Logger, error) {
+	writeFileCore, err := getFileLogWriter(path, consoleLevel)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +80,14 @@ func getEncoder() zapcore.Encoder {
 	return zapcore.NewJSONEncoder(config)
 }
 
-func getFileLogWriter(path string) (zapcore.Core, error) {
+func getFileLogWriter(path string, consoleLevel string) (zapcore.Core, error) {
+	var level = zapcore.InfoLevel
+	if strings.EqualFold(consoleLevel, "debug") {
+		level = zapcore.DebugLevel
+	}
+	if strings.EqualFold(consoleLevel, "warn") {
+		level = zapcore.WarnLevel
+	}
 	logger := &lumberjack.Logger{
 		Filename:   path,
 		MaxSize:    500, // megabytes
@@ -87,7 +96,7 @@ func getFileLogWriter(path string) (zapcore.Core, error) {
 		Compress:   true, // disabled by default
 	}
 	encoder := getEncoder()
-	core := zapcore.NewCore(encoder, zapcore.AddSync(logger), zapcore.InfoLevel)
+	core := zapcore.NewCore(encoder, zapcore.AddSync(logger), level)
 	return core, nil
 }
 func getStdoutLogWriter() zapcore.Core {
@@ -96,10 +105,10 @@ func getStdoutLogWriter() zapcore.Core {
 	return core
 }
 
-func (httpPush *HttpPush) Start() error {
-
+func (httpPush *HttpPush) Start() {
 	logPath := httpPush.context.GetCfgStringDefault("log", "file.path", "push.log")
-	logger, err := initLogger(logPath)
+	consoleLevel := httpPush.context.GetCfgStringDefault("log", "console.level", "info")
+	logger, err := initLogger(logPath, consoleLevel)
 	if err != nil {
 		panic(err)
 	}
@@ -108,21 +117,30 @@ func (httpPush *HttpPush) Start() error {
 	httpPush.context.rangeServer(func(server Server) {
 		if s, ok := server.(IHttpServer); ok {
 			s.init(httpPush.context)
-			go func() {
+			httpPush.context.RecoverGo(func() {
 				err := s.start()
 				if err != nil {
-					log.Panic(err)
+					httpPush.context.GetLog().Error("s.start", zap.Error(err))
 				}
-			}()
+			})
 		}
 		server.Init(httpPush.context)
-		go func() {
+		httpPush.context.RecoverGo(func() {
 			err := server.Start()
 			if err != nil {
-				log.Panic(err)
+				httpPush.context.GetLog().Error("server.Start", zap.Error(err))
 			}
-		}()
+		})
 	})
 	httpPush.context.SetSystemInfo("VERSION", VERSION)
-	return httpPush.startHttpServer()
+	httpPush.context.RecoverGo(func() {
+		err = httpPush.startHttpServer()
+		if err != nil {
+			httpPush.context.GetLog().Error("startHttpServer", zap.Error(err))
+		}
+	})
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGBUS)
+	<-sig
+
 }

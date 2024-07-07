@@ -31,7 +31,10 @@ func NewServer() *Server {
 func (server *Server) Start() error {
 	if server.isStart {
 		server.AddHttpRoute("/ex", server.ex)
-		server.context.Go(func() {
+		server.context.RecoverGo(func() {
+			server.tw.Start()
+		})
+		server.context.RecoverGo(func() {
 			server.loop()
 		})
 	}

@@ -130,7 +130,7 @@ func (tw *TimeWheel) scheduler() {
 		tw.addLog(num, &startTime, &endTime)
 	}
 }
-func (tw *TimeWheel) run() {
+func (tw *TimeWheel) Start() {
 	ticker := time.NewTicker(time.Duration(tw.tick) * time.Second)
 	for {
 		select {
@@ -156,6 +156,5 @@ func NewTimeWheel(tickSeconds int32, bucketsNum int32) *TimeWheel {
 	}
 	timeWheel.timeWheelLog = make([]*TimeWheelLog, logNum)
 	timeWheel.logIndex = 0
-	go timeWheel.run()
 	return timeWheel
 }

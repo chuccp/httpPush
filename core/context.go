@@ -64,33 +64,6 @@ func (context *Context) RecoverGo(handle func()) {
 		}
 	}()
 }
-
-// Go 协程异常保活，避免协程内错误导致整个系统
-func (context *Context) Go(handle func()) {
-	go func() {
-		defer func() {
-			if err := recover(); err != nil {
-				s := string(debug.Stack())
-				context.GetLog().Error("Go", zap.Any("err", err), zap.String("info", s))
-			}
-		}()
-		handle()
-	}()
-}
-
-// GoForIndex  协程异常保活，避免协程内错误导致整个系统
-func (context *Context) GoForIndex(index int, handle func(ind int)) {
-	go func() {
-		defer func() {
-			if err := recover(); err != nil {
-				s := string(debug.Stack())
-				context.GetLog().Error("Go", zap.Any("err", err), zap.String("info", s))
-			}
-		}()
-		handle(index)
-	}()
-}
-
 func (context *Context) GetUserOrder(username string) []user.IOrderUser {
 	return context.userStore.GetOrderUser(username)
 }

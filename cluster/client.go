@@ -376,7 +376,7 @@ func (ms *ClientOperate) getMachineLite() []*LiteMachine {
 
 func (ms *ClientOperate) run() {
 	ms.initial()
-	ms.context.Go(func() {
+	ms.context.RecoverGo(func() {
 		ms.live()
 	})
 }

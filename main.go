@@ -23,9 +23,6 @@ func main() {
 	register.AddServer(cluster.NewServer())
 	register.AddServer(ex.NewServer())
 	httpPush := register.Create()
-	err = httpPush.Start()
-	if err != nil {
-		log.Panic(err)
-	}
+	httpPush.Start()
 
 }
