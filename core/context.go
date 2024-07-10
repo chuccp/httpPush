@@ -64,6 +64,19 @@ func (context *Context) RecoverGo(handle func()) {
 		}
 	}()
 }
+
+func (context *Context) Go(handle func()) {
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				s := string(debug.Stack())
+				context.GetLog().Error("recoverGo", zap.Any("err", err), zap.String("info", s))
+			}
+		}()
+		handle()
+	}()
+}
+
 func (context *Context) GetUserOrder(username string) []user.IOrderUser {
 	return context.userStore.GetOrderUser(username)
 }
