@@ -85,6 +85,7 @@ func newUserStore(username string) *StoreUser {
 
 type StoreGroup struct {
 	uMap *sync.Map
+	num  int
 }
 
 func NewStoreGroup() *StoreGroup {
@@ -97,6 +98,7 @@ func (storeGroup *StoreGroup) AddUser(user IUser) {
 		group := v.(*Group)
 		group.lastLiveTime = user.LastLiveTime()
 	} else {
+		storeGroup.num++
 		group := NewGroup(user)
 		storeGroup.uMap.Store(user.GetUsername(), group)
 	}
@@ -107,7 +109,11 @@ func (storeGroup *StoreGroup) RangeUser(f func(string) bool) {
 	})
 }
 func (storeGroup *StoreGroup) RemoteUser(user IUser) {
+	storeGroup.num--
 	storeGroup.uMap.Delete(user.GetUsername())
+}
+func (storeGroup *StoreGroup) GetNum() int {
+	return storeGroup.num
 }
 
 type Store struct {
@@ -253,6 +259,19 @@ func (store *Store) QueryGroupsUser(groupIds ...string) *GroupUser {
 
 func (store *Store) UserHasConn() bool {
 	return int(store.num) > 0
+}
+
+func (store *Store) AllGroupInfo() map[string]int {
+	groupMap := make(map[string]int)
+	store.gMap.Range(func(key, value any) bool {
+		sg, ok1 := value.(*StoreGroup)
+		k, ok2 := key.(string)
+		if ok1 && ok2 {
+			groupMap[k] = sg.num
+		}
+		return true
+	})
+	return groupMap
 }
 func (store *Store) GetUserNum() int {
 	return int(store.num)

@@ -84,6 +84,12 @@ type PageTimeWheelLog struct {
 	TimeWheelLogs  []*TimeWheelLog
 }
 
+type GroupInfo struct {
+	MachineAddress string
+	MachineId      string
+	GroupInfo      map[string]int
+}
+
 type TimeWheelLog struct {
 	Num       int
 	Cha       int

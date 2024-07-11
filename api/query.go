@@ -20,10 +20,9 @@ func (query *Query) Init() {
 	query.AddQuery("/sendGroupMsg", query.sendGroupMsg, query.sendGroupMsgApi)
 	query.AddQuery("/info_user", query.clusterInfo, query.clusterInfoApi)
 	query.AddQuery("/queryOrderInfo", query.queryOrderInfo, query.queryOrderInfoApi)
-
 	query.AddQuery("/queryTimeWheelLog", query.queryTimeWheelLog, query.queryTimeWheelLogApi)
-
 	query.AddQuery("/queryClusterUserNum", query.queryClusterUserNum, query.queryClusterUserNumApi)
+	query.AddQuery("/queryGroupInfo", query.queryGroupInfo, query.queryGroupInfoApi)
 
 }
 
@@ -273,6 +272,31 @@ func (query *Query) queryTimeWheelLogApi(writer http.ResponseWriter, request *ht
 	values := query.context.Query(parameter).([]any)
 	for _, value := range values {
 		p := value.(*PageTimeWheelLog)
+		machineAddress, ok := query.getMachineAddress(p.MachineId, parameter)
+		if ok {
+			p.MachineAddress = machineAddress
+		}
+	}
+	data, _ := json.Marshal(values)
+	writer.Write(data)
+}
+
+func (query *Query) queryGroupInfo(parameter *core.Parameter) any {
+	var groupInfo GroupInfo
+	groupInfo.GroupInfo = query.context.AllGroupInfo()
+	MachineInfoId, ok := query.getMachineInfoId(parameter)
+	if ok {
+		groupInfo.MachineId = MachineInfoId
+
+	}
+	return &groupInfo
+}
+
+func (query *Query) queryGroupInfoApi(writer http.ResponseWriter, request *http.Request) {
+	parameter := core.NewParameter(request)
+	values := query.context.Query(parameter).([]any)
+	for _, value := range values {
+		p := value.(*GroupInfo)
 		machineAddress, ok := query.getMachineAddress(p.MachineId, parameter)
 		if ok {
 			p.MachineAddress = machineAddress

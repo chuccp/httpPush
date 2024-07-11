@@ -92,6 +92,10 @@ func (context *Context) AddUser(iUser user.IUser) {
 	}
 }
 
+func (context *Context) AllGroupInfo() map[string]int {
+	return context.userStore.AllGroupInfo()
+}
+
 func (context *Context) GetUser(userName string) ([]user.IUser, bool) {
 	return context.userStore.GetUser(userName)
 }
