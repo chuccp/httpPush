@@ -52,7 +52,11 @@ func freeClient(client *client) {
 	client.connMap = nil
 	poolClient.Put(client)
 }
-
+func (c *client) deleteUser(id string) {
+	c.rLock.Lock()
+	defer c.rLock.Unlock()
+	c.connMap.Delete(id)
+}
 func (c *client) expiredCheck() {
 	c.rLock.Lock()
 	t := time.Now()

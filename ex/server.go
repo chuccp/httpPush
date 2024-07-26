@@ -6,7 +6,6 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"sync"
-	"time"
 )
 
 type Server struct {
@@ -17,6 +16,7 @@ type Server struct {
 	isStart  bool
 	rLock    *sync.RWMutex
 	tw       *util.TimeWheel
+	tw2      *util.TimeWheel2
 }
 
 func NewServer() *Server {
@@ -25,6 +25,7 @@ func NewServer() *Server {
 	server.IHttpServer = httpServer
 	server.rLock = new(sync.RWMutex)
 	server.tw = util.NewTimeWheel(2, 180)
+	server.tw2 = util.NewTimeWheel2(1, 60)
 	return server
 }
 
@@ -35,7 +36,7 @@ func (server *Server) Start() error {
 			server.tw.Start()
 		})
 		server.context.RecoverGo(func() {
-			server.loop()
+			server.tw2.Start()
 		})
 	}
 	return nil
@@ -63,24 +64,24 @@ func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
 	}
 	user := client.loadUser(writer, re)
 	server.rLock.RUnlock()
+	server.tw2.DeleteFunc(user.GetId())
 	user.waitMessage(server.tw)
 	user.RefreshExpired()
+	server.tw2.AfterFunc(4, user.GetId(), func() {
+		server.deleteClientOrUser(client, user)
+	})
 }
-
-func (server *Server) loop() {
-	for {
-		time.Sleep(time.Second * 1)
-		server.store.RangeClient(func(c *client) {
-			//过期检查
-			c.expiredCheck()
-			server.rLock.Lock()
-			if c.userNum() == 0 {
-				server.store.Delete(c.username)
-				freeClient(c)
-			}
-			server.rLock.Unlock()
-		})
+func (server *Server) deleteClientOrUser(client *client, user *User) {
+	server.rLock.Lock()
+	if user.expiredTime != nil {
+		client.deleteUser(user.GetId())
+		if client.userNum() == 0 {
+			server.store.Delete(client.username)
+			freeClient(client)
+		}
+		server.context.DeleteUser(user)
 	}
+	server.rLock.Unlock()
 }
 
 func (server *Server) Init(context *core.Context) {
