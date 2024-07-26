@@ -87,6 +87,9 @@ func (tw *TimeWheel2) scheduler() {
 		tw.readerIndex++
 	}
 }
+func (tw *TimeWheel2) Stop() {
+	tw.cancel()
+}
 
 func (tw *TimeWheel2) Start() {
 	ticker := time.NewTicker(time.Duration(tw.tick) * time.Second)
