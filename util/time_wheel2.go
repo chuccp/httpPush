@@ -81,7 +81,11 @@ func (tw *TimeWheel2) scheduler() {
 	db.data.Range(func(key, value any) bool {
 		tw.lock.Lock()
 		db.data.Delete(key)
-		delete(tw.data, key.(string))
+		k := key.(string)
+		i, ok := tw.data[k]
+		if ok && i == index {
+			delete(tw.data, k)
+		}
 		tw.lock.Unlock()
 		handel, ok := value.(*handle)
 		if ok {
