@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type Handle func()
+type Handle func(value ...any)
 
 type TimeWheel2 struct {
 	tick            int32
@@ -24,6 +24,10 @@ type bucket2 struct {
 	data *sync.Map
 	lock *sync.Mutex
 }
+type handle struct {
+	handle Handle
+	value  []any
+}
 
 func NewTimeWheel2(tickSeconds int32, bucketsNum int32) *TimeWheel2 {
 	timeWheel := &TimeWheel2{tick: tickSeconds, bucketsNum: bucketsNum, bucketsMaxIndex: bucketsNum - 1, data: make(map[string]int32), lock: new(sync.RWMutex)}
@@ -34,17 +38,17 @@ func NewTimeWheel2(tickSeconds int32, bucketsNum int32) *TimeWheel2 {
 	}
 	return timeWheel
 }
-func (tw *TimeWheel2) addHandle(index int32, id string, f Handle) {
+func (tw *TimeWheel2) addHandle(index int32, id string, f Handle, value ...any) {
 	tw.lock.Lock()
 	defer tw.lock.Unlock()
 	v, ok := tw.data[id]
 	if ok {
 		tw.buckets[v].data.Delete(id)
 	}
-	tw.buckets[index].data.Store(id, f)
+	tw.buckets[index].data.Store(id, &handle{handle: f, value: value})
 	tw.data[id] = index
 }
-func (tw *TimeWheel2) AfterFunc(tickSeconds int32, id string, f Handle) {
+func (tw *TimeWheel2) AfterFunc(tickSeconds int32, id string, f Handle, value ...any) {
 	index := tickSeconds / tw.tick
 	y := tickSeconds % tw.tick
 	if y > 0 {
@@ -55,7 +59,7 @@ func (tw *TimeWheel2) AfterFunc(tickSeconds int32, id string, f Handle) {
 	if vIndex >= tw.bucketsNum {
 		vIndex = vIndex - tw.bucketsNum
 	}
-	tw.addHandle(vIndex, id, f)
+	tw.addHandle(vIndex, id, f, value...)
 }
 func (tw *TimeWheel2) DeleteFunc(id string) {
 	tw.lock.RLock()
@@ -75,9 +79,9 @@ func (tw *TimeWheel2) scheduler() {
 	db := tw.getBucketsByIndex(index)
 	db.data.Range(func(key, value any) bool {
 		db.data.Delete(key)
-		handel, ok := value.(Handle)
+		handel, ok := value.(*handle)
 		if ok {
-			handel()
+			handel.handle(handel.value...)
 		}
 		return true
 	})

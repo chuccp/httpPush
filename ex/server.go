@@ -58,18 +58,18 @@ func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
 	}
 	server.rLock.RLock()
 	cl := getNewClient(server.context, username, server.liveTime)
-	client, ok := server.store.LoadOrStore(cl, username)
+	_client_, ok := server.store.LoadOrStore(cl, username)
 	if ok {
 		freeNoUseClient(cl)
 	}
-	user := client.loadUser(writer, re)
+	user := _client_.loadUser(writer, re)
 	server.rLock.RUnlock()
 	server.tw2.DeleteFunc(user.GetId())
 	user.waitMessage(server.tw)
 	user.RefreshExpired()
-	server.tw2.AfterFunc(4, user.GetId(), func() {
-		server.deleteClientOrUser(client, user)
-	})
+	server.tw2.AfterFunc(4, user.GetId(), func(value ...any) {
+		server.deleteClientOrUser(value[0].(*client), value[1].(*User))
+	}, _client_, user)
 }
 func (server *Server) deleteClientOrUser(client *client, user *User) {
 	server.rLock.Lock()
