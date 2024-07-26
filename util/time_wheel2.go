@@ -62,12 +62,13 @@ func (tw *TimeWheel2) AfterFunc(tickSeconds int32, id string, f Handle, value ..
 	tw.addHandle(vIndex, id, f, value...)
 }
 func (tw *TimeWheel2) DeleteFunc(id string) {
-	tw.lock.RLock()
-	defer tw.lock.RUnlock()
+	tw.lock.Lock()
+	defer tw.lock.Unlock()
 	v, ok := tw.data[id]
 	if ok {
 		tw.buckets[v].data.Delete(id)
 	}
+	delete(tw.data, id)
 }
 
 func (tw *TimeWheel2) getBucketsByIndex(index int32) *bucket2 {
@@ -78,7 +79,10 @@ func (tw *TimeWheel2) scheduler() {
 	index := tw.readerIndex
 	db := tw.getBucketsByIndex(index)
 	db.data.Range(func(key, value any) bool {
+		tw.lock.Lock()
 		db.data.Delete(key)
+		delete(tw.data, key.(string))
+		tw.lock.Unlock()
 		handel, ok := value.(*handle)
 		if ok {
 			handel.handle(handel.value...)
