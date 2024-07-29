@@ -5,6 +5,7 @@ import (
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/util"
 	"net/http"
+	"net/http/pprof"
 )
 
 type Server struct {
@@ -63,6 +64,11 @@ func (server *Server) Start() error {
 	server.AddHttpRoute("/sendmsg", server.sendMsg)
 	server.AddHttpRoute("/sendMessage", server.sendMessage)
 	server.AddHttpRoute("/root_version", server.root)
+	server.AddHttpRoute("/debug/pprof/", pprof.Index)
+	server.AddHttpRoute("/debug/pprof/cmdline", pprof.Cmdline)
+	server.AddHttpRoute("/debug/pprof/profile", pprof.Profile)
+	server.AddHttpRoute("/debug/pprof/symbol", pprof.Symbol)
+	server.AddHttpRoute("/debug/pprof/trace", pprof.Trace)
 	server.query.Init()
 	return nil
 }
