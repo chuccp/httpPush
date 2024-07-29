@@ -65,12 +65,12 @@ const (
 	VERSION = "0.2.1"
 )
 
-func initLogger(path string, consoleLevel string) (*zap.Logger, error) {
-	writeFileCore, err := getFileLogWriter(path, consoleLevel)
+func initLogger(path string, consoleLevel string, writeLevel string) (*zap.Logger, error) {
+	writeFileCore, err := getFileLogWriter(path, writeLevel)
 	if err != nil {
 		return nil, err
 	}
-	core := zapcore.NewTee(writeFileCore, getStdoutLogWriter())
+	core := zapcore.NewTee(writeFileCore, getStdoutLogWriter(consoleLevel))
 	return zap.New(core, zap.AddCaller()), nil
 }
 
@@ -99,16 +99,24 @@ func getFileLogWriter(path string, consoleLevel string) (zapcore.Core, error) {
 	core := zapcore.NewCore(encoder, zapcore.AddSync(logger), level)
 	return core, nil
 }
-func getStdoutLogWriter() zapcore.Core {
+func getStdoutLogWriter(consoleLevel string) zapcore.Core {
+	var level = zapcore.DebugLevel
+	if strings.EqualFold(consoleLevel, "info") {
+		level = zapcore.InfoLevel
+	}
+	if strings.EqualFold(consoleLevel, "warn") {
+		level = zapcore.WarnLevel
+	}
 	encoder := getEncoder()
-	core := zapcore.NewCore(encoder, os.Stdout, zapcore.DebugLevel)
+	core := zapcore.NewCore(encoder, os.Stdout, level)
 	return core
 }
 
 func (httpPush *HttpPush) Start() {
 	logPath := httpPush.context.GetCfgStringDefault("log", "file.path", "push.log")
-	consoleLevel := httpPush.context.GetCfgStringDefault("log", "console.level", "info")
-	logger, err := initLogger(logPath, consoleLevel)
+	consoleLevel := httpPush.context.GetCfgStringDefault("log", "console.level", "debug")
+	writeLevel := httpPush.context.GetCfgStringDefault("log", "write.level", "info")
+	logger, err := initLogger(logPath, consoleLevel, writeLevel)
 	if err != nil {
 		panic(err)
 	}
