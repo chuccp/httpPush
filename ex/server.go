@@ -78,8 +78,8 @@ func (server *Server) deleteClientOrUser(client *client, user *User) {
 		if client.userNum() == 0 {
 			server.store.Delete(client.username)
 			freeClient(client)
-			server.context.DeleteUser(user)
 		}
+		server.context.DeleteUser(user)
 	}
 	server.rLock.Unlock()
 }
