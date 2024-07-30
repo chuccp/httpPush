@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU() * 5)
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	cfg, err := config.LoadFile("config.ini")
 	if err != nil {
 		log.Panic(err)
