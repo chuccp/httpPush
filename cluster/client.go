@@ -96,6 +96,9 @@ func (client *client) queryByJsonByTimeOut(marshal []byte, localValue any) (v an
 	case <-chanBool:
 		return
 	}
+	once.Do(func() {
+		close(chanBool)
+	})
 	return nil, errors.New("time out")
 }
 
