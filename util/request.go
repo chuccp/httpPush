@@ -2,6 +2,7 @@ package util
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -100,6 +101,9 @@ func (r *Request) Call(link string, jsonData []byte) ([]byte, error) {
 	resp, err := r.client.Post(link, "application/json", buff)
 	if err != nil {
 		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		return nil, errors.New(resp.Status)
 	}
 	r.netBreak.noBreak()
 	all, err := io.ReadAll(resp.Body)
