@@ -46,7 +46,6 @@ func freeNoUseClient(client *client) {
 func freeClient(client *client) {
 	FreeSliceMap(client.connMap)
 	util.FreeQueue(client.queue)
-	client.liveTime = defaultLiveTime
 	client.rLock = nil
 	client.queue = nil
 	client.connMap = nil

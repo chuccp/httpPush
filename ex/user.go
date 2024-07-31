@@ -64,6 +64,7 @@ func (u *User) waitMessage(tw *util.TimeWheel2) {
 		u.queue.Offer(nil)
 	})
 	msg, hasValue := u.queue.Dequeue()
+	tw.DeleteFunc(u.id)
 	if !hasValue {
 		u.writer.Write([]byte("[]"))
 	} else {
