@@ -1,27 +1,34 @@
 package util
 
 import (
-	"strconv"
+	"log"
 	"testing"
 	"time"
 )
 
 func TestTimeWheel2_AfterFunc(t *testing.T) {
 
-	tw2 := NewTimeWheel2(1, 60)
-	go tw2.Start()
-	var index = 0
-	for {
-		index++
-		tw2.AfterFunc(4, strconv.Itoa(index), func() {
-			t.Log(strconv.Itoa(index))
-		})
-		index++
-		tw2.AfterFunc(4, strconv.Itoa(index), func() {
-			t.Log(strconv.Itoa(index))
-		})
-		time.Sleep(time.Second)
-	}
+	chanBool := make(chan bool)
 
-	time.Sleep(time.Second * 180)
+	go func() {
+		for {
+			fa := <-chanBool
+			log.Println("00000000000", fa)
+
+		}
+	}()
+	time.Sleep(time.Second)
+	go func() {
+		for {
+			fa := <-chanBool
+			log.Println("11111111", fa)
+
+		}
+	}()
+	time.Sleep(time.Second)
+	for {
+		chanBool <- true
+		time.Sleep(time.Second * 2)
+	}
+	time.Sleep(10 * time.Second)
 }
