@@ -83,24 +83,19 @@ func (client *client) queryByJson(marshal []byte, localValue any) (any, error) {
 
 func (client *client) queryByJsonByTimeOut(marshal []byte, localValue any) (v any, err error) {
 	tm := time.NewTimer(time.Second)
-	wg := new(sync.WaitGroup)
 	once := new(sync.Once)
-	wg.Add(1)
+	chanBool := make(chan bool)
 	go func() {
 		v, err = client.queryByJson(marshal, localValue)
 		once.Do(func() {
-			wg.Done()
+			chanBool <- true
 		})
 	}()
 	select {
 	case <-tm.C:
-		{
-			once.Do(func() {
-				wg.Done()
-			})
-		}
+	case <-chanBool:
+		return
 	}
-	wg.Wait()
 	return nil, errors.New("time out")
 }
 
