@@ -15,7 +15,7 @@ type Server struct {
 	liveTime int
 	isStart  bool
 	rLock    *sync.RWMutex
-	tw       *util.TimeWheel
+	tw       *util.TimeWheel2
 	tw2      *util.TimeWheel2
 }
 
@@ -24,7 +24,7 @@ func NewServer() *Server {
 	httpServer := core.NewHttpServer(server.Name())
 	server.IHttpServer = httpServer
 	server.rLock = new(sync.RWMutex)
-	server.tw = util.NewTimeWheel(2, 180)
+	server.tw = util.NewTimeWheel2(1, 60)
 	server.tw2 = util.NewTimeWheel2(1, 60)
 	return server
 }
@@ -44,9 +44,6 @@ func (server *Server) Start() error {
 func (server *Server) ex(w http.ResponseWriter, re *http.Request) {
 	util.HttpCross(w)
 	server.jack(w, re)
-}
-func (server *Server) GetTimeWheelLog(parameter *core.Parameter) any {
-	return server.tw.GetLog()
 }
 func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
 
@@ -86,7 +83,7 @@ func (server *Server) deleteClientOrUser(client *client, user *User) {
 
 func (server *Server) Init(context *core.Context) {
 	server.context = context
-	server.context.RegisterHandle("getTimeWheelLog", server.GetTimeWheelLog)
+	//server.context.RegisterHandle("getTimeWheelLog", server.GetTimeWheelLog)
 	server.isStart = server.context.GetCfgBoolDefault("ex", "start", false)
 	if server.isStart {
 		server.liveTime = server.context.GetCfgInt("ex", "liveTime")

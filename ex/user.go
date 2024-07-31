@@ -59,9 +59,11 @@ func (u *User) RefreshExpired() {
 	u.expiredTime = &tm
 }
 
-func (u *User) waitMessage(tw *util.TimeWheel) {
-	timer := tw.NewTimer(int32(u.liveTime))
-	msg, hasValue := u.queue.DequeueTimer(timer)
+func (u *User) waitMessage(tw *util.TimeWheel2) {
+	tw.AfterFunc(int32(u.liveTime), u.id, func(value ...any) {
+		u.queue.Offer(nil)
+	})
+	msg, hasValue := u.queue.Dequeue()
 	if !hasValue {
 		u.writer.Write([]byte("[]"))
 	} else {

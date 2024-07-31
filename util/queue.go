@@ -55,6 +55,28 @@ func (queue *Queue) DequeueTimer(timer *Timer) (value interface{}, hasValue bool
 		}
 	}
 }
+func (queue *Queue) Dequeue() (value interface{}, hasValue bool) {
+	for {
+		queue.lock.Lock()
+		v, err := queue.sliceQueue.Read()
+		if err == nil {
+			queue.lock.Unlock()
+			if v == nil {
+				return nil, false
+			}
+			return v, true
+		} else {
+			queue.waitNum++
+			queue.lock.Unlock()
+			select {
+			case <-queue.flag:
+				{
+					continue
+				}
+			}
+		}
+	}
+}
 
 var poolQueue = &sync.Pool{
 	New: func() interface{} {
