@@ -71,7 +71,7 @@ func NewRequest() *Request {
 	//	Transport: http.DefaultTransport,
 	//	Retries:   0,
 	//}
-	ct := http.Client{Timeout: time.Second * 1, Transport: http.DefaultTransport}
+	ct := http.Client{Timeout: time.Second * 2, Transport: http.DefaultTransport}
 	return &Request{client: &ct, netBreak: &netBreak{isBreak: false}}
 }
 
