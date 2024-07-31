@@ -48,7 +48,7 @@ func (tw *TimeWheel2) addHandle(index int32, id string, f Handle, value ...any) 
 	tw.buckets[index].data.Store(id, &handle{handle: f, value: value})
 	tw.data[id] = index
 }
-func (tw *TimeWheel2) AfterFunc(tickSeconds int32, id string, f Handle, value ...any) {
+func (tw *TimeWheel2) AfterFunc(tickSeconds int32, id string, f Handle, value ...any) int32 {
 	index := tickSeconds / tw.tick
 	y := tickSeconds % tw.tick
 	if y > 0 {
@@ -60,6 +60,7 @@ func (tw *TimeWheel2) AfterFunc(tickSeconds int32, id string, f Handle, value ..
 		vIndex = vIndex - tw.bucketsNum
 	}
 	tw.addHandle(vIndex, id, f, value...)
+	return vIndex
 }
 func (tw *TimeWheel2) DeleteFunc(id string) {
 	tw.lock.Lock()
@@ -69,6 +70,17 @@ func (tw *TimeWheel2) DeleteFunc(id string) {
 		tw.buckets[v].data.Delete(id)
 	}
 	delete(tw.data, id)
+}
+func (tw *TimeWheel2) DeleteIndexFunc(id string, index int32) {
+	tw.lock.Lock()
+	defer tw.lock.Unlock()
+	v, ok := tw.data[id]
+	if ok {
+		if v == index {
+			tw.buckets[v].data.Delete(id)
+			delete(tw.data, id)
+		}
+	}
 }
 
 func (tw *TimeWheel2) getBucketsByIndex(index int32) *bucket2 {
