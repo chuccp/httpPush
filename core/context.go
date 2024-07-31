@@ -4,7 +4,6 @@ import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
-	"github.com/panjf2000/ants/v2"
 	"go.uber.org/zap"
 	"net/http"
 	"runtime/debug"
@@ -22,15 +21,12 @@ type Context struct {
 	msgDock       *MsgDock
 	handleFuncMap map[string]RegisterHandle
 	log           *zap.Logger
-	sendPool      *ants.Pool
 	startTime     *time.Time
 }
 
 func newContext(register *Register) *Context {
-	pool, _ := ants.NewPool(50)
 	st := time.Now()
 	context := &Context{register: register, systemInfo: make(systemInfo), startTime: &st}
-	context.sendPool = pool
 	context.httpPush = newHttpPush(context)
 	context.userStore = user.NewStore()
 	context.msgDock = NewMsgDock(context.userStore, context)
@@ -118,41 +114,18 @@ func (context *Context) DeleteUser(iUser user.IUser) bool {
 }
 
 func (context *Context) SendLocalMessage(msg message.IMessage) (err error, fa bool) {
-	waitGroup := new(sync.WaitGroup)
-	waitGroup.Add(1)
-	err1 := context.sendPool.Submit(func() {
-		fa, err = context.msgDock.SendLocalMessage(msg)
-		waitGroup.Done()
-	})
-	if err1 != nil {
-		waitGroup.Done()
-		return err1, false
-	}
-	waitGroup.Wait()
-	return
+	fa, err = context.msgDock.SendLocalMessage(msg)
+	return err, fa
 }
 
 func (context *Context) SendMessage(msg message.IMessage) (err error, fa bool) {
-	waitGroup := new(sync.WaitGroup)
-	waitGroup.Add(1)
-	err1 := context.sendPool.Submit(func() {
-		fa, err = context.msgDock.SendMessage(msg)
-		waitGroup.Done()
-	})
-	if err1 != nil {
-		waitGroup.Done()
-		return err1, false
-	}
-	waitGroup.Wait()
+	fa, err = context.msgDock.SendMessage(msg)
 	return
 }
 
-func (context *Context) SendAsyncMessage(msg message.IMessage, write user.WriteCallBackFunc) (err error) {
-	err1 := context.sendPool.Submit(func() {
-		fa, err := context.msgDock.SendMessage(msg)
-		write(err, fa)
-	})
-	return err1
+func (context *Context) SendAsyncMessage(msg message.IMessage, write user.WriteCallBackFunc) {
+	fa, err := context.msgDock.SendMessage(msg)
+	write(err, fa)
 }
 
 func (context *Context) SendGroupTextMessage(form string, groupId, msg string) int32 {

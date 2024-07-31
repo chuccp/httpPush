@@ -3,7 +3,6 @@ module github.com/chuccp/httpPush
 go 1.22
 
 require (
-	github.com/panjf2000/ants/v2 v2.10.0
 	go.uber.org/zap v1.27.0
 	gopkg.in/ini.v1 v1.67.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
