@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/util"
@@ -79,6 +80,23 @@ func (client *client) queryByJson(marshal []byte, localValue any) (any, error) {
 		return nil, err
 	}
 }
+
+func (client *client) queryByJsonByTimeOut(marshal []byte, localValue any) (v any, err error) {
+	tm := time.NewTimer(time.Second)
+	chanBool := make(chan bool)
+	go func() {
+		v, err = client.queryByJson(marshal, localValue)
+		chanBool <- true
+	}()
+	select {
+	case <-tm.C:
+	case <-chanBool:
+		tm.Stop()
+		return
+	}
+	return nil, errors.New("time out")
+}
+
 func (client *client) sendTextMsg(msg *message.TextMessage) error {
 	path := client.remoteMachine.Link + "/_cluster/sendTextMsg"
 	marshal, err := json.Marshal(msg)
@@ -294,7 +312,7 @@ func (ms *ClientOperate) Query(parameter *core.Parameter, localValue any) []any 
 				waitGroup.Add(1)
 				go func(json []byte) {
 					defer waitGroup.Done()
-					v, err := client.queryByJson(json, localValue)
+					v, err := client.queryByJsonByTimeOut(json, localValue)
 					ms.context.GetLog().Debug("query", zap.Error(err), zap.Any("value", v))
 					if err == nil && v != nil {
 						v1, ok := v.(*interface{})
@@ -308,6 +326,7 @@ func (ms *ClientOperate) Query(parameter *core.Parameter, localValue any) []any 
 							lock.Unlock()
 						}
 					}
+
 				}(data)
 			}
 		}
