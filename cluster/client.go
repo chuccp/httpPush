@@ -315,7 +315,9 @@ func (ms *ClientOperate) Query(parameter *core.Parameter, localValue any) []any 
 				go func(json []byte) {
 					defer waitGroup.Done()
 					v, err := client.queryByJsonByTimeOut(json, localValue)
-					ms.context.GetLog().Error("query", zap.Error(err), zap.Any("value", v))
+					if err != nil {
+						ms.context.GetLog().Error("query", zap.Error(err), zap.Any("value", v))
+					}
 					if err == nil && v != nil {
 						v1, ok := v.(*interface{})
 						if ok {
