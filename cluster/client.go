@@ -66,10 +66,10 @@ func (client *client) queryByJson(marshal []byte, localValue any) (any, error) {
 	path := client.remoteMachine.Link + "/_cluster/query"
 	call, err := client.request.Call(path, marshal)
 	if err == nil {
-		m := util.NewPtr(localValue)
 		if len(call) == 0 {
-			return m, nil
+			return nil, errors.New("NO_VALUE")
 		}
+		m := util.NewPtr(localValue)
 		err = json.Unmarshal(call, m)
 		if err == nil {
 			return m, nil
@@ -313,7 +313,7 @@ func (ms *ClientOperate) Query(parameter *core.Parameter, localValue any) []any 
 				go func(json []byte) {
 					defer waitGroup.Done()
 					v, err := client.queryByJsonByTimeOut(json, localValue)
-					ms.context.GetLog().Debug("query", zap.Error(err), zap.Any("value", v))
+					ms.context.GetLog().Error("query", zap.Error(err), zap.Any("value", v))
 					if err == nil && v != nil {
 						v1, ok := v.(*interface{})
 						if ok {
