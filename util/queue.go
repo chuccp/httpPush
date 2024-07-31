@@ -11,7 +11,7 @@ type Queue struct {
 	flag       chan bool
 }
 
-func (queue *Queue) Offer(value interface{}) error {
+func (queue *Queue) Offer(value any) error {
 	queue.lock.Lock()
 	err := queue.sliceQueue.Write(value)
 	if queue.waitNum > 0 {
@@ -23,7 +23,7 @@ func (queue *Queue) Offer(value interface{}) error {
 	}
 	return err
 }
-func (queue *Queue) DequeueTimer(timer *Timer) (value interface{}, hasValue bool) {
+func (queue *Queue) DequeueTimer(timer *Timer) (value any, hasValue bool) {
 	for {
 		queue.lock.Lock()
 		v, err := queue.sliceQueue.Read()
@@ -55,7 +55,7 @@ func (queue *Queue) DequeueTimer(timer *Timer) (value interface{}, hasValue bool
 		}
 	}
 }
-func (queue *Queue) Dequeue() (value interface{}, hasValue bool) {
+func (queue *Queue) Dequeue() (value any, hasValue bool) {
 	for {
 		queue.lock.Lock()
 		v, err := queue.sliceQueue.Read()
