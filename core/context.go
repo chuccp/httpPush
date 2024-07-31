@@ -124,8 +124,10 @@ func (context *Context) SendMessage(msg message.IMessage) (err error, fa bool) {
 }
 
 func (context *Context) SendAsyncMessage(msg message.IMessage, write user.WriteCallBackFunc) {
-	fa, err := context.msgDock.SendMessage(msg)
-	write(err, fa)
+	go func() {
+		fa, err := context.msgDock.SendMessage(msg)
+		write(err, fa)
+	}()
 }
 
 func (context *Context) SendGroupTextMessage(form string, groupId, msg string) int32 {
