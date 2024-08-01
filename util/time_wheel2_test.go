@@ -1,34 +1,29 @@
 package util
 
 import (
-	"log"
 	"testing"
 	"time"
 )
 
 func TestTimeWheel2_AfterFunc(t *testing.T) {
 
-	chanBool := make(chan bool)
-
-	go func() {
-		for {
-			fa := <-chanBool
-			log.Println("00000000000", fa)
-
-		}
-	}()
+	tw2 := NewTimeWheel2(1, 10)
+	go tw2.Start()
+	tw2.AfterFunc(4, "111111", func(value ...any) {
+		println("111")
+	})
 	time.Sleep(time.Second)
-	go func() {
-		for {
-			fa := <-chanBool
-			log.Println("11111111", fa)
-
-		}
-	}()
+	tw2.AfterFunc(4, "22222", func(value ...any) {
+		println("2222")
+	})
 	time.Sleep(time.Second)
-	for {
-		chanBool <- true
-		time.Sleep(time.Second * 2)
-	}
-	time.Sleep(10 * time.Second)
+	tw2.AfterFunc(2, "33333", func(value ...any) {
+		println("3333")
+	})
+	time.Sleep(time.Second)
+	tw2.AfterFunc(8, "44444", func(value ...any) {
+		println("444")
+	})
+	time.Sleep(time.Second * 60)
+
 }
