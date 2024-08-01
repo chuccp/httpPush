@@ -1,6 +1,0 @@
-{"level":"info","ts":"2024-01-22 14:29:39","caller":"core/server.go:62","msg":"服务名称与端口","name":"api","port":9095}
-{"level":"info","ts":"2024-01-22 14:29:39","caller":"core/server.go:62","msg":"服务名称与端口","name":"cluster","port":6572}
-{"level":"info","ts":"2024-01-22 14:29:39","caller":"cluster/server.go:144","msg":"machineId配置","machineId":"b74hg3"}
-{"level":"info","ts":"2024-01-22 14:29:39","caller":"cluster/client.go:189","msg":"添加临时集群节点","link":"http://127.0.0.1:6571"}
-{"level":"info","ts":"2024-01-22 14:29:39","caller":"core/server.go:62","msg":"服务名称与端口","name":"ex","port":9096}
-{"level":"info","ts":"2024-01-22 14:29:39","caller":"cluster/client.go:208","msg":"moveTempToStore","link":"http://127.0.0.1:6571","MachineId":"1o9pkpt"}
