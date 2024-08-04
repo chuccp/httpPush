@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/panjf2000/ants/v2"
 	"io"
 	"net/http"
 	"sync"
@@ -54,14 +53,12 @@ func (r *request) call(link string, jsonData []byte, ctx context.Context) ([]byt
 type HttpClient struct {
 	requests map[string]*request
 	lock     *sync.RWMutex
-	pool     *ants.Pool
 }
 
 func NewHttpClient() *HttpClient {
-	pool, _ := ants.NewPool(-1)
 	return &HttpClient{
 		requests: make(map[string]*request),
-		lock:     new(sync.RWMutex), pool: pool,
+		lock:     new(sync.RWMutex),
 	}
 }
 func (client *HttpClient) getRequest(remoteAddress string) *request {
