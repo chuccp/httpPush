@@ -1,4 +1,4 @@
-package cluster
+package cluster0
 
 import (
 	"encoding/json"

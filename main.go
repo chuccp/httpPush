@@ -1,11 +1,11 @@
 package main
 
 import (
+	"github.com/chuccp/httpPush/cluster"
 	"log"
 	"runtime"
 
 	"github.com/chuccp/httpPush/api"
-	"github.com/chuccp/httpPush/cluster"
 	"github.com/chuccp/httpPush/config"
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/ex"

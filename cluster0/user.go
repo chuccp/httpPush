@@ -1,4 +1,4 @@
-package cluster
+package cluster0
 
 import (
 	"github.com/chuccp/httpPush/core"
@@ -38,14 +38,14 @@ type cuStore struct {
 	createTime *time.Time
 }
 
-func (cs *cuStore) addUser(username string, machineId string, writeSyncMessage writeSyncMessage) {
-	cu := newCu(username, machineId, writeSyncMessage)
+func (cs *cuStore) addUser(username string, machineId string, clientOperate *ClientOperate) {
+	cu := newCu(username, machineId, clientOperate)
 	cs.store[machineId] = cu
 }
-func (cs *cuStore) renewUser(username string, machineId string, writeSyncMessage writeSyncMessage) {
+func (cs *cuStore) renewUser(username string, machineId string, clientOperate *ClientOperate) {
 	v, ok := cs.store[machineId]
 	if !ok {
-		cu := newCu(username, machineId, writeSyncMessage)
+		cu := newCu(username, machineId, clientOperate)
 		cs.store[machineId] = cu
 	} else {
 		t := time.Now()
@@ -66,20 +66,14 @@ func (cs *cuStore) getUser() []user.IOrderUser {
 
 }
 
-type writeSyncMessage func(message message.IMessage, machineId string) (bool, error)
-
 type clientUser struct {
-	username         string
-	machineId        string
-	priority         int
-	createTime       *time.Time
-	lastLiveTime     *time.Time
-	expiredTime      *time.Time
-	writeSyncMessage writeSyncMessage
-}
-
-func (u *clientUser) WriteSyncMessage(message message.IMessage) (bool, error) {
-	return u.writeSyncMessage(message, u.machineId)
+	username      string
+	machineId     string
+	priority      int
+	createTime    *time.Time
+	lastLiveTime  *time.Time
+	expiredTime   *time.Time
+	clientOperate *ClientOperate
 }
 
 func (u *clientUser) isExpiredTime(now *time.Time) bool {
@@ -104,14 +98,34 @@ func (u *clientUser) GetId() string {
 func (u *clientUser) GetPriority() int {
 	return u.priority
 }
+func (u *clientUser) WriteSyncMessage(iMessage message.IMessage) (fa bool, err error) {
+
+	switch t := iMessage.(type) {
+	case *message.TextMessage:
+		{
+			cl, ok := u.clientOperate.getClient(u.machineId)
+			if ok {
+				err = cl.sendTextMsg(t)
+				if err == nil {
+					u.priority = 0
+					return true, nil
+				}
+			}
+		}
+	}
+	if u.priority < 5 {
+		u.priority = u.priority + 1
+	}
+	return false, core.NoFoundUser
+}
 func (u *clientUser) GetUsername() string {
 	return u.username
 }
 func (u *clientUser) CreateTime() string {
 	return u.createTime.Format(util.TimestampFormat)
 }
-func newCu(username string, machineId string, writeSyncMessage writeSyncMessage) *clientUser {
-	u := &clientUser{username: username, machineId: machineId, priority: 0, writeSyncMessage: writeSyncMessage}
+func newCu(username string, machineId string, clientOperate *ClientOperate) *clientUser {
+	u := &clientUser{username: username, machineId: machineId, clientOperate: clientOperate, priority: 0}
 	tu := time.Now()
 	u.createTime = &tu
 	u.lastLiveTime = &tu
@@ -127,7 +141,7 @@ type userStore struct {
 	context *core.Context
 }
 
-func (us *userStore) AddUser(username string, machineId string, writeSyncMessage writeSyncMessage) {
+func (us *userStore) AddUser(username string, machineId string, clientOperate *ClientOperate) {
 	us.rLock.Lock()
 	defer us.rLock.Unlock()
 	cus, ok := us.userMap.Load(username)
@@ -135,26 +149,26 @@ func (us *userStore) AddUser(username string, machineId string, writeSyncMessage
 		us.context.GetLog().Debug("AddUser", zap.String("username", username), zap.Int("us.num", int(us.num)))
 		atomic.AddInt32(&us.num, 1)
 		cus := getNewCuStore(username)
-		cus.addUser(username, machineId, writeSyncMessage)
+		cus.addUser(username, machineId, clientOperate)
 		us.userMap.Store(username, cus)
 	} else {
 		sc := cus.(*cuStore)
-		sc.addUser(username, machineId, writeSyncMessage)
+		sc.addUser(username, machineId, clientOperate)
 	}
 }
 
-func (us *userStore) RefreshUser(username string, machineId string, writeSyncMessage writeSyncMessage) {
+func (us *userStore) RefreshUser(username string, machineId string, clientOperate *ClientOperate) {
 	us.rLock.Lock()
 	defer us.rLock.Unlock()
 	cus, ok := us.userMap.Load(username)
 	if !ok {
 		atomic.AddInt32(&us.num, 1)
 		cus := getNewCuStore(username)
-		cus.addUser(username, machineId, writeSyncMessage)
+		cus.addUser(username, machineId, clientOperate)
 		us.userMap.Store(username, cus)
 	} else {
 		sc := cus.(*cuStore)
-		sc.renewUser(username, machineId, writeSyncMessage)
+		sc.renewUser(username, machineId, clientOperate)
 	}
 }
 
@@ -219,6 +233,6 @@ func (us *userStore) GetOrderUser(username string) []user.IOrderUser {
 	u := make([]user.IOrderUser, 0)
 	return u
 }
-func newUserStore(context *core.Context, writeSyncMessage writeSyncMessage) *userStore {
+func newUserStore(context *core.Context) *userStore {
 	return &userStore{userMap: new(sync.Map), rLock: new(sync.RWMutex), context: context}
 }

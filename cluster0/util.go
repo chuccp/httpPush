@@ -1,4 +1,4 @@
-package cluster
+package cluster0
 
 import (
 	"encoding/json"
@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -42,14 +41,4 @@ func UnmarshalJsonBody(re *http.Request, v any) error {
 		}
 	}
 	return nil
-}
-
-func parseLink(link string) (*Machine, error) {
-	url, err := url.Parse(link)
-	if err != nil {
-		return nil, err
-	}
-	var machine Machine
-	machine.Link = url.Scheme + "://" + url.Hostname() + ":" + url.Port()
-	return &machine, nil
 }
