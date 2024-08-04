@@ -42,7 +42,7 @@ func (m *Machines) removeMachine(machine *Machine) {
 	data := make([]*Machine, 0)
 	for _, m2 := range m.machines {
 		if machine.MachineId == m2.MachineId || m2.Link == machine.Link {
-			return
+			continue
 		} else {
 			data = append(data, m2)
 		}
