@@ -122,8 +122,8 @@ func (machineStore *MachineStore) addMachines(machines []*Machine) {
 	machineStore.lock.Lock()
 	defer machineStore.lock.Unlock()
 	for _, machine := range machines {
-		if len(machine.MachineId) == 0 {
-			return
+		if len(machine.MachineId) == 0 || machine.MachineId == machineStore.localMachine.MachineId {
+			continue
 		}
 		if !machineStore.machines.hasMachine(machine) {
 			machineStore.tempMachines.addMachine(machine)
