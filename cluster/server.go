@@ -179,11 +179,11 @@ func getRemoteMachine(re *http.Request) (*Machine, error) {
 func (server *Server) query(w http.ResponseWriter, re *http.Request) {
 	var parameter core.Parameter
 	err := UnmarshalJsonBody(re, &parameter)
-	server.context.GetLog().Debug("收到查询", zap.String("remoteAddress", re.RemoteAddr))
 	if err != nil {
 		w.WriteHeader(500)
 		w.Write([]byte(err.Error()))
 	} else {
+		server.context.GetLog().Debug("收到查询", zap.String("path", parameter.Path), zap.String("remoteAddress", re.RemoteAddr))
 		handleFunc, fa := server.context.GetHandle(parameter.Path)
 		if fa {
 			v := handleFunc(&parameter)

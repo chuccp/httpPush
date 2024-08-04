@@ -81,27 +81,11 @@ func (client *HttpClient) Call(machine *Machine, path string, jsonData []byte) (
 }
 func (client *HttpClient) CallByLink(link string, path string, jsonData []byte) (data []byte, err error) {
 	req := client.getRequest(link)
-	tm := time.NewTimer(time.Second)
-	ctx, cancel := context.WithCancel(context.Background())
-	once := new(sync.Once)
-	chanBool := make(chan bool)
-	client.pool.Submit(func() {
-		data, err = req.call(link+path, jsonData, ctx)
-		once.Do(func() {
-			chanBool <- true
-		})
-	})
-	select {
-	case <-chanBool:
-		cancel()
-		return
-	case <-tm.C:
-		{
-			once.Do(func() {
-				close(chanBool)
-			})
-			cancel()
-		}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	data, err = req.call(link+path, jsonData, ctx)
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return nil, context.DeadlineExceeded
 	}
-	return nil, errors.New("time out")
+	return
 }
