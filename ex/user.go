@@ -54,7 +54,7 @@ func messageToBytes(iMessage message.IMessage) ([]byte, error) {
 func (u *User) RefreshPreExpired() {
 	t := time.Now()
 	u.last = &t
-	tm := t.Add(expiredTime + time.Duration(u.liveTime)*time.Second*2)
+	tm := t.Add((expiredTime + time.Duration(u.liveTime)*time.Second) * 2)
 	u.expiredTime = &tm
 }
 func (u *User) RefreshExpired() {
