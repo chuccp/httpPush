@@ -62,14 +62,22 @@ func NewHttpClient() *HttpClient {
 	}
 }
 func (client *HttpClient) getRequest(remoteAddress string) *request {
-	client.lock.Lock()
-	defer client.lock.Unlock()
+	client.lock.RLock()
 	req, ok := client.requests[remoteAddress]
 	if ok {
+		client.lock.RUnlock()
 		return req
 	} else {
+		client.lock.RUnlock()
+		client.lock.Lock()
+		req, ok := client.requests[remoteAddress]
+		if ok {
+			client.lock.Unlock()
+			return req
+		}
 		req = NewRequest()
 		client.requests[remoteAddress] = req
+		client.lock.Unlock()
 		return req
 	}
 }
