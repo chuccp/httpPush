@@ -8,7 +8,9 @@ import (
 	"time"
 )
 
-const expiredTime = 2 * time.Second
+const expiredCheckTimeSecond = 6
+
+const expiredTime = 4 * time.Second
 
 const defaultLiveTime = 15
 

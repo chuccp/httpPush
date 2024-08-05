@@ -65,8 +65,10 @@ func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
 	user.RefreshPreExpired()
 	server.rLock.RUnlock()
 	user.waitMessage(server.tw)
-	server.tw2.AfterFunc(5, user.GetId(), func(value ...any) {
-		server.deleteClientOrUser(value[0].(*client), value[1].(*User))
+	server.tw2.AfterFunc(expiredCheckTimeSecond, user.GetId(), func(value ...any) {
+		u := value[1].(*User)
+		c := value[0].(*client)
+		server.deleteClientOrUser(c, u)
 	}, _client_, user)
 	user.RefreshExpired()
 }
