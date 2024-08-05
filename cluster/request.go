@@ -81,8 +81,5 @@ func (client *HttpClient) CallByLink(link string, path string, jsonData []byte) 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	data, err = req.call(link+path, jsonData, ctx)
-	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-		return nil, context.DeadlineExceeded
-	}
 	return
 }

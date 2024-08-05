@@ -94,6 +94,7 @@ func (server *Server) WriteSyncMessage(iMessage message.IMessage) (fa bool, err 
 				for _, machine := range machines {
 					fa, err = server.sendMsg(t, machine.MachineId)
 					if fa {
+						server.userStore.AddUser(username, machine.MachineId, server.sendMsg)
 						return
 					}
 				}
