@@ -74,9 +74,13 @@ func (queue *Queue) Dequeue() (value any, hasValue bool) {
 			queue.waitNum++
 			queue.lock.Unlock()
 			select {
-			case <-queue.flag:
+			case fa := <-queue.flag:
 				{
-					continue
+					if fa {
+						continue
+					} else {
+						return nil, false
+					}
 				}
 			}
 		}
