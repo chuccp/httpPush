@@ -71,7 +71,9 @@ func growSliceMap[V any](b []*kv[V], n int) []*kv[V] {
 	copy(b2, b)
 	return b2[:len(b)]
 }
-
+func (b *SliceMap[V]) Empty() bool {
+	return b.empty()
+}
 func (b *SliceMap[V]) empty() bool { return len(b.buf) <= b.off }
 func (b *SliceMap[V]) Read() (any, error) {
 	if b.empty() {

@@ -78,6 +78,11 @@ func (c *client) userNum() int {
 	defer c.rLock.RUnlock()
 	return c.connMap.Len()
 }
+func (c *client) Empty() bool {
+	c.rLock.RLock()
+	defer c.rLock.RUnlock()
+	return c.connMap.Empty()
+}
 func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
 	liveTime := util.GetLiveTime(re)
 	id := getId(c.username, re)

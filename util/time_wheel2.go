@@ -90,18 +90,26 @@ func (tw *TimeWheel2) getBucketsByIndex(index int32) *bucket2 {
 func (tw *TimeWheel2) scheduler() {
 	index := tw.readerIndex
 	db := tw.getBucketsByIndex(index)
-	db.data.Range(func(key, value any) bool {
+	db.data.Range(func(id, _ any) bool {
+		isRun := false
 		tw.lock.Lock()
-		db.data.Delete(key)
-		k := key.(string)
-		i, ok := tw.data[k]
-		if ok && i == index {
-			delete(tw.data, k)
+		value, has := db.data.LoadAndDelete(id)
+		if has {
+			kId := id.(string)
+			i, has2 := tw.data[kId]
+			if has2 {
+				if i == index {
+					delete(tw.data, kId)
+					isRun = true
+				}
+			}
 		}
 		tw.lock.Unlock()
-		handel, ok := value.(*handle)
-		if ok {
-			handel.handle(handel.value...)
+		if isRun {
+			handel, ok := value.(*handle)
+			if ok {
+				handel.handle(handel.value...)
+			}
 		}
 		return true
 	})

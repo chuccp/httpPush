@@ -73,7 +73,7 @@ func (server *Server) deleteClientOrUser(client *client, user *User) {
 	if user.expiredTime != nil {
 		server.context.DeleteUser(user)
 		client.deleteUser(user.GetId())
-		if client.userNum() == 0 {
+		if client.Empty() {
 			server.store.Delete(client.username)
 			freeClient(client)
 		}
