@@ -146,7 +146,7 @@ func (machineStore *MachineStore) GetMachineNum() int {
 	defer machineStore.lock.RUnlock()
 	return len(machineStore.machines.machines)
 }
-func (machineStore *MachineStore) removeTempToMachines(machine *Machine) {
+func (machineStore *MachineStore) switchTempToMachines(machine *Machine) {
 	machineStore.lock.Lock()
 	defer machineStore.lock.Unlock()
 	machineStore.tempMachines.removeMachine(machine)
@@ -217,7 +217,7 @@ func (machineStore *MachineStore) initial(machine *Machine, data []byte) {
 		err = json.Unmarshal(call, &_machine_)
 		if _machine_.MachineId != machineStore.localMachine.MachineId {
 			machine.MachineId = _machine_.MachineId
-			machineStore.removeTempToMachines(machine)
+			machineStore.switchTempToMachines(machine)
 		} else {
 			machineStore.context.GetLog().Info("initial 握手的对象是自己移除", zap.String("MachineId", _machine_.MachineId))
 			machine.MachineId = _machine_.MachineId
