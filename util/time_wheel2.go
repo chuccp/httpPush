@@ -91,8 +91,8 @@ func (tw *TimeWheel2) scheduler() {
 	index := tw.readerIndex
 	db := tw.getBucketsByIndex(index)
 	db.data.Range(func(id, _ any) bool {
-		isRun := false
 		tw.lock.Lock()
+		isRun := false
 		value, has := db.data.LoadAndDelete(id)
 		if has {
 			kId := id.(string)
