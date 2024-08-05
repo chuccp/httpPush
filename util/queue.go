@@ -35,9 +35,14 @@ func (queue *Queue) DequeueTimer(timer *Timer) (value any, hasValue bool) {
 			queue.waitNum++
 			queue.lock.Unlock()
 			select {
-			case <-queue.flag:
+			case fa := <-queue.flag:
 				{
-					continue
+					if fa {
+						continue
+					} else {
+						timer.Close()
+						return nil, false
+					}
 				}
 			case <-timer.C:
 				{
