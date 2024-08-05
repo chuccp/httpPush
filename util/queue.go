@@ -87,7 +87,11 @@ var poolQueue = &sync.Pool{
 func GetQueue() *Queue {
 	queue := poolQueue.Get().(*Queue)
 	queue.sliceQueue = GetSliceQueue()
-	queue.waitNum = 0
+	if queue.waitNum > 0 {
+		close(queue.flag)
+		queue.flag = make(chan bool)
+		queue.waitNum = 0
+	}
 	return queue
 }
 func FreeQueue(queue *Queue) {
