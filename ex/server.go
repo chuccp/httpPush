@@ -75,6 +75,7 @@ func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
 func (server *Server) deleteClientOrUser(client *client, user *User) {
 	server.rLock.Lock()
 	if user.expiredTime != nil && user.expiredTime.Before(time.Now()) {
+		user.expiredTime = nil
 		server.context.DeleteUser(user)
 		client.deleteUser(user.GetId())
 		if client.Empty() {
