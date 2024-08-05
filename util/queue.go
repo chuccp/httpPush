@@ -87,8 +87,6 @@ var poolQueue = &sync.Pool{
 func GetQueue() *Queue {
 	queue := poolQueue.Get().(*Queue)
 	queue.sliceQueue = GetSliceQueue()
-	queue.lock = new(sync.RWMutex)
-	queue.flag = make(chan bool)
 	queue.waitNum = 0
 	return queue
 }
