@@ -80,7 +80,7 @@ func (queue *Queue) Dequeue() (value any, hasValue bool) {
 
 var poolQueue = &sync.Pool{
 	New: func() interface{} {
-		return &Queue{}
+		return &Queue{lock: new(sync.RWMutex), flag: make(chan bool)}
 	},
 }
 
