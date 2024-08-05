@@ -18,7 +18,7 @@ type request struct {
 func NewRequest() *request {
 	transport := &http.Transport{
 		ForceAttemptHTTP2:     false,
-		MaxIdleConns:          2,
+		MaxIdleConns:          1,
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
