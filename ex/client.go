@@ -46,9 +46,7 @@ func freeNoUseClient(client *client) {
 func freeClient(client *client) {
 	FreeSliceMap(client.connMap)
 	util.FreeQueue(client.queue)
-	client.rLock = nil
-	client.queue = nil
-	client.connMap = nil
+	client.liveTime = defaultLiveTime
 	poolClient.Put(client)
 }
 func (c *client) deleteUser(id string) {
