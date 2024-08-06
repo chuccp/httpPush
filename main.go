@@ -2,13 +2,13 @@ package main
 
 import (
 	"github.com/chuccp/httpPush/cluster"
+	"github.com/chuccp/httpPush/ex2"
 	"log"
 	"runtime"
 
 	"github.com/chuccp/httpPush/api"
 	"github.com/chuccp/httpPush/config"
 	"github.com/chuccp/httpPush/core"
-	"github.com/chuccp/httpPush/ex"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func main() {
 	register := core.NewRegister(cfg)
 	register.AddServer(api.NewServer())
 	register.AddServer(cluster.NewServer())
-	register.AddServer(ex.NewServer())
+	register.AddServer(ex2.NewServer())
 	httpPush := register.Create()
 	httpPush.Start()
 

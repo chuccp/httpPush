@@ -15,8 +15,13 @@ func TestFreeQueueAAA(t *testing.T) {
 	sliceMap.Put("111", "111")
 	sliceMap.Put("222", "222")
 	sliceMap.Put("333", "333")
-	sliceMap.Delete("222")
 
+	t.Log(sliceMap.Get("222"))
+
+	sliceMap.Delete("222")
+	sliceMap.Delete("333")
+	sliceMap.Delete("111")
+	t.Log(sliceMap.Len())
 }
 func BenchmarkNameMap2(t *testing.B) {
 

@@ -19,6 +19,30 @@ var errNegativeRead = errors.New("sliceQueue: reader returned negative count fro
 
 const maxInt = int(^uint(0) >> 1)
 
+type SliceQueueSafe struct {
+	sliceQueue *SliceQueue
+	lock       *sync.Mutex
+}
+
+func NewSliceQueueSafe() *SliceQueueSafe {
+	return &SliceQueueSafe{sliceQueue: new(SliceQueue), lock: new(sync.Mutex)}
+}
+func (sqs *SliceQueueSafe) Reset() {
+	sqs.lock.Lock()
+	defer sqs.lock.Unlock()
+	sqs.sliceQueue.Reset()
+}
+func (sqs *SliceQueueSafe) Write(c any) error {
+	sqs.lock.Lock()
+	defer sqs.lock.Unlock()
+	return sqs.sliceQueue.Write(c)
+}
+func (sqs *SliceQueueSafe) Read() (any, error) {
+	sqs.lock.Lock()
+	defer sqs.lock.Unlock()
+	return sqs.sliceQueue.Read()
+}
+
 type SliceQueue struct {
 	buf      []any
 	off      int
