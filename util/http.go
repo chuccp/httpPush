@@ -28,7 +28,7 @@ const MaxReadHeaderTimeout = time.Second * 30
 
 const MaxReadTimeout = time.Minute * 2
 
-const MaxIdleTimeout = time.Minute * 5
+const MaxIdleTimeout = time.Minute * 3
 
 func (hs *HttpServer) Start(port int) error {
 	srv := &http.Server{
