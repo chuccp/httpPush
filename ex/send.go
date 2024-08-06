@@ -61,15 +61,17 @@ func (s *OnceSend) Wait() {
 	}
 }
 
-func (s *OnceSend) WriteBlank() {
+func (s *OnceSend) WriteBlank(f func()) {
 	s.lock.Lock()
 	if s.isWait {
 		s.isWait = false
 		s.write(nil)
 		s.lock.Unlock()
+		f()
 		s.fa <- true
 	} else {
 		s.lock.Unlock()
+		f()
 	}
 }
 

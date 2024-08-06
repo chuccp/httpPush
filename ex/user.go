@@ -59,17 +59,21 @@ func (u *User) waitMessage(tw *util.TimeWheel2) {
 	u.onceSend = send
 	u.lock.Unlock()
 	index := tw.AfterFunc(int32(u.liveTime), u.id, func(value ...any) {
-		onceSend, ok := value[0].(*OnceSend)
-		if ok {
-			onceSend.WriteBlank()
+		u.lock.Lock()
+		if u.onceSend != nil {
+			u.onceSend.WriteBlank(func() {
+				u.lock.Unlock()
+			})
+		} else {
+			u.lock.Unlock()
 		}
-	}, u.onceSend)
+	})
 	u.onceSend.Wait()
 	u.lock.Lock()
-	tw.DeleteIndexFunc(u.id, index)
 	u.onceSend = nil
 	freeOnceSend(send)
 	u.lock.Unlock()
+	tw.DeleteIndexFunc(u.id, index)
 
 }
 
