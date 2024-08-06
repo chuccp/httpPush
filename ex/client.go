@@ -75,6 +75,7 @@ func (c *client) loadUser(writer http.ResponseWriter, re *http.Request) *User {
 		u := NewUser(c.username, id, c.queue, c.context, writer, re)
 		u.liveTime = liveTime
 		u.lastLiveTime = &t
+		u.createTime = &t
 		c.connMap.Put(id, u)
 		c.rLock.Unlock()
 		c.context.AddUser(u)
