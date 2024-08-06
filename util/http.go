@@ -36,8 +36,8 @@ func (hs *HttpServer) Start(port int) error {
 		Handler:           hs.serveMux,
 		ReadHeaderTimeout: MaxReadHeaderTimeout,
 		MaxHeaderBytes:    MaxHeaderBytes,
-		ReadTimeout:       MaxReadTimeout,
-		IdleTimeout:       MaxIdleTimeout,
+		//ReadTimeout:       MaxReadTimeout,
+		//IdleTimeout:       MaxIdleTimeout,
 	}
 	hs.isTls = false
 	error := srv.ListenAndServe()
@@ -49,8 +49,8 @@ func (hs *HttpServer) StartTLS(port int, certFile, keyFile string) error {
 		Handler:           hs.serveMux,
 		ReadHeaderTimeout: MaxReadHeaderTimeout,
 		MaxHeaderBytes:    MaxHeaderBytes,
-		ReadTimeout:       MaxReadTimeout,
-		IdleTimeout:       MaxIdleTimeout,
+		//ReadTimeout:       MaxReadTimeout,
+		//IdleTimeout:       MaxIdleTimeout,
 	}
 	hs.isTls = true
 	return srv.ListenAndServeTLS(certFile, keyFile)
