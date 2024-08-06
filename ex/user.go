@@ -69,12 +69,11 @@ func (u *User) waitMessage(tw *util.TimeWheel2) {
 		}
 	})
 	u.onceSend.Wait()
+	tw.DeleteIndexFunc(u.id, index)
 	u.lock.Lock()
 	u.onceSend = nil
 	freeOnceSend(send)
 	u.lock.Unlock()
-	tw.DeleteIndexFunc(u.id, index)
-
 }
 
 func (u *User) GetUsername() string {
