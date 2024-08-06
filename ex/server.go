@@ -24,9 +24,9 @@ func NewServer() *Server {
 	server := &Server{store: NewStore()}
 	httpServer := core.NewHttpServer(server.Name())
 	server.IHttpServer = httpServer
-	server.rLock = new(sync.RWMutex)
-	server.tw = util.NewTimeWheel2(1, 60)
+	server.tw = util.NewTimeWheel2(1, 180)
 	server.tw2 = util.NewTimeWheel2(1, 60)
+	server.rLock = new(sync.RWMutex)
 	return server
 }
 
@@ -47,7 +47,6 @@ func (server *Server) ex(w http.ResponseWriter, re *http.Request) {
 	server.jack(w, re)
 }
 func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
-
 	username := util.GetUsername(re)
 	if len(username) == 0 {
 		writer.WriteHeader(404)
@@ -58,10 +57,9 @@ func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
 	cl := getNewClient(server.context, username, server.liveTime)
 	_client_, ok := server.store.LoadOrStore(cl, username)
 	if ok {
-		freeNoUseClient(cl)
+		freeClient(cl)
 	}
 	user := _client_.loadUser(writer, re)
-	server.tw2.DeleteFunc(user.GetId())
 	user.RefreshPreExpired()
 	server.rLock.RUnlock()
 	user.waitMessage(server.tw)
@@ -72,6 +70,7 @@ func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
 	}, _client_, user)
 	user.RefreshExpired()
 }
+
 func (server *Server) deleteClientOrUser(client *client, user *User) {
 	server.rLock.Lock()
 	if user.expiredTime != nil && user.expiredTime.Before(time.Now()) {
@@ -88,7 +87,6 @@ func (server *Server) deleteClientOrUser(client *client, user *User) {
 
 func (server *Server) Init(context *core.Context) {
 	server.context = context
-	//server.context.RegisterHandle("getTimeWheelLog", server.GetTimeWheelLog)
 	server.isStart = server.context.GetCfgBoolDefault("ex", "start", false)
 	if server.isStart {
 		server.liveTime = server.context.GetCfgInt("ex", "liveTime")

@@ -1,12 +1,12 @@
 package ex
 
 import (
-	"encoding/json"
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -17,18 +17,16 @@ type User struct {
 	liveTime      int
 	priority      int
 	writer        http.ResponseWriter
+	sliceQueue    *util.SliceQueueSafe
+	groupIds      []string
+	context       *core.Context
+	id            string
+	send          *OnceSend
+	lock          *sync.RWMutex
 	lastLiveTime  *time.Time
-	createTime    *time.Time
-	addTime       *time.Time
 	last          *time.Time
-	queue         *util.Queue
 	expiredTime   *time.Time
-
-	writeLiveTime *time.Time
-
-	groupIds []string
-	context  *core.Context
-	id       string
+	createTime    *time.Time
 }
 type HttpMessage struct {
 	From string
@@ -41,15 +39,6 @@ func newHttpMessage(from string, body string) *HttpMessage {
 
 func (u *User) GetId() string {
 	return u.id
-}
-
-func messageToBytes(iMessage message.IMessage) ([]byte, error) {
-	ht := newHttpMessage(
-		iMessage.GetString(message.From),
-		iMessage.GetString(message.Msg))
-	hts := []*HttpMessage{ht}
-	data, err := json.Marshal(hts)
-	return data, err
 }
 func (u *User) RefreshPreExpired() {
 	t := time.Now()
@@ -65,52 +54,41 @@ func (u *User) RefreshExpired() {
 }
 
 func (u *User) waitMessage(tw *util.TimeWheel2) {
-	vIndex := tw.AfterFunc(int32(u.liveTime), u.id, func(value ...any) {
-		queue := value[0].(*util.Queue)
-		queue.Offer(nil)
-	}, u.queue)
-	msg, hasValue := u.queue.Dequeue()
-	if !hasValue {
-		u.writer.Write([]byte("[]"))
-	} else {
-		tw.DeleteIndexFunc(u.id, vIndex)
-		mg, ok := (msg).(message.IMessage)
+	u.lock.Lock()
+	send := getOnceSend(u.writer, u.sliceQueue)
+	u.send = send
+	u.lock.Unlock()
+	index := tw.AfterFunc(int32(u.liveTime), u.id, func(value ...any) {
+		onceSend, ok := value[0].(*OnceSend)
 		if ok {
-			v, err := messageToBytes(mg)
-			if err == nil && v != nil {
-				_, err := u.writer.Write(v)
-				if err != nil {
-					u.queue.Offer(v)
-				}
-			} else {
-				u.writer.Write([]byte("[]"))
-			}
+			onceSend.WriteBlank()
 		}
-	}
-}
-func (u *User) isExpired(now *time.Time) bool {
-	if u.expiredTime != nil {
-		if u.expiredTime.Before(*now) {
-			return true
-		}
-	}
-	return false
-}
-
-func (u *User) isWriteLive(now *time.Time) bool {
-	if u.writeLiveTime != nil {
-		if u.writeLiveTime.Before(*now) {
-			return true
-		}
-	}
-	return false
+	}, u.send)
+	u.send.Wait()
+	u.lock.Lock()
+	u.send = nil
+	freeOnceSend(send)
+	u.lock.Unlock()
+	tw.DeleteIndexFunc(u.id, index)
 }
 
 func (u *User) GetUsername() string {
 	return u.username
 }
 func (u *User) WriteSyncMessage(iMessage message.IMessage) (bool, error) {
-	u.queue.Offer(iMessage)
+	u.lock.Lock()
+	if u.send != nil {
+		return u.send.WriteAndUnLock(iMessage, func() {
+			u.lock.Unlock()
+		})
+	} else {
+		err := u.sliceQueue.Write(iMessage)
+		if err != nil {
+			u.lock.Unlock()
+			return false, err
+		}
+	}
+	u.lock.Unlock()
 	return true, nil
 }
 
@@ -141,8 +119,9 @@ func (u *User) GetMachineId() string {
 func (u *User) GetOrderTime() *time.Time {
 	return u.lastLiveTime
 }
-func NewUser(username string, id string, queue *util.Queue, context *core.Context, writer http.ResponseWriter, re *http.Request) *User {
-	u := &User{username: username, id: id, context: context, queue: queue, writer: writer, remoteAddress: re.RemoteAddr}
+func NewUser(username string, id string, sliceQueue *util.SliceQueueSafe, context *core.Context, writer http.ResponseWriter, re *http.Request) *User {
+	u := &User{username: username, id: id, context: context, sliceQueue: sliceQueue, writer: writer, remoteAddress: re.RemoteAddr}
 	u.groupIds = util.GetGroupIds(re)
+	u.lock = new(sync.RWMutex)
 	return u
 }

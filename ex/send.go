@@ -1,4 +1,4 @@
-package ex2
+package ex
 
 import (
 	"encoding/json"
@@ -73,21 +73,6 @@ func (s *OnceSend) WriteBlank() {
 	}
 }
 
-func (s *OnceSend) Write(iMessage message.IMessage) (n bool, err error) {
-	s.lock.Lock()
-	if s.isWait {
-		s.isWait = false
-		_, err := s.write(iMessage)
-		s.lock.Unlock()
-		s.fa <- true
-		return err == nil, err
-	} else {
-		err := s.sliceQueue.Write(iMessage)
-		s.lock.Unlock()
-		return err == nil, err
-	}
-}
-
 func (s *OnceSend) WriteAndUnLock(iMessage message.IMessage, f func()) (n bool, err error) {
 	s.lock.Lock()
 	if s.isWait {
@@ -103,10 +88,6 @@ func (s *OnceSend) WriteAndUnLock(iMessage message.IMessage, f func()) (n bool, 
 		f()
 		return err == nil, err
 	}
-}
-
-func NewOnceSend(writer io.Writer, sliceQueue *util.SliceQueueSafe) *OnceSend {
-	return &OnceSend{writer: writer, sliceQueue: sliceQueue, fa: make(chan bool), lock: new(sync.RWMutex)}
 }
 
 var poolOnceSend = &sync.Pool{
