@@ -40,6 +40,7 @@ func (r *request) call(link string, jsonData []byte, ctx context.Context) ([]byt
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		return nil, errors.New(resp.Status)
 	}
