@@ -21,7 +21,7 @@ type User struct {
 	groupIds      []string
 	context       *core.Context
 	id            string
-	send          *OnceSend
+	onceSend      *OnceSend
 	lock          *sync.RWMutex
 	lastLiveTime  *time.Time
 	last          *time.Time
@@ -56,17 +56,17 @@ func (u *User) RefreshExpired() {
 func (u *User) waitMessage(tw *util.TimeWheel2) {
 	u.lock.Lock()
 	send := getOnceSend(u.writer, u.sliceQueue)
-	u.send = send
+	u.onceSend = send
 	u.lock.Unlock()
 	index := tw.AfterFunc(int32(u.liveTime), u.id, func(value ...any) {
 		onceSend, ok := value[0].(*OnceSend)
 		if ok {
 			onceSend.WriteBlank()
 		}
-	}, u.send)
-	u.send.Wait()
+	}, u.onceSend)
+	u.onceSend.Wait()
 	u.lock.Lock()
-	u.send = nil
+	u.onceSend = nil
 	freeOnceSend(send)
 	u.lock.Unlock()
 	tw.DeleteIndexFunc(u.id, index)
@@ -77,8 +77,8 @@ func (u *User) GetUsername() string {
 }
 func (u *User) WriteSyncMessage(iMessage message.IMessage) (bool, error) {
 	u.lock.Lock()
-	if u.send != nil {
-		return u.send.WriteAndUnLock(iMessage, func() {
+	if u.onceSend != nil {
+		return u.onceSend.WriteAndUnLock(iMessage, func() {
 			u.lock.Unlock()
 		})
 	} else {
