@@ -32,10 +32,10 @@ const MaxIdleTimeout = time.Minute * 3
 
 func (hs *HttpServer) Start(port int) error {
 	srv := &http.Server{
-		Addr:              ":" + strconv.Itoa(port),
-		Handler:           hs.serveMux,
-		ReadHeaderTimeout: MaxReadHeaderTimeout,
-		MaxHeaderBytes:    MaxHeaderBytes,
+		Addr:    ":" + strconv.Itoa(port),
+		Handler: hs.serveMux,
+		//ReadHeaderTimeout: MaxReadHeaderTimeout,
+		MaxHeaderBytes: MaxHeaderBytes,
 		//ReadTimeout:       MaxReadTimeout,
 		//IdleTimeout:       MaxIdleTimeout,
 	}
@@ -45,10 +45,10 @@ func (hs *HttpServer) Start(port int) error {
 }
 func (hs *HttpServer) StartTLS(port int, certFile, keyFile string) error {
 	srv := &http.Server{
-		Addr:              ":" + strconv.Itoa(port),
-		Handler:           hs.serveMux,
-		ReadHeaderTimeout: MaxReadHeaderTimeout,
-		MaxHeaderBytes:    MaxHeaderBytes,
+		Addr:    ":" + strconv.Itoa(port),
+		Handler: hs.serveMux,
+		//ReadHeaderTimeout: MaxReadHeaderTimeout,
+		MaxHeaderBytes: MaxHeaderBytes,
 		//ReadTimeout:       MaxReadTimeout,
 		//IdleTimeout:       MaxIdleTimeout,
 	}
