@@ -100,3 +100,10 @@ type TimeWheelLog struct {
 func NewAllOrderUser() *AllOrderUser {
 	return &AllOrderUser{OrderUser: make([]*OrderUser, 0)}
 }
+
+type Version struct {
+	Version        string
+	StartTime      string
+	MachineId      string
+	MachineAddress string
+}

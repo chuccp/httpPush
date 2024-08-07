@@ -23,6 +23,7 @@ func (query *Query) Init() {
 	query.AddQuery("/queryTimeWheelLog", query.queryTimeWheelLog, query.queryTimeWheelLogApi)
 	query.AddQuery("/queryClusterUserNum", query.queryClusterUserNum, query.queryClusterUserNumApi)
 	query.AddQuery("/queryGroupInfo", query.queryGroupInfo, query.queryGroupInfoApi)
+	query.AddQuery("/queryVersion", query.queryVersion, query.queryVersionApi)
 
 }
 
@@ -300,6 +301,32 @@ func (query *Query) queryGroupInfoApi(writer http.ResponseWriter, request *http.
 		machineAddress, ok := query.getMachineAddress(p.MachineId, parameter)
 		if ok {
 			p.MachineAddress = machineAddress
+		}
+	}
+	data, _ := json.Marshal(values)
+	writer.Write(data)
+}
+
+func (query *Query) queryVersion(parameter *core.Parameter) any {
+	var version Version
+	version.Version = core.VERSION
+	version.StartTime = query.context.GetStartTime()
+	MachineInfoId, ok := query.getMachineInfoId(parameter)
+	if ok {
+		version.MachineId = MachineInfoId
+
+	}
+	return &version
+}
+
+func (query *Query) queryVersionApi(writer http.ResponseWriter, request *http.Request) {
+	parameter := core.NewParameter(request)
+	values := query.context.Query(parameter).([]any)
+	for _, value := range values {
+		val := value.(*Version)
+		machineAddress, ok := query.getMachineAddress(val.MachineId, parameter)
+		if ok {
+			val.MachineAddress = machineAddress
 		}
 	}
 	data, _ := json.Marshal(values)
