@@ -115,8 +115,6 @@ func (u *User) CreateTime() *time.Time {
 }
 
 func (u *User) GetPriority() int {
-	u.lock.RLock()
-	defer u.lock.RUnlock()
 	if u.onceSend == nil {
 		return 100
 	}
