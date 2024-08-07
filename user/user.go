@@ -25,7 +25,7 @@ func (a ByAsc) Len() int      { return len(a) }
 func (a ByAsc) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a ByAsc) Less(i, j int) bool {
 	if a[i].GetPriority() == a[j].GetPriority() {
-		return a[i].GetOrderTime().Compare(*a[j].GetOrderTime()) > 0
+		return a[i].GetOrderTime().After(*a[j].GetOrderTime())
 	}
 	return a[i].GetPriority() < a[j].GetPriority()
 }
