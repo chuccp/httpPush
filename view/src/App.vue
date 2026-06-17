@@ -116,6 +116,7 @@ watch(chatTab, () => { if (connected.value) { disconnect(); connect() } })
         <div class="chat-topbar">
           <span class="proto-tag">{{ chatTab === 'ws' ? 'WebSocket' : 'HTTP 轮询' }}</span>
           <input v-model="host" placeholder="地址" class="sm" style="width:140px" />
+          <input v-model="userId" placeholder="你的 ID" class="sm" />
           <span class="arr">→</span>
           <input v-model="targetId" placeholder="目标 ID" class="sm" />
           <button v-if="!connected" class="btn-on" @click="connect">连接</button>
