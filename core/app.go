@@ -75,12 +75,12 @@ func (a *App) SendGroupTextMessage(from, groupId, msg string) int32 {
 	var num int32
 	if groupId == "all" || groupId == "All" {
 		a.userStore.RangeAllUser(func(username string) bool {
-			if fa, _ := a.msgDock.SendLocalMessage(message.NewTextMessage(from, username, msg)); fa { num++ }
+			if fa, _ := a.msgDock.SendMessage(message.NewTextMessage(from, username, msg)); fa { num++ }
 			return true
 		})
 	} else {
 		a.userStore.RangeGroupUser(groupId, func(username string) bool {
-			if fa, _ := a.msgDock.SendLocalMessage(message.NewTextMessage(from, username, msg)); fa { num++ }
+			if fa, _ := a.msgDock.SendMessage(message.NewTextMessage(from, username, msg)); fa { num++ }
 			return true
 		})
 	}
