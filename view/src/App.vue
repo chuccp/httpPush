@@ -12,7 +12,7 @@ const userId = ref('user_a')
 const targetId = ref('user_b')
 const connected = ref(false)
 const messages = ref<{ from: string; body: string; time: string; self: boolean }[]>([])
-const host = '127.0.0.1:8084'
+const host = ref('127.0.0.1:8084')
 
 let ws: WebSocket | null = null
 let pollCtrl: AbortController | null = null
@@ -26,7 +26,7 @@ async function connect() {
   if (connected.value) return
   messages.value = []
   if (chatTab.value === 'ws') {
-    ws = new WebSocket(`ws://${host}/ws?id=${userId.value}`)
+    ws = new WebSocket(`ws://${host.value}/ws?id=${userId.value}`)
     ws.onopen = () => { connected.value = true; addMsg('system', `已连接 (WS)`, false) }
     ws.onmessage = (e) => {
       try { JSON.parse(e.data).forEach((m: any) => addMsg(m.from || m.From, m.body || m.Body || m.msg || m.Msg, false)) } catch { /* */ }
@@ -41,7 +41,7 @@ async function poll() {
   while (connected.value && chatTab.value === 'http') {
     pollCtrl = new AbortController()
     try {
-      const r = await fetch(`http://${host}/ex?id=${userId.value}&liveTime=15`, { signal: pollCtrl.signal })
+      const r = await fetch(`http://${host.value}/ex?id=${userId.value}&liveTime=15`, { signal: pollCtrl.signal })
       const t = await r.text()
       if (t && t !== '[]') {
         try { JSON.parse(t).forEach((m: any) => addMsg(m.from || m.From, m.body || m.Body || m.msg || m.Msg, false)) } catch { /* */ }
@@ -57,7 +57,7 @@ function send() {
   const body = el?.value?.trim(); if (!body) return
   el.value = ''; addMsg(userId.value, body, true)
   if (chatTab.value === 'ws' && ws) { ws.send(JSON.stringify({ to: targetId.value, msg: body })) }
-  else { fetch(`http://${host}/sendmsg?username=${targetId.value}&msg=${encodeURIComponent(body)}`) }
+  else { fetch(`http://${host.value}/sendmsg?username=${targetId.value}&msg=${encodeURIComponent(body)}`) }
 }
 
 // ---- admin ----
@@ -73,15 +73,15 @@ const infoCards = ref([
 ])
 
 async function loadOnlineUsers() {
-  try { const r = await fetch(`http://${host}/onlineUser`); onlineUsers.value = (await r.json())?.data || (await r.json()) || [] } catch { /* */ }
+  try { const r = await fetch(`http://${host.value}/onlineUser`); onlineUsers.value = (await r.json())?.data || (await r.json()) || [] } catch { /* */ }
 }
 async function queryUser() {
   if (!userQueryId.value) return
-  try { const r = await fetch(`http://${host}/queryUser?id=${userQueryId.value}`); userDetail.value = await r.json() } catch { /* */ }
+  try { const r = await fetch(`http://${host.value}/queryUser?id=${userQueryId.value}`); userDetail.value = await r.json() } catch { /* */ }
 }
 async function loadInfoCard(c: typeof infoCards.value[0]) {
   c.loading = true
-  try { const r = await fetch(`http://${host}${c.path}`); c.data = await r.json() } catch { /* */ } finally { c.loading = false }
+  try { const r = await fetch(`http://${host.value}${c.path}`); c.data = await r.json() } catch { /* */ } finally { c.loading = false }
 }
 function loadAllInfo() { infoCards.value.forEach(c => loadInfoCard(c)) }
 
@@ -114,7 +114,8 @@ watch(chatTab, () => { if (connected.value) { disconnect(); connect() } })
       <!-- ============ 聊天 ============ -->
       <div v-show="page === 'chat'" class="chat-panel">
         <div class="chat-topbar">
-          <input v-model="userId" placeholder="你的 ID" class="sm" />
+          <span class="proto-tag">{{ chatTab === 'ws' ? 'WebSocket' : 'HTTP 轮询' }}</span>
+          <input v-model="host" placeholder="地址" class="sm" style="width:140px" />
           <span class="arr">→</span>
           <input v-model="targetId" placeholder="目标 ID" class="sm" />
           <button v-if="!connected" class="btn-on" @click="connect">连接</button>
@@ -194,6 +195,7 @@ body { font-family:system-ui,-apple-system,sans-serif; background:#0f172a; color
 .chat-panel { flex:1; display:flex; flex-direction:column; }
 .chat-topbar { display:flex; align-items:center; gap:8px; padding:10px 16px; background:#1e293b; border-bottom:1px solid #334155; }
 .chat-topbar input.sm { width:100px; padding:6px 8px; border:1px solid #334155; border-radius:6px; background:#0f172a; color:#e2e8f0; font-size:12px; outline:none; }
+.proto-tag { font-size:11px; font-weight:600; padding:4px 8px; border-radius:4px; background:#1e3a5f; color:#38bdf8; white-space:nowrap; }
 .chat-topbar input.sm:focus { border-color:#1e3a5f; }
 .arr { color:#475569; font-size:12px; }
 .btn-on { padding:6px 14px; border:none; border-radius:6px; background:#166534; color:#86efac; font-size:12px; cursor:pointer; }
