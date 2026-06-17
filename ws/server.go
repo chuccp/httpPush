@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/chuccp/httpPush/core"
+	"github.com/chuccp/httpPush/util"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
@@ -35,7 +36,7 @@ func (server *Server) Start() error {
 }
 
 func (server *Server) wsHandler(w http.ResponseWriter, r *http.Request) {
-	username := r.URL.Query().Get("userId")
+	username := util.GetUsername(r)
 	if len(username) == 0 {
 		http.Error(w, "userId required", 400)
 		return
