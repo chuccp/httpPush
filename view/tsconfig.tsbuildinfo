@@ -1,1 +1,1 @@
-{"root":["./src/main.ts","./src/vite-env.d.ts","./src/app.vue"],"version":"6.0.3"}
+{"root":["./src/main.ts","./src/vite-env.d.ts","./src/adminview.vue","./src/app.vue","./src/broadcastview.vue","./src/chatview.vue"],"version":"6.0.3"}
