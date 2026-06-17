@@ -8,7 +8,6 @@ web:
 cluster:
   start: true
   local_port: 8085
-  remote_host: "127.0.0.1:8085"
   machine_id: ""
 
 ex:

@@ -35,12 +35,14 @@ func (c *Controller) Init(ctx *wfcore.Context) error {
 	h("/queryGroupInfo", c.queryGroupInfo)
 	h("/queryVersion", c.queryVersion)
 
-	// 配置 pprof (暂不暴露)
 	c.app.SetSystemInfo("VERSION", core.VERSION)
-	c.app.RegisterHandle("machineInfoId", func(p *core.Parameter) any { return "" })
-	c.app.RegisterHandle("remoteMachineNum", func(p *core.Parameter) any { return 0 })
-	c.app.RegisterHandle("clusterUserNum", func(p *core.Parameter) any { return 0 })
-	c.app.RegisterHandle("machineAddress", func(p *core.Parameter) any { return "" })
+	// 只在 cluster 未注册时才设默认桩
+	if _, ok := c.app.GetHandle("machineInfoId"); !ok {
+		c.app.RegisterHandle("machineInfoId", func(p *core.Parameter) any { return "" })
+		c.app.RegisterHandle("remoteMachineNum", func(p *core.Parameter) any { return 0 })
+		c.app.RegisterHandle("clusterUserNum", func(p *core.Parameter) any { return 0 })
+		c.app.RegisterHandle("machineAddress", func(p *core.Parameter) any { return "" })
+	}
 
 	return nil
 }
