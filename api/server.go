@@ -2,6 +2,8 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
+	"reflect"
 
 	wf "github.com/chuccp/go-web-frame"
 	wfcore "github.com/chuccp/go-web-frame/core"
@@ -145,22 +147,49 @@ func (c *Controller) clusterInfo(r *web.Request) (any, error) {
 	result := make([]map[string]any, 0)
 	total := 0
 	for _, v := range values {
-		if m, ok := v.(map[string]any); ok {
-			total += int(m["userNum"].(float64))
-			result = append(result, m)
+		mid, num := extractMachineInfo(v)
+		if mid != "" {
+			total += num
+			result = append(result, map[string]any{"machineId": mid, "userNum": num})
 		}
 	}
-	machineId := ""
-	if handle, ok := c.app.GetHandle("machineInfoId"); ok {
-		machineId = handle(nil).(string)
-	}
 	return map[string]any{
-		"total":   total + c.app.GetUserNum(),
-		"cluster": append(result, map[string]any{
-			"machineId": machineId,
-			"userNum":   c.app.GetUserNum(),
-		}),
+		"total":   total,
+		"cluster": result,
 	}, nil
+}
+
+func extractMachineInfo(v any) (machineId string, userNum int) {
+	switch t := v.(type) {
+	case map[string]any:
+		if m, ok := t["machineId"]; ok { machineId = fmt.Sprint(m) }
+		if n, ok := t["userNum"]; ok { userNum = int(toFloat64(n)) }
+	case *any:
+		return extractMachineInfo(*t)
+	default:
+		// 反射处理 *MachineInfo 等
+		rv := reflect.ValueOf(v)
+		if rv.Kind() == reflect.Ptr {
+			rv = rv.Elem()
+		}
+		if rv.Kind() == reflect.Struct {
+			if f := rv.FieldByName("MachineId"); f.IsValid() { machineId = f.String() }
+			if f := rv.FieldByName("UserNum"); f.IsValid() { userNum = int(f.Int()) }
+		}
+	}
+	return
+}
+
+func toFloat64(v any) float64 {
+	switch n := v.(type) {
+	case float64: return n
+	case int: return float64(n)
+	case int64: return float64(n)
+	case json.Number:
+		f, _ := n.Float64()
+		return f
+	}
+	return 0
 }
 
 func (c *Controller) queryOrderInfo(r *web.Request) (any, error) {
