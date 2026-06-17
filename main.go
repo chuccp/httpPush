@@ -19,7 +19,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 	builder := wf.NewBuilder(cfg)
 	builder.Service(core.NewApp())
 	builder.Service(cluster.NewService())
