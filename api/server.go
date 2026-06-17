@@ -2,8 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
-	"reflect"
 
 	wf "github.com/chuccp/go-web-frame"
 	wfcore "github.com/chuccp/go-web-frame/core"
@@ -141,55 +139,34 @@ func (c *Controller) onlineUser(r *web.Request) (any, error) {
 	return result, nil
 }
 
+type machineInfo struct {
+	Address   string `json:"address,omitempty"`
+	UserNum   int    `json:"userNum"`
+	MachineId string `json:"machineId"`
+}
+
 func (c *Controller) clusterInfo(r *web.Request) (any, error) {
 	parameter := newParameter(r)
 	values := c.app.Query(parameter).([]any)
-	result := make([]map[string]any, 0)
+	result := make([]*machineInfo, 0)
 	total := 0
-	for _, v := range values {
-		mid, num := extractMachineInfo(v)
-		if mid != "" {
-			total += num
-			result = append(result, map[string]any{"machineId": mid, "userNum": num})
+	for _, value := range values {
+		mi, ok := value.(*machineInfo)
+		if !ok {
+			// 远程返回的可能是 any 包装
+			if a, ok2 := value.(*any); ok2 {
+				mi, _ = (*a).(*machineInfo)
+			}
+		}
+		if mi != nil {
+			result = append(result, mi)
+			total += mi.UserNum
 		}
 	}
 	return map[string]any{
-		"total":   total,
 		"cluster": result,
+		"total":   total,
 	}, nil
-}
-
-func extractMachineInfo(v any) (machineId string, userNum int) {
-	switch t := v.(type) {
-	case map[string]any:
-		if m, ok := t["machineId"]; ok { machineId = fmt.Sprint(m) }
-		if n, ok := t["userNum"]; ok { userNum = int(toFloat64(n)) }
-	case *any:
-		return extractMachineInfo(*t)
-	default:
-		// 反射处理 *MachineInfo 等
-		rv := reflect.ValueOf(v)
-		if rv.Kind() == reflect.Ptr {
-			rv = rv.Elem()
-		}
-		if rv.Kind() == reflect.Struct {
-			if f := rv.FieldByName("MachineId"); f.IsValid() { machineId = f.String() }
-			if f := rv.FieldByName("UserNum"); f.IsValid() { userNum = int(f.Int()) }
-		}
-	}
-	return
-}
-
-func toFloat64(v any) float64 {
-	switch n := v.(type) {
-	case float64: return n
-	case int: return float64(n)
-	case int64: return float64(n)
-	case json.Number:
-		f, _ := n.Float64()
-		return f
-	}
-	return 0
 }
 
 func (c *Controller) queryOrderInfo(r *web.Request) (any, error) {
