@@ -41,7 +41,10 @@ func (md *MsgDock) SendMessage(msg message.IMessage) (bool, error) {
 	if fa {
 		return true, nil
 	}
-	return md.IForward.WriteSyncMessage(msg)
+	if md.IForward != nil {
+		return md.IForward.WriteSyncMessage(msg)
+	}
+	return false, NoFoundUser
 }
 func (md *MsgDock) Query(parameter *Parameter, localValue any) []any {
 	if md.IForward != nil {
