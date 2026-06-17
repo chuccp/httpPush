@@ -2,7 +2,9 @@
 import { ref, nextTick, watch } from 'vue'
 
 const props = defineProps<{ host: string; tab: 'ws' | 'http' }>()
+const emit = defineEmits<{ 'update:host': [v: string] }>()
 
+const host = ref(props.host)
 const userId = ref('user_a')
 const targetId = ref('user_b')
 const groupId = ref('111')
@@ -23,7 +25,7 @@ async function connect() {
   if (connected.value) return
   messages.value = []
   if (props.tab === 'ws') {
-    ws = new WebSocket(`ws://${props.host}/ws?id=${userId.value}${gid()}`)
+    ws = new WebSocket(`ws://${host.value}/ws?id=${userId.value}${gid()}`)
     ws.onopen = () => { connected.value = true; addMsg('system', '已连接 (WS)', false) }
     ws.onmessage = (e) => {
       try { JSON.parse(e.data).forEach((m: any) => addMsg(m.from || m.From, m.body || m.Body || m.msg || m.Msg, false)) } catch { /* */ }
@@ -38,7 +40,7 @@ async function poll() {
   while (connected.value && props.tab === 'http') {
     pollCtrl = new AbortController()
     try {
-      const r = await fetch(`http://${props.host}/ex?id=${userId.value}&liveTime=15${gid()}`, { signal: pollCtrl.signal })
+      const r = await fetch(`http://${host.value}/ex?id=${userId.value}&liveTime=15${gid()}`, { signal: pollCtrl.signal })
       const t = await r.text()
       if (t && t !== '[]') {
         try { JSON.parse(t).forEach((m: any) => addMsg(m.from || m.From, m.body || m.Body || m.msg || m.Msg, false)) } catch { /* */ }
@@ -54,7 +56,7 @@ function send() {
   const body = el?.value?.trim(); if (!body) return
   el.value = ''; addMsg(userId.value, body, true)
   if (props.tab === 'ws' && ws) { ws.send(JSON.stringify({ to: targetId.value, msg: body })) }
-  else { fetch(`http://${props.host}/sendmsg?username=${targetId.value}&msg=${encodeURIComponent(body)}`) }
+  else { fetch(`http://${host.value}/sendmsg?username=${targetId.value}&msg=${encodeURIComponent(body)}`) }
 }
 
 watch(() => props.tab, () => { if (connected.value) { disconnect(); connect() } })
@@ -64,6 +66,7 @@ watch(() => props.tab, () => { if (connected.value) { disconnect(); connect() } 
   <div class="chat-panel">
     <div class="chat-topbar">
       <span class="proto-tag">{{ tab === 'ws' ? 'WebSocket' : 'HTTP 轮询' }}</span>
+      <input v-model="host" placeholder="地址" class="sm" style="width:140px" />
       <input v-model="userId" placeholder="你的 ID" class="sm" />
       <span class="arr">→</span>
       <input v-model="targetId" placeholder="目标 ID" class="sm" />
