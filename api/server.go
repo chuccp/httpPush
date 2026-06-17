@@ -118,7 +118,7 @@ func (c *Controller) onlineUser(r *web.Request) (any, error) {
 			for _, u := range p.List {
 				result = append(result, map[string]any{
 					"userName":   u.UserName,
-					"machineId":  p.MachineId,
+					"machineId":  u.MachineId,
 					"createTime": u.CreateTime,
 				})
 			}
