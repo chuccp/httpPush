@@ -17,24 +17,30 @@ func NewController() *Controller { return &Controller{} }
 
 func (c *Controller) Init(ctx *wfcore.Context) error {
 	c.app = wf.GetService[*core.App](ctx)
-	h := ctx.Get  // route register shorthand
+	h := ctx.Get
 
 	// 基础 API
 	h("/root_version", c.rootVersion)
 	h("/sendmsg", c.sendMsg)
 	h("/sendMessage", c.sendMessage)
 
-	// 查询 API
+	// 查询 API — 同时注册端口 handler 和本地查询函数
 	h("/queryUser", c.queryUser)
+	c.app.RegisterHandle("/queryUser", c.handleQueryUser)
 	h("/onlineUser", c.onlineUser)
+	c.app.RegisterHandle("/onlineUser", c.handleOnlineUser)
 	h("/info_user", c.clusterInfo)
+	c.app.RegisterHandle("/info_user", c.handleClusterInfo)
 	h("/queryOrderInfo", c.queryOrderInfo)
+	c.app.RegisterHandle("/queryOrderInfo", c.handleQueryOrderInfo)
 	h("/queryClusterUserNum", c.queryClusterUserNum)
+	c.app.RegisterHandle("/queryClusterUserNum", c.handleClusterUserNum)
 	h("/queryGroupInfo", c.queryGroupInfo)
+	c.app.RegisterHandle("/queryGroupInfo", c.handleQueryGroupInfo)
 	h("/queryVersion", c.queryVersion)
+	c.app.RegisterHandle("/queryVersion", c.handleQueryVersion)
 
 	c.app.SetSystemInfo("VERSION", core.VERSION)
-	// 只在 cluster 未注册时才设默认桩
 	if _, ok := c.app.GetHandle("machineInfoId"); !ok {
 		c.app.RegisterHandle("machineInfoId", func(p *core.Parameter) any { return "" })
 		c.app.RegisterHandle("remoteMachineNum", func(p *core.Parameter) any { return 0 })
@@ -54,48 +60,31 @@ func (c *Controller) rootVersion(r *web.Request) (any, error) {
 
 func (c *Controller) sendMsg(r *web.Request) (any, error) {
 	username := r.Query("username")
-	if username == "" {
-		username = r.Query("id")
-	}
+	if username == "" { username = r.Query("id") }
 	msg := r.Query("msg")
-	if username == "" || msg == "" {
-		return "username or msg required", nil
-	}
+	if username == "" || msg == "" { return "username or msg required", nil }
 	fa, _ := c.app.SendTextMessage("system", username, msg)
-	if fa {
-		return "success", nil
-	}
+	if fa { return "success", nil }
 	return "NO user", nil
 }
 
 func (c *Controller) sendMessage(r *web.Request) (any, error) {
 	username := r.Query("username")
-	if username == "" {
-		username = r.Query("id")
-	}
+	if username == "" { username = r.Query("id") }
 	msg := r.Query("msg")
-	if username == "" || msg == "" {
-		return "username or msg required", nil
-	}
+	if username == "" || msg == "" { return "username or msg required", nil }
 	fa, _ := c.app.SendTextMessage("system", username, msg)
 	return map[string]any{"success": fa}, nil
 }
 
-func (c *Controller) queryUser(r *web.Request) (any, error) {
-	id := r.Query("id")
-	if id == "" {
-		id = r.Query("username")
-	}
-	result := make([]any, 0)
-	parameter := newParameter(r)
-	vs := c.app.Query(parameter).([]any)
-	for _, v := range vs {
-		result = append(result, v)
-	}
+// ========== 本地查询函数 (RegisterHandle 注册，供 App.Query 调用) ==========
+
+func (c *Controller) handleQueryUser(p *core.Parameter) any {
+	id := p.GetVString("id", "username")
+	var result []map[string]any
 	if id != "" {
 		if us, ok := c.app.GetUser(id); ok {
-			sorted := user.SortByAsc(us)
-			for _, u := range sorted {
+			for _, u := range user.SortByAsc(us) {
 				result = append(result, map[string]any{
 					"username":      u.GetUsername(),
 					"remoteAddress": u.GetRemoteAddress(),
@@ -105,6 +94,58 @@ func (c *Controller) queryUser(r *web.Request) (any, error) {
 			}
 		}
 	}
+	return result
+}
+
+func (c *Controller) handleOnlineUser(p *core.Parameter) any {
+	var list []*pageUser
+	c.app.RangeUser(func(username string, _ *user.StoreUser) bool {
+		list = append(list, &pageUser{UserName: username})
+		return true
+	})
+	return &page{List: list, Num: c.app.GetUserNum()}
+}
+
+func (c *Controller) handleClusterInfo(p *core.Parameter) any {
+	mid, _ := c.app.GetHandle("machineInfoId")
+	machineId := ""
+	if mid != nil { machineId = mid(p).(string) }
+	return &machineInfo{MachineId: machineId, UserNum: c.app.GetUserNum()}
+}
+
+func (c *Controller) handleQueryOrderInfo(p *core.Parameter) any {
+	userId := p.GetVString("userId", "username", "id")
+	us := c.app.GetUserOrder(userId)
+	var list []*orderUser
+	for _, u := range us {
+		list = append(list, &orderUser{Priority: u.GetPriority(), MachineId: u.GetMachineId(), OrderTime: u.GetOrderTime().Format(util.TimestampFormat)})
+	}
+	return &allOrderUser{OrderUser: list}
+}
+
+func (c *Controller) handleClusterUserNum(p *core.Parameter) any {
+	h, ok := c.app.GetHandle("clusterUserNum")
+	if ok { return &clusterUserNum{UserNum: h(p)} }
+	return &clusterUserNum{}
+}
+
+func (c *Controller) handleQueryGroupInfo(p *core.Parameter) any {
+	return &groupInfo{GroupInfo: c.app.AllGroupInfo()}
+}
+
+func (c *Controller) handleQueryVersion(p *core.Parameter) any {
+	return &versionInfo{Version: core.VERSION, StartTime: c.app.GetStartTime()}
+}
+
+// ========== API handler ==========
+
+func (c *Controller) queryUser(r *web.Request) (any, error) {
+	result := make([]any, 0)
+	parameter := newParameter(r)
+	vs := c.app.Query(parameter).([]any)
+	for _, v := range vs {
+		result = append(result, v)
+	}
 	return result, nil
 }
 
@@ -113,7 +154,6 @@ func (c *Controller) onlineUser(r *web.Request) (any, error) {
 	values := c.app.Query(parameter).([]any)
 	result := make([]map[string]any, 0)
 	for _, v := range values {
-		// 本地返回的是 *page，远程 unmarshal 后也是 *page
 		if p, ok := v.(*page); ok {
 			for _, u := range p.List {
 				result = append(result, map[string]any{
@@ -138,8 +178,6 @@ type machineInfo struct {
 	UserNum   int    `json:"userNum"`
 	MachineId string `json:"machineId"`
 }
-
-// 与集群 query 返回类型匹配的结构体
 type pageUser struct {
 	UserName       string
 	MachineAddress string
@@ -147,10 +185,8 @@ type pageUser struct {
 	MachineId      string
 }
 type page struct {
-	Num        int
-	List       []*pageUser
-	MachineId  string
-	UserNum    int
+	Num  int
+	List []*pageUser
 }
 type clusterUserNum struct {
 	UserNum   any    `json:"userNum"`
@@ -165,6 +201,15 @@ type versionInfo struct {
 	StartTime string
 	MachineId string
 }
+type orderUser struct {
+	Priority  int
+	MachineId string
+	OrderTime string
+}
+type allOrderUser struct {
+	OrderUser []*orderUser
+	MachineId string
+}
 
 func (c *Controller) clusterInfo(r *web.Request) (any, error) {
 	parameter := newParameter(r)
@@ -172,35 +217,22 @@ func (c *Controller) clusterInfo(r *web.Request) (any, error) {
 	result := make([]*machineInfo, 0)
 	total := 0
 	for _, value := range values {
-		mi, ok := value.(*machineInfo)
-		if !ok {
-			// 远程返回的可能是 any 包装
-			if a, ok2 := value.(*any); ok2 {
-				mi, _ = (*a).(*machineInfo)
-			}
-		}
-		if mi != nil {
+		if mi, ok := value.(*machineInfo); ok {
 			result = append(result, mi)
 			total += mi.UserNum
 		}
 	}
-	return map[string]any{
-		"cluster": result,
-		"total":   total,
-	}, nil
+	return map[string]any{"cluster": result, "total": total}, nil
 }
 
 func (c *Controller) queryOrderInfo(r *web.Request) (any, error) {
 	userId := r.Query("id")
-	if userId == "" {
-		userId = r.Query("username")
-	}
+	if userId == "" { userId = r.Query("username") }
 	us := c.app.GetUserOrder(userId)
 	result := make([]map[string]any, 0)
 	for _, u := range us {
 		result = append(result, map[string]any{
-			"priority":  u.GetPriority(),
-			"machineId": u.GetMachineId(),
+			"priority": u.GetPriority(), "machineId": u.GetMachineId(),
 			"orderTime": u.GetOrderTime().Format(util.TimestampFormat),
 		})
 	}
@@ -212,9 +244,7 @@ func (c *Controller) queryClusterUserNum(r *web.Request) (any, error) {
 	vs := c.app.Query(parameter).([]any)
 	result := make([]*clusterUserNum, 0)
 	for _, v := range vs {
-		if m, ok := v.(*clusterUserNum); ok {
-			result = append(result, m)
-		}
+		if m, ok := v.(*clusterUserNum); ok { result = append(result, m) }
 	}
 	return result, nil
 }
@@ -224,9 +254,7 @@ func (c *Controller) queryGroupInfo(r *web.Request) (any, error) {
 	vs := c.app.Query(parameter).([]any)
 	result := make([]*groupInfo, 0)
 	for _, v := range vs {
-		if m, ok := v.(*groupInfo); ok {
-			result = append(result, m)
-		}
+		if m, ok := v.(*groupInfo); ok { result = append(result, m) }
 	}
 	return result, nil
 }
@@ -236,16 +264,11 @@ func (c *Controller) queryVersion(r *web.Request) (any, error) {
 	vs := c.app.Query(parameter).([]any)
 	result := make([]*versionInfo, 0)
 	for _, v := range vs {
-		if m, ok := v.(*versionInfo); ok {
-			result = append(result, m)
-		}
+		if m, ok := v.(*versionInfo); ok { result = append(result, m) }
 	}
 	return map[string]any{
 		"versions": result,
-		"local": map[string]string{
-			"version":   core.VERSION,
-			"startTime": c.app.GetStartTime(),
-		},
+		"local":    map[string]string{"version": core.VERSION, "startTime": c.app.GetStartTime()},
 	}, nil
 }
 
