@@ -1,8 +1,6 @@
 package api
 
 import (
-	"encoding/json"
-
 	wf "github.com/chuccp/go-web-frame"
 	wfcore "github.com/chuccp/go-web-frame/core"
 	"github.com/chuccp/go-web-frame/web"
@@ -112,27 +110,23 @@ func (c *Controller) queryUser(r *web.Request) (any, error) {
 
 func (c *Controller) onlineUser(r *web.Request) (any, error) {
 	parameter := newParameter(r)
-	vs := c.app.Query(parameter).([]any)
-	type item struct {
-		UserName   string `json:"userName"`
-		MachineId  string `json:"machineId"`
-		CreateTime string `json:"createTime"`
-		Conn       []any  `json:"conn"`
-	}
-	result := make([]item, 0)
-	for _, v := range vs {
-		if p, ok := v.(map[string]any); ok {
-			result = append(result, item{
-				UserName:   p["userName"].(string),
-				MachineId:  p["machineId"].(string),
-				CreateTime: p["createTime"].(string),
-			})
+	values := c.app.Query(parameter).([]any)
+	result := make([]map[string]any, 0)
+	for _, v := range values {
+		// 本地返回的是 *page，远程 unmarshal 后也是 *page
+		if p, ok := v.(*page); ok {
+			for _, u := range p.List {
+				result = append(result, map[string]any{
+					"userName":   u.UserName,
+					"machineId":  p.MachineId,
+					"createTime": u.CreateTime,
+				})
+			}
 		}
 	}
-	// fallback: just list local users
 	if len(result) == 0 {
 		c.app.RangeUser(func(username string, _ *user.StoreUser) bool {
-			result = append(result, item{UserName: username})
+			result = append(result, map[string]any{"userName": username})
 			return true
 		})
 	}
@@ -143,6 +137,33 @@ type machineInfo struct {
 	Address   string `json:"address,omitempty"`
 	UserNum   int    `json:"userNum"`
 	MachineId string `json:"machineId"`
+}
+
+// 与集群 query 返回类型匹配的结构体
+type pageUser struct {
+	UserName       string
+	MachineAddress string
+	CreateTime     string
+	MachineId      string
+}
+type page struct {
+	Num        int
+	List       []*pageUser
+	MachineId  string
+	UserNum    int
+}
+type clusterUserNum struct {
+	UserNum   any    `json:"userNum"`
+	MachineId string `json:"machineId"`
+}
+type groupInfo struct {
+	MachineId string
+	GroupInfo map[string]int
+}
+type versionInfo struct {
+	Version   string
+	StartTime string
+	MachineId string
 }
 
 func (c *Controller) clusterInfo(r *web.Request) (any, error) {
@@ -189,14 +210,10 @@ func (c *Controller) queryOrderInfo(r *web.Request) (any, error) {
 func (c *Controller) queryClusterUserNum(r *web.Request) (any, error) {
 	parameter := newParameter(r)
 	vs := c.app.Query(parameter).([]any)
-	type item struct {
-		MachineId string `json:"machineId"`
-		UserNum   any    `json:"userNum"`
-	}
-	result := make([]item, 0)
+	result := make([]*clusterUserNum, 0)
 	for _, v := range vs {
-		if m, ok := v.(map[string]any); ok {
-			result = append(result, item{MachineId: m["machineId"].(string), UserNum: m["userNum"]})
+		if m, ok := v.(*clusterUserNum); ok {
+			result = append(result, m)
 		}
 	}
 	return result, nil
@@ -205,16 +222,30 @@ func (c *Controller) queryClusterUserNum(r *web.Request) (any, error) {
 func (c *Controller) queryGroupInfo(r *web.Request) (any, error) {
 	parameter := newParameter(r)
 	vs := c.app.Query(parameter).([]any)
-	data, _ := json.Marshal(vs)
-	return string(data), nil
+	result := make([]*groupInfo, 0)
+	for _, v := range vs {
+		if m, ok := v.(*groupInfo); ok {
+			result = append(result, m)
+		}
+	}
+	return result, nil
 }
 
 func (c *Controller) queryVersion(r *web.Request) (any, error) {
 	parameter := newParameter(r)
 	vs := c.app.Query(parameter).([]any)
+	result := make([]*versionInfo, 0)
+	for _, v := range vs {
+		if m, ok := v.(*versionInfo); ok {
+			result = append(result, m)
+		}
+	}
 	return map[string]any{
-		"versions": vs,
-		"local":    core.VERSION,
+		"versions": result,
+		"local": map[string]string{
+			"version":   core.VERSION,
+			"startTime": c.app.GetStartTime(),
+		},
 	}, nil
 }
 
