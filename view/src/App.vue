@@ -10,6 +10,8 @@ const chatTab = ref<ChatTab>('ws')
 const adminTab = ref<AdminTab>('users')
 const userId = ref('user_a')
 const targetId = ref('user_b')
+const sendMode = ref<'single' | 'group'>('single')
+const groupId = ref('all')
 const connected = ref(false)
 const messages = ref<{ from: string; body: string; time: string; self: boolean }[]>([])
 const host = ref('127.0.0.1:8084')
@@ -56,8 +58,13 @@ function send() {
   const el = document.getElementById('msgInput') as HTMLInputElement
   const body = el?.value?.trim(); if (!body) return
   el.value = ''; addMsg(userId.value, body, true)
-  if (chatTab.value === 'ws' && ws) { ws.send(JSON.stringify({ to: targetId.value, msg: body })) }
-  else { fetch(`http://${host.value}/sendmsg?username=${targetId.value}&msg=${encodeURIComponent(body)}`) }
+  if (sendMode.value === 'group') {
+    fetch(`http://${host.value}/sendGroupMsg?groupId=${groupId.value}&msg=${encodeURIComponent(body)}`)
+  } else if (chatTab.value === 'ws' && ws) {
+    ws.send(JSON.stringify({ to: targetId.value, msg: body }))
+  } else {
+    fetch(`http://${host.value}/sendmsg?username=${targetId.value}&msg=${encodeURIComponent(body)}`)
+  }
 }
 
 // ---- admin ----
@@ -118,7 +125,12 @@ watch(chatTab, () => { if (connected.value) { disconnect(); connect() } })
           <input v-model="host" placeholder="地址" class="sm" style="width:140px" />
           <input v-model="userId" placeholder="你的 ID" class="sm" />
           <span class="arr">→</span>
-          <input v-model="targetId" placeholder="目标 ID" class="sm" />
+          <div class="mode-switch">
+            <button :class="{ a: sendMode === 'single' }" @click="sendMode = 'single'">单发</button>
+            <button :class="{ a: sendMode === 'group' }" @click="sendMode = 'group'">群发</button>
+          </div>
+          <input v-if="sendMode === 'single'" v-model="targetId" placeholder="目标 ID" class="sm" />
+          <input v-else v-model="groupId" placeholder="群组 ID" class="sm" />
           <button v-if="!connected" class="btn-on" @click="connect">连接</button>
           <button v-else class="btn-off" @click="disconnect">断开</button>
           <span class="dot" :class="{ on: connected }">{{ connected ? '●' : '○' }}</span>

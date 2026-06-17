@@ -23,6 +23,8 @@ func (c *Controller) Init(ctx *wfcore.Context) error {
 	h("/root_version", c.rootVersion)
 	h("/sendmsg", c.sendMsg)
 	h("/sendMessage", c.sendMessage)
+	h("/sendGroupMsg", c.sendGroupMsg)
+	c.app.RegisterHandle("/sendGroupMsg", c.handleSendGroupMsg)
 
 	// 查询 API — 同时注册端口 handler 和本地查询函数
 	h("/queryUser", c.queryUser)
@@ -66,6 +68,18 @@ func (c *Controller) sendMsg(r *web.Request) (any, error) {
 	fa, _ := c.app.SendTextMessage("system", username, msg)
 	if fa { return "success", nil }
 	return "NO user", nil
+}
+
+func (c *Controller) sendGroupMsg(r *web.Request) (any, error) {
+	groupId := r.Query("groupId")
+	msg := r.Query("msg")
+	if groupId == "" || msg == "" { return "groupId or msg required", nil }
+	num := c.app.SendGroupTextMessage("system", groupId, msg)
+	return map[string]any{"success": true, "num": num}, nil
+}
+
+func (c *Controller) handleSendGroupMsg(p *core.Parameter) any {
+	return map[string]any{}
 }
 
 func (c *Controller) sendMessage(r *web.Request) (any, error) {

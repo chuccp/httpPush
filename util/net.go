@@ -14,6 +14,14 @@ func GetUsername(re *http.Request) string {
 	return username
 }
 
+func GetGroupId(re *http.Request) string {
+	group := re.FormValue("groupId")
+	if len(group) == 0 {
+		group = re.FormValue("GroupId")
+	}
+	return group
+}
+
 func GetGroupIds(re *http.Request) []string {
 	group := re.FormValue("groupId")
 	if len(group) == 0 {
