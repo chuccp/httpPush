@@ -22,7 +22,7 @@ func main() {
 	}
 	builder := wf.NewBuilder(cfg)
 	builder.Service(core.NewApp())
-	builder.Service(cluster.NewService())
+	builder.Runner(cluster.NewService())
 	builder.Rest(api.NewController())
 	builder.Rest(ex.NewController())
 	builder.Rest(ws.NewController())
