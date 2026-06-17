@@ -1,0 +1,22 @@
+server:
+  port: 8084
+
+cluster:
+  start: true
+  local_port: 8085
+  remote_host: "127.0.0.1:8085"
+  machine_id: ""
+
+ex:
+  start: true
+  live_time: 15
+
+ws:
+  start: true
+
+api:
+  start: true
+
+log:
+  level: debug
+  file_path: push.log

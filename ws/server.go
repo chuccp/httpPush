@@ -6,79 +6,88 @@ import (
 	"sync"
 	"time"
 
+	wfcore "github.com/chuccp/go-web-frame/core"
+	"github.com/chuccp/go-web-frame/web"
 	"github.com/chuccp/httpPush/core"
-	"github.com/chuccp/httpPush/util"
-	"github.com/gorilla/websocket"
+	ws "github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
 
-type Server struct {
-	core.IHttpServer
-	context  *core.Context
+type Controller struct {
+	app      *core.App
 	store    *Store
-	isStart  bool
 	rLock    *sync.RWMutex
-	upgrader websocket.Upgrader
+	upgrader ws.Upgrader
 }
 
-func NewServer() *Server {
-	server := &Server{store: NewStore()}
-	httpServer := core.NewHttpServer(server.Name())
-	server.IHttpServer = httpServer
-	server.rLock = new(sync.RWMutex)
-	return server
-}
-
-func (server *Server) Start() error {
-	if server.isStart {
-		server.AddHttpRoute("/ws", server.wsHandler)
+func NewController(app *core.App) *Controller {
+	return &Controller{
+		app:   app,
+		store: NewStore(),
+		rLock: new(sync.RWMutex),
+		upgrader: ws.Upgrader{
+			CheckOrigin: func(r *http.Request) bool { return true },
+		},
 	}
+}
+
+func (c *Controller) Init(ctx *wfcore.Context) error {
+	if !c.app.GetCfgBoolDefault("ws", "start", false) {
+		return nil
+	}
+	ctx.Any("/ws", c.handleWs)
 	return nil
 }
 
-func (server *Server) wsHandler(w http.ResponseWriter, r *http.Request) {
-	username := util.GetUsername(r)
+func (c *Controller) handleWs(r *web.Request) (any, error) {
+	ginCtx := r.GinContext()
+	username := ginCtx.Query("id")
+	if username == "" {
+		username = ginCtx.Query("username")
+	}
 	if len(username) == 0 {
-		http.Error(w, "userId required", 400)
-		return
+		return "userId required", nil
 	}
 
-	conn, err := server.upgrader.Upgrade(w, r, nil)
+	conn, err := c.upgrader.Upgrade(ginCtx.Writer, ginCtx.Request, nil)
 	if err != nil {
-		server.context.GetLog().Error("ws upgrade failed", zap.Error(err))
-		return
+		return nil, err
 	}
 
 	writeCh := make(chan []byte, 16)
+	id := username + "_" + ginCtx.Request.RemoteAddr
 
-	server.rLock.RLock()
-	cl := getNewClient(server.context, username)
-	_client_, ok := server.store.LoadOrStore(cl, username)
+	c.rLock.RLock()
+	cl := getNewClient(c.app, username)
+	_client_, ok := c.store.LoadOrStore(cl, username)
 	if ok {
 		freeClient(cl)
 	}
-	id := getId(username, r)
-	cuser := NewUser(username, id, server.context, conn, writeCh, r)
+	cuser := NewUser(username, id, c.app, conn, writeCh, ginCtx.Request)
 	_client_.connMap.Put(id, cuser)
-	server.rLock.RUnlock()
+	c.rLock.RUnlock()
 
-	server.context.AddUser(cuser)
-	server.context.GetLog().Info("ws 用户连接", zap.String("username", username), zap.String("remote", r.RemoteAddr))
+	c.app.AddUser(cuser)
+	c.app.GetLog().Info("ws connect", zap.String("user", username))
 
-	// readPump 单独 goroutine，writePump 留在当前 goroutine（必须和 Upgrade 同 goroutine）
-	go server.readPump(conn, server.context, username)
-	server.writePump(conn, writeCh, username)
+	go c.readPump(conn, username)
+	c.writePump(conn, writeCh)
 
-	// 清理
-	server.deleteClientOrUser(_client_, cuser)
+	c.rLock.Lock()
+	c.app.DeleteUser(cuser)
+	cl.connMap.Delete(cuser.GetId())
+	if cl.Empty() {
+		c.store.Delete(cl.username)
+		freeClient(cl)
+	}
+	c.rLock.Unlock()
+
+	return nil, nil
 }
 
-func (server *Server) writePump(conn *websocket.Conn, writeCh chan []byte, username string) {
+func (c *Controller) writePump(conn *ws.Conn, writeCh chan []byte) {
 	ticker := time.NewTicker(30 * time.Second)
-	defer func() {
-		ticker.Stop()
-		conn.Close()
-	}()
+	defer func() { ticker.Stop(); conn.Close() }()
 
 	for {
 		select {
@@ -87,58 +96,32 @@ func (server *Server) writePump(conn *websocket.Conn, writeCh chan []byte, usern
 				return
 			}
 			conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-			if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+			if err := conn.WriteMessage(ws.TextMessage, data); err != nil {
 				return
 			}
 		case <-ticker.C:
 			conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			if err := conn.WriteMessage(ws.PingMessage, nil); err != nil {
 				return
 			}
 		}
 	}
 }
 
-func (server *Server) readPump(conn *websocket.Conn, context *core.Context, username string) {
+func (c *Controller) readPump(conn *ws.Conn, username string) {
+	defer conn.Close()
 	for {
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
-			context.GetLog().Info("ws 用户断开", zap.String("username", username))
+			c.app.GetLog().Info("ws disconnect", zap.String("user", username))
 			break
 		}
-
 		var wsMsg struct {
 			To  string `json:"to"`
 			Msg string `json:"msg"`
 		}
 		if json.Unmarshal(msg, &wsMsg) == nil && len(wsMsg.To) > 0 {
-			context.SendTextMessage(username, wsMsg.To, wsMsg.Msg)
+			c.app.SendTextMessage(username, wsMsg.To, wsMsg.Msg)
 		}
 	}
-}
-
-func (server *Server) deleteClientOrUser(cl *client, cuser *User) {
-	server.rLock.Lock()
-	defer server.rLock.Unlock()
-	server.context.DeleteUser(cuser)
-	cl.connMap.Delete(cuser.GetId())
-	if cl.Empty() {
-		server.store.Delete(cl.username)
-		freeClient(cl)
-	}
-}
-
-func (server *Server) Init(context *core.Context) {
-	server.context = context
-	server.isStart = server.context.GetCfgBoolDefault("ws", "start", false)
-	if server.isStart {
-		server.upgrader = websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool { return true },
-		}
-		server.context.GetLog().Info("ws 模块启动")
-	}
-}
-
-func (server *Server) Name() string {
-	return "ws"
 }

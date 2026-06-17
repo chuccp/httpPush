@@ -6,180 +6,145 @@ import (
 	"strings"
 	"time"
 
+	wfcore "github.com/chuccp/go-web-frame/core"
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/message"
 	"go.uber.org/zap"
 )
 
-type Server struct {
-	core.IForward
-	core.IHttpServer
-	context      *core.Context
-	isStart      bool
+type Service struct {
+	app          *core.App
 	machineStore *MachineStore
 	userStore    *userStore
-	grpcServer   *grpcServer
+	grpcSrv      *grpcServer
 	grpcPort     int
 }
 
-func NewServer() *Server {
-	server := &Server{}
-	httpServer := core.NewHttpServer(server.Name())
-	server.IHttpServer = httpServer
-	return server
+func NewService(app *core.App) *Service {
+	return &Service{app: app}
 }
 
-func (server *Server) checkUser() {
-	for {
-		time.Sleep(time.Second * 5)
-		server.userStore.ClearTimeOutUser(time.Now())
-		time.Sleep(time.Second * 5)
+func (s *Service) Init(ctx *wfcore.Context) error {
+	if !s.app.GetCfgBoolDefault("cluster", "start", false) {
+		return nil
 	}
-}
 
-func (server *Server) Start() error {
-	if server.isStart {
-		if server.grpcServer != nil && server.grpcPort > 0 {
-			server.context.RecoverGo(func() {
-				err := server.grpcServer.start(server.grpcPort)
-				if err != nil {
-					server.context.GetLog().Error("gRPC server 启动失败", zap.Error(err))
-				}
-			})
+	grpcClient := NewGrpcClient(s.app.GetLog())
+	s.machineStore = NewMachineStore(s.app, grpcClient)
+	s.app.SetForward(s)
+
+	machineId := s.app.GetCfgString("cluster", "machine_id")
+	if len(machineId) == 0 {
+		machineId = MachineId()
+	}
+	s.app.GetLog().Info("machineId", zap.String("machineId", machineId))
+
+	s.grpcPort = s.app.GetCfgInt("cluster", "local_port")
+	if s.grpcPort <= 0 {
+		s.grpcPort = s.app.GetCfgInt("server", "port") + 1
+	}
+
+	s.machineStore.localMachine = &Machine{MachineId: machineId, Link: "0.0.0.0:" + strconv.Itoa(s.grpcPort)}
+
+	for _, host := range strings.Split(s.app.GetCfgString("cluster", "remote_host"), ",") {
+		host = strings.TrimSpace(host)
+		if len(host) > 0 {
+			s.machineStore.addFirstMachine(&Machine{Link: host})
 		}
-		server.context.RecoverGo(func() {
-			server.loop()
-		})
-		server.context.RecoverGo(func() {
-			server.checkUser()
-		})
 	}
+
+	s.userStore = newUserStore(s.app, s.sendMsg)
+	s.app.RegisterHandle("machineInfoId", s.machineInfoId)
+	s.app.RegisterHandle("remoteMachineNum", s.remoteMachineNum)
+	s.app.RegisterHandle("clusterUserNum", s.clusterUserNum)
+	s.app.RegisterHandle("machineAddress", s.machineAddress)
+
+	s.grpcSrv = newGrpcServer(s.app, s.machineStore)
+	s.app.GetLog().Info("gRPC port", zap.Int("port", s.grpcPort))
 	return nil
 }
 
-func (server *Server) loop() {
+func (s *Service) Run() error {
+	if s.grpcPort <= 0 {
+		return nil
+	}
+	go func() {
+		if err := s.grpcSrv.start(s.grpcPort); err != nil {
+			s.app.GetLog().Error("gRPC start failed", zap.Error(err))
+		}
+	}()
+	time.Sleep(time.Second)
+
+	go s.loop()
+	go s.checkUser()
+
+	select {}
+}
+
+func (s *Service) loop() {
 	for {
 		time.Sleep(time.Second * 5)
-		server.machineStore.initials()
+		s.machineStore.initials()
 		time.Sleep(time.Second * 5)
-		server.machineStore.queryMachineList()
+		s.machineStore.queryMachineList()
 	}
 }
 
-func (server *Server) sendMsg(message message.IMessage, machineId string) (bool, error) {
-	marshal, err := json.Marshal(message)
-	if err != nil {
-		return false, err
+func (s *Service) checkUser() {
+	for {
+		time.Sleep(time.Second * 5)
+		s.userStore.ClearTimeOutUser(time.Now())
+		time.Sleep(time.Second * 5)
 	}
-	err = server.machineStore.sendMsg(machineId, marshal)
-	if err != nil {
-		return false, err
-	}
-	return true, nil
 }
 
-func (server *Server) WriteSyncMessage(iMessage message.IMessage) (fa bool, err error) {
+func (s *Service) sendMsg(msg message.IMessage, machineId string) (bool, error) {
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return false, err
+	}
+	return true, s.machineStore.sendMsg(machineId, data)
+}
+
+func (s *Service) WriteSyncMessage(iMessage message.IMessage) (bool, error) {
 	switch t := iMessage.(type) {
 	case *message.TextMessage:
-		{
-			username := t.GetString(message.To)
-			orderUser := server.userStore.GetOrderUser(username)
-			exMachineIds := make([]string, 0)
-			for _, iOrderUser := range orderUser {
-				cu := iOrderUser.(*clientUser)
-				fa, err = cu.WriteSyncMessage(iMessage)
-				server.context.GetLog().Debug("WriteSyncMessage", zap.Bool("fa", fa), zap.Error(err))
-				if fa {
-					server.userStore.RefreshUser(username, cu.machineId, server.sendMsg)
-					return
-				} else {
-					exMachineIds = append(exMachineIds, cu.machineId)
-					server.userStore.DeleteUser(username, cu.machineId)
-				}
+		username := t.GetString(message.To)
+		orderUser := s.userStore.GetOrderUser(username)
+		exMachineIds := make([]string, 0)
+		for _, u := range orderUser {
+			cu := u.(*clientUser)
+			fa, _ := cu.WriteSyncMessage(iMessage)
+			if fa {
+				s.userStore.RefreshUser(username, cu.machineId, s.sendMsg)
+				return true, nil
 			}
-			machines := server.machineStore.getExMachines(exMachineIds...)
-			if len(machines) > 0 {
-				for _, machine := range machines {
-					fa, err = server.sendMsg(t, machine.MachineId)
-					if fa {
-						server.userStore.AddUser(username, machine.MachineId, server.sendMsg)
-						return
-					}
-				}
-			} else {
-				return
+			exMachineIds = append(exMachineIds, cu.machineId)
+			s.userStore.DeleteUser(username, cu.machineId)
+		}
+		machines := s.machineStore.getExMachines(exMachineIds...)
+		for _, machine := range machines {
+			fa, _ := s.sendMsg(t, machine.MachineId)
+			if fa {
+				s.userStore.AddUser(username, machine.MachineId, s.sendMsg)
+				return true, nil
 			}
 		}
 	}
 	return false, core.NoFoundUser
 }
 
-func (server *Server) Query(parameter *core.Parameter, localValue any) []any {
-	return server.machineStore.Query(parameter, localValue)
+func (s *Service) Query(parameter *core.Parameter, localValue any) []any {
+	return s.machineStore.Query(parameter, localValue)
 }
 
-func (server *Server) machineInfoId(parameter *core.Parameter) any {
-	return server.machineStore.localMachine.MachineId
-}
-
-func (server *Server) remoteMachineNum(parameter *core.Parameter) any {
-	return server.machineStore.num()
-}
-
-func (server *Server) Init(context *core.Context) {
-	server.context = context
-	server.isStart = server.context.GetCfgBoolDefault("cluster", "start", false)
-	if server.isStart {
-		grpcClient := NewGrpcClient(server.context.GetLog())
-		server.machineStore = NewMachineStore(server.context, grpcClient)
-		context.SetForward(server)
-
-		machineId := server.context.GetCfgString("cluster", "machineId")
-		if len(machineId) == 0 {
-			machineId = MachineId()
-		}
-		server.context.GetLog().Info("machineId配置", zap.String("machineId", machineId))
-
-		// gRPC 端口
-		server.grpcPort = server.context.GetCfgInt("cluster", "local.port")
-
-		// 本地机器信息，link 使用 gRPC 端口
-		localMachine := &Machine{MachineId: machineId, Link: "0.0.0.0:" + strconv.Itoa(server.grpcPort)}
-		server.machineStore.localMachine = localMachine
-
-		// 远程节点
-		remoteHostStr := server.context.GetCfgString("cluster", "remote.host")
-		for _, host := range strings.Split(remoteHostStr, ",") {
-			host = strings.TrimSpace(host)
-			if len(host) > 0 {
-				server.machineStore.addFirstMachine(&Machine{Link: host})
-			}
-		}
-
-		server.userStore = newUserStore(context, server.sendMsg)
-		server.context.RegisterHandle("machineInfoId", server.machineInfoId)
-		server.context.RegisterHandle("remoteMachineNum", server.remoteMachineNum)
-		server.context.RegisterHandle("clusterUserNum", server.clusterUserNum)
-		server.context.RegisterHandle("machineAddress", server.machineAddress)
-
-		// 创建 gRPC server
-		server.grpcServer = newGrpcServer(server.context, server.machineStore)
-		server.context.GetLog().Info("gRPC 端口配置", zap.Int("grpcPort", server.grpcPort))
+func (s *Service) machineInfoId(*core.Parameter) any   { return s.machineStore.localMachine.MachineId }
+func (s *Service) remoteMachineNum(*core.Parameter) any { return s.machineStore.num() }
+func (s *Service) clusterUserNum(*core.Parameter) any   { return s.userStore.Num() }
+func (s *Service) machineAddress(parameter *core.Parameter) any {
+	id := parameter.GetString("machineId")
+	if id == s.machineStore.localMachine.MachineId {
+		return s.machineStore.localMachine.Link
 	}
-}
-
-func (server *Server) Name() string {
-	return "cluster"
-}
-
-func (server *Server) clusterUserNum(parameter *core.Parameter) any {
-	return server.userStore.Num()
-}
-
-func (server *Server) machineAddress(parameter *core.Parameter) any {
-	machineId := parameter.GetString("machineId")
-	if machineId == server.machineStore.localMachine.MachineId {
-		return server.machineStore.localMachine.Link
-	}
-	return server.machineStore.GetMachineLink(machineId)
+	return s.machineStore.GetMachineLink(id)
 }

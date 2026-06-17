@@ -122,7 +122,7 @@ func (s *grpcServer) SendTextMsg(ctx context.Context, req *SendTextMsgRequest) (
 	if err := json.Unmarshal(req.Message, &textMessage); err != nil {
 		return nil, err
 	}
-	err, fa := s.ctx.SendLocalMessage(&textMessage)
+	fa, err := s.ctx.SendLocalMessage(&textMessage)
 	s.ctx.GetLog().Debug("收到远程信息(gRPC):",
 		zap.String("toUser", textMessage.GetString(message.To)),
 		zap.Bool("是否成功", fa),

@@ -1,99 +1,86 @@
 package ex
 
 import (
-	"github.com/chuccp/httpPush/core"
-	"github.com/chuccp/httpPush/util"
-	"go.uber.org/zap"
-	"net/http"
 	"sync"
 	"time"
+
+	wfcore "github.com/chuccp/go-web-frame/core"
+	"github.com/chuccp/go-web-frame/web"
+	"github.com/chuccp/httpPush/core"
+	"github.com/chuccp/httpPush/util"
 )
 
-type Server struct {
-	core.IHttpServer
-	context  *core.Context
+type Controller struct {
+	app      *core.App
 	store    *Store
 	liveTime int
-	isStart  bool
 	rLock    *sync.RWMutex
 	tw       *util.TimeWheel2
 	tw2      *util.TimeWheel2
 }
 
-func NewServer() *Server {
-	server := &Server{store: NewStore()}
-	httpServer := core.NewHttpServer(server.Name())
-	server.IHttpServer = httpServer
-	server.tw = util.NewTimeWheel2(1, 180)
-	server.tw2 = util.NewTimeWheel2(1, 60)
-	server.rLock = new(sync.RWMutex)
-	return server
+func NewController(app *core.App) *Controller {
+	return &Controller{
+		app:   app,
+		store: NewStore(),
+		rLock: new(sync.RWMutex),
+		tw:    util.NewTimeWheel2(1, 180),
+		tw2:   util.NewTimeWheel2(1, 60),
+	}
 }
 
-func (server *Server) Start() error {
-	if server.isStart {
-		server.AddHttpRoute("/ex", server.ex)
-		server.context.RecoverGo(func() {
-			server.tw.Start()
-		})
-		server.context.RecoverGo(func() {
-			server.tw2.Start()
-		})
+func (c *Controller) Init(ctx *wfcore.Context) error {
+	if !c.app.GetCfgBoolDefault("ex", "start", false) {
+		return nil
 	}
+	c.liveTime = c.app.GetCfgInt("ex", "live_time")
+
+	go c.tw.Start()
+	go c.tw2.Start()
+
+	ctx.Any("/ex", c.handleEx)
 	return nil
 }
-func (server *Server) ex(w http.ResponseWriter, re *http.Request) {
-	util.HttpCross(w)
-	server.jack(w, re)
-}
-func (server *Server) jack(writer http.ResponseWriter, re *http.Request) {
-	username := util.GetUsername(re)
+
+func (c *Controller) handleEx(r *web.Request) (any, error) {
+	ginCtx := r.GinContext()
+	username := util.GetUsername(ginCtx.Request)
 	if len(username) == 0 {
-		writer.WriteHeader(404)
-		writer.Write([]byte("request error"))
-		return
+		ginCtx.String(404, "request error")
+		return nil, nil
 	}
-	server.rLock.RLock()
-	cl := getNewClient(server.context, username, server.liveTime)
-	_client_, ok := server.store.LoadOrStore(cl, username)
+
+	c.rLock.RLock()
+	cl := getNewClient(c.app, username, c.liveTime)
+	_client_, ok := c.store.LoadOrStore(cl, username)
 	if ok {
 		freeClient(cl)
 	}
-	user := _client_.loadUser(writer, re)
-	user.RefreshPreExpired()
-	server.rLock.RUnlock()
-	user.waitMessage(server.tw)
-	server.tw2.AfterFunc(expiredCheckTimeSecond, user.GetId(), func(value ...any) {
-		u := value[1].(*User)
-		c := value[0].(*client)
-		server.deleteClientOrUser(c, u)
-	}, _client_, user)
-	user.RefreshExpired()
+	u := _client_.loadUser(ginCtx.Writer, ginCtx.Request)
+	u.RefreshPreExpired()
+	c.rLock.RUnlock()
+
+	u.waitMessage(c.tw)
+	c.tw2.AfterFunc(expiredCheckTimeSecond, u.GetId(), func(value ...any) {
+		uu := value[1].(*User)
+		cc := value[0].(*client)
+		c.deleteClientOrUser(cc, uu)
+	}, _client_, u)
+	u.RefreshExpired()
+
+	return nil, nil
 }
 
-func (server *Server) deleteClientOrUser(client *client, user *User) {
-	server.rLock.Lock()
-	if user.expiredTime != nil && user.expiredTime.Before(time.Now()) {
-		user.expiredTime = nil
-		server.context.DeleteUser(user)
-		client.deleteUser(user.GetId())
-		if client.Empty() {
-			server.store.Delete(client.username)
-			freeClient(client)
+func (c *Controller) deleteClientOrUser(cl *client, u *User) {
+	c.rLock.Lock()
+	if u.expiredTime != nil && u.expiredTime.Before(time.Now()) {
+		u.expiredTime = nil
+		c.app.DeleteUser(u)
+		cl.deleteUser(u.GetId())
+		if cl.Empty() {
+			c.store.Delete(cl.username)
+			freeClient(cl)
 		}
 	}
-	server.rLock.Unlock()
-}
-
-func (server *Server) Init(context *core.Context) {
-	server.context = context
-	server.isStart = server.context.GetCfgBoolDefault("ex", "start", false)
-	if server.isStart {
-		server.liveTime = server.context.GetCfgInt("ex", "liveTime")
-		server.context.GetLog().Info("ex 配置", zap.Int("liveTime", server.liveTime))
-	}
-}
-func (server *Server) Name() string {
-
-	return "ex"
+	c.rLock.Unlock()
 }
