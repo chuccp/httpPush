@@ -42,30 +42,27 @@ func (c *Controller) Init(ctx *wfcore.Context) error {
 }
 
 func (c *Controller) handleWs(r *web.Request) (any, error) {
-	ginCtx := r.GinContext()
-	username := ginCtx.Query("id")
+	username := r.Query("id")
 	if username == "" {
-		username = ginCtx.Query("username")
+		username = r.Query("username")
 	}
 	if len(username) == 0 {
 		return "userId required", nil
 	}
-
-	conn, err := c.upgrader.Upgrade(ginCtx.Writer, ginCtx.Request, nil)
+	req := r.Request()
+	conn, err := c.upgrader.Upgrade(r.Response(), req, nil)
 	if err != nil {
 		return nil, err
 	}
-
 	writeCh := make(chan []byte, 16)
-	id := username + "_" + ginCtx.Request.RemoteAddr
-
+	id := username + "_" + req.RemoteAddr
 	c.rLock.RLock()
 	cl := getNewClient(c.app, username)
 	_client_, ok := c.store.LoadOrStore(cl, username)
 	if ok {
 		freeClient(cl)
 	}
-	cuser := NewUser(username, id, c.app, conn, writeCh, ginCtx.Request)
+	cuser := NewUser(username, id, c.app, conn, writeCh, req)
 	_client_.connMap.Put(id, cuser)
 	c.rLock.RUnlock()
 
