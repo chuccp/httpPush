@@ -44,11 +44,10 @@ func (c *Controller) Init(ctx *wfcore.Context) error {
 }
 
 func (c *Controller) handleEx(r *web.Request) (any, error) {
-	ginCtx := r.GinContext()
-	username := util.GetUsername(ginCtx.Request)
+	req := r.Request()
+	username := util.GetUsername(req)
 	if len(username) == 0 {
-		ginCtx.String(404, "request error")
-		return nil, nil
+		return "request error", nil
 	}
 
 	c.rLock.RLock()
@@ -57,7 +56,7 @@ func (c *Controller) handleEx(r *web.Request) (any, error) {
 	if ok {
 		freeClient(cl)
 	}
-	u := _client_.loadUser(ginCtx.Writer, ginCtx.Request)
+	u := _client_.loadUser(r.Response(), req)
 	u.RefreshPreExpired()
 	c.rLock.RUnlock()
 
