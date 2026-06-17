@@ -139,6 +139,18 @@ func (s *Service) WriteSyncMessage(iMessage message.IMessage) (bool, error) {
 	return false, core.NoFoundUser
 }
 
+func (s *Service) ForwardGroupMessage(from, groupId, msg string) int32 {
+	var num int32
+	textMsg := message.NewTextMessage(from, "__grp__:"+groupId, msg)
+	data, _ := json.Marshal(textMsg)
+	for _, machine := range s.machineStore.GetMachines() {
+		if err := s.machineStore.sendMsg(machine.MachineId, data); err == nil {
+			num++
+		}
+	}
+	return num
+}
+
 func (s *Service) Query(parameter *core.Parameter, localValue any) []any {
 	return s.machineStore.Query(parameter, localValue)
 }

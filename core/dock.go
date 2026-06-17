@@ -9,6 +9,7 @@ import (
 type IForward interface {
 	WriteSyncMessage(iMessage message.IMessage) (bool, error)
 	Query(parameter *Parameter, localValue any) []any
+	ForwardGroupMessage(from, groupId, msg string) int32
 }
 
 type MsgDock struct {

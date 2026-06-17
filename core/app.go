@@ -84,6 +84,10 @@ func (a *App) SendGroupTextMessage(from, groupId, msg string) int32 {
 			return true
 		})
 	}
+	// 转发到集群其他节点
+	if a.msgDock.IForward != nil {
+		num += a.msgDock.IForward.ForwardGroupMessage(from, groupId, msg)
+	}
 	return num
 }
 

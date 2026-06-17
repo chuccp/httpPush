@@ -240,15 +240,29 @@ func (c *Controller) clusterInfo(r *web.Request) (any, error) {
 }
 
 func (c *Controller) queryOrderInfo(r *web.Request) (any, error) {
-	userId := r.Query("id")
-	if userId == "" { userId = r.Query("username") }
-	us := c.app.GetUserOrder(userId)
-	result := make([]map[string]any, 0)
-	for _, u := range us {
-		result = append(result, map[string]any{
-			"priority": u.GetPriority(), "machineId": u.GetMachineId(),
-			"orderTime": u.GetOrderTime().Format(util.TimestampFormat),
-		})
+	parameter := newParameter(r)
+	values := c.app.Query(parameter).([]any)
+	result := make([]any, 0)
+	for _, v := range values {
+		if ao, ok := v.(*allOrderUser); ok {
+			for _, u := range ao.OrderUser {
+				result = append(result, map[string]any{
+					"priority": u.Priority, "machineId": u.MachineId, "orderTime": u.OrderTime,
+					"machineAddress": ao.MachineId,
+				})
+			}
+		}
+	}
+	// fallback: just show local
+	if len(result) == 0 {
+		userId := r.Query("id")
+		if userId == "" { userId = r.Query("username") }
+		for _, u := range c.app.GetUserOrder(userId) {
+			result = append(result, map[string]any{
+				"priority": u.GetPriority(), "machineId": u.GetMachineId(),
+				"orderTime": u.GetOrderTime().Format(util.TimestampFormat),
+			})
+		}
 	}
 	return result, nil
 }
