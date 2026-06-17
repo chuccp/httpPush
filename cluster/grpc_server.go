@@ -125,19 +125,9 @@ func (s *grpcServer) SendTextMsg(ctx context.Context, req *SendTextMsgRequest) (
 	if err := json.Unmarshal(req.Message, &textMessage); err != nil {
 		return nil, err
 	}
-	to := textMessage.GetString(message.To)
-	// 群发消息：__grp__:groupId 格式
-	if strings.HasPrefix(to, "__grp__:") {
-		groupId := strings.TrimPrefix(to, "__grp__:")
-		from := textMessage.GetString(message.From)
-		body := textMessage.GetString(message.Msg)
-		num := s.ctx.SendGroupTextMessage(from, groupId, body)
-		wflog.Debug("收到群发消息(gRPC)", zap.String("groupId", groupId), zap.Int32("num", num))
-		return &SendTextMsgResponse{Code: 200}, nil
-	}
 	fa, err := s.ctx.SendLocalMessage(&textMessage)
 	wflog.Debug("收到远程信息(gRPC):",
-		zap.String("toUser", to),
+		zap.String("toUser", textMessage.GetString(message.To)),
 		zap.Bool("是否成功", fa),
 		zap.Error(err))
 	if fa {
