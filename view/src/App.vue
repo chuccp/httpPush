@@ -80,20 +80,34 @@ const endpoints: Endpoint[] = [
 ]
 const apiResult = ref('')
 const apiLoading = ref('')
+const paramValues = ref<Record<string, string>>({})
+const activeEp = ref<Endpoint | null>(null)
 
-async function callApi(ep: Endpoint) {
-  apiLoading.value = ep.path
-  let url = `http://${host}${ep.path}`
-  if (ep.params) {
-    const p = prompt(`参数 ${ep.params.join(', ')}?`)
-    if (p) url += `?${ep.params[0]}=${p}`
+function openForm(ep: Endpoint) {
+  if (ep.params && ep.params.length > 0) {
+    activeEp.value = ep
+    paramValues.value = {}
+  } else {
+    callApi(ep, '')
   }
+}
+
+async function callApi(ep: Endpoint, qs: string) {
+  activeEp.value = null
+  apiLoading.value = ep.path
+  const url = `http://${host}${ep.path}${qs}`
   try {
     const r = await fetch(url)
     apiResult.value = JSON.stringify(await r.json(), null, 2)
   } catch (e: any) {
     apiResult.value = `Error: ${e.message}`
   } finally { apiLoading.value = '' }
+}
+
+function submitForm() {
+  if (!activeEp.value) return
+  const qs = '?' + (activeEp.value.params || []).map(k => `${k}=${encodeURIComponent(paramValues.value[k] || '')}`).join('&')
+  callApi(activeEp.value, qs)
 }
 
 watch(mode, () => { if (connected.value) { disconnect(); connect() } })
@@ -143,13 +157,27 @@ watch(mode, () => { if (connected.value) { disconnect(); connect() } })
       <!-- 管理界面 -->
       <div v-show="page === 'admin'" class="admin-panel">
         <div class="api-grid">
-          <button v-for="ep in endpoints" :key="ep.path" class="api-btn" @click="callApi(ep)" :disabled="apiLoading === ep.path">
+          <button v-for="ep in endpoints" :key="ep.path" class="api-btn" @click="openForm(ep)" :disabled="apiLoading === ep.path">
             <span class="api-path">{{ ep.path }}</span>
             <span class="api-desc">{{ ep.desc }}</span>
           </button>
         </div>
+
+        <!-- 参数表单 -->
+        <div v-if="activeEp" class="param-form">
+          <span class="param-title">{{ activeEp.path }}</span>
+          <div v-for="p in activeEp.params" :key="p" class="param-row">
+            <label>{{ p }}</label>
+            <input v-model="paramValues[p]" :placeholder="p" @keyup.enter="submitForm" />
+          </div>
+          <div class="param-actions">
+            <button class="btn-on" @click="submitForm">提交</button>
+            <button class="btn-off" @click="activeEp = null">取消</button>
+          </div>
+        </div>
+
         <pre class="api-result" v-if="apiResult">{{ apiResult }}</pre>
-        <div v-else class="hint">点击接口查看结果</div>
+        <div v-else-if="!activeEp" class="hint">点击接口查看结果</div>
       </div>
     </div>
   </div>
@@ -208,5 +236,12 @@ body { font-family:system-ui,-apple-system,sans-serif; background:#0f172a; color
 .api-btn:disabled { opacity:.4; }
 .api-path { font-family:monospace; font-size:13px; color:#38bdf8; }
 .api-desc { font-size:11px; color:#64748b; }
+.param-form { background:#0f172a; border:1px solid #334155; border-radius:8px; padding:16px; display:flex; flex-direction:column; gap:10px; }
+.param-title { font-family:monospace; font-size:14px; color:#38bdf8; }
+.param-row { display:flex; align-items:center; gap:8px; }
+.param-row label { font-size:12px; color:#94a3b8; min-width:60px; }
+.param-row input { flex:1; padding:8px 10px; border:1px solid #334155; border-radius:6px; background:#1e293b; color:#e2e8f0; font-size:13px; outline:none; }
+.param-row input:focus { border-color:#1e3a5f; }
+.param-actions { display:flex; gap:8px; }
 .api-result { background:#0f172a; border:1px solid #334155; border-radius:8px; padding:16px; font-family:monospace; font-size:12px; color:#94a3b8; white-space:pre-wrap; max-height:300px; overflow-y:auto; }
 </style>
