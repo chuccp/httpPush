@@ -140,12 +140,8 @@ func (server *Server) Init(context *core.Context) {
 		}
 		server.context.GetLog().Info("machineId配置", zap.String("machineId", machineId))
 
-		// gRPC 端口：cluster.local.port，默认 HTTP端口+1
-		httpPort := server.context.GetCfgInt("core", "http.port")
+		// gRPC 端口
 		server.grpcPort = server.context.GetCfgInt("cluster", "local.port")
-		if server.grpcPort <= 0 || server.grpcPort == httpPort {
-			server.grpcPort = httpPort + 1
-		}
 
 		// 本地机器信息，link 使用 gRPC 端口
 		localMachine := &Machine{MachineId: machineId, Link: "0.0.0.0:" + strconv.Itoa(server.grpcPort)}
