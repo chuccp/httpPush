@@ -37,10 +37,12 @@ func fixLinkByPeer(ctx context.Context, machine *Machine) {
 		return
 	}
 
-	// 新格式 host:port（无 scheme），保留 link 中的端口
+	// 无 scheme 格式，用 peer IP 修正地址
 	if !strings.Contains(machine.Link, "://") {
 		_, port, err := net.SplitHostPort(machine.Link)
 		if err != nil {
+			// 可能只有端口号或只有 IP，直接替换整段
+			machine.Link = peerHost + ":" + machine.Link
 			return
 		}
 		machine.Link = peerHost + ":" + port

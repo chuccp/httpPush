@@ -8,9 +8,9 @@ import (
 
 	wf "github.com/chuccp/go-web-frame"
 	wfcore "github.com/chuccp/go-web-frame/core"
+	wflog "github.com/chuccp/go-web-frame/log"
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/message"
-	wflog "github.com/chuccp/go-web-frame/log"
 	"go.uber.org/zap"
 )
 
@@ -49,9 +49,13 @@ func (s *Service) Init(ctx *wfcore.Context) error {
 
 	for _, host := range strings.Split(s.app.GetCfgString("cluster", "remote_host"), ",") {
 		host = strings.TrimSpace(host)
-		if len(host) > 0 {
-			s.machineStore.addFirstMachine(&Machine{Link: host})
+		if len(host) == 0 {
+			continue
 		}
+		if !strings.Contains(host, ":") {
+			host = "127.0.0.1:" + host
+		}
+		s.machineStore.addFirstMachine(&Machine{Link: host})
 	}
 
 	s.userStore = newUserStore(s.app, s.sendMsg)
