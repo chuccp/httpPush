@@ -3,7 +3,7 @@ module github.com/chuccp/httpPush
 go 1.25.5
 
 require (
-	github.com/chuccp/go-web-frame v0.0.0
+	github.com/chuccp/go-web-frame v0.9.5
 	github.com/gorilla/websocket v1.5.3
 	go.uber.org/zap v1.28.0
 	google.golang.org/grpc v1.81.1
