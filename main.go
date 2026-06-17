@@ -4,6 +4,7 @@ import (
 	"context"
 
 	wf "github.com/chuccp/go-web-frame"
+	"github.com/chuccp/go-web-frame/component/cors"
 	"github.com/chuccp/go-web-frame/config"
 	wflog "github.com/chuccp/go-web-frame/log"
 	"github.com/chuccp/httpPush/api"
@@ -25,6 +26,7 @@ func main() {
 	builder.Rest(api.NewController())
 	builder.Rest(ex.NewController())
 	builder.Rest(ws.NewController())
+	builder.Filter(cors.NewCrosFilter())
 	if err := builder.Build().Run(context.Background()); err != nil {
 		wflog.Fatal("server stopped", zap.Error(err))
 	}

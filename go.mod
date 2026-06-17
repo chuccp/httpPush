@@ -3,7 +3,7 @@ module github.com/chuccp/httpPush
 go 1.25.5
 
 require (
-	github.com/chuccp/go-web-frame v0.9.5
+	github.com/chuccp/go-web-frame v0.9.6
 	github.com/gorilla/websocket v1.5.3
 	go.uber.org/zap v1.28.0
 	google.golang.org/grpc v1.81.1
@@ -21,6 +21,7 @@ require (
 	github.com/fogleman/gg v1.3.0 // indirect
 	github.com/fsnotify/fsnotify v1.10.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
+	github.com/gin-contrib/cors v1.7.7 // indirect
 	github.com/gin-contrib/sse v1.1.1 // indirect
 	github.com/gin-gonic/gin v1.12.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
@@ -85,4 +86,4 @@ require (
 	modernc.org/sqlite v1.50.0 // indirect
 )
 
-replace github.com/chuccp/go-web-frame => C:\Users\cao\Documents\GitHub\go-web-frame
+replace github.com/chuccp/go-web-frame => ..\go-web-frame
