@@ -42,7 +42,7 @@ func (s *Service) Init(ctx *wfcore.Context) error {
 
 	s.grpcPort = s.app.GetCfgInt("cluster", "local_port")
 	if s.grpcPort <= 0 {
-		s.grpcPort = s.app.GetCfgInt("server", "port") + 1
+		s.grpcPort = s.app.GetCfgInt("web", "server.port") + 1
 	}
 
 	s.machineStore.localMachine = &Machine{MachineId: machineId, Link: "0.0.0.0:" + strconv.Itoa(s.grpcPort)}

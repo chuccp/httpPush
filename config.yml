@@ -1,5 +1,9 @@
-server:
-  port: 8084
+web:
+  server:
+    port: 8084
+  log:
+    level: debug
+    file_path: push.log
 
 cluster:
   start: true
@@ -17,6 +21,3 @@ ws:
 api:
   start: true
 
-log:
-  level: debug
-  file_path: push.log
