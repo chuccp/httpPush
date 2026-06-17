@@ -9,6 +9,7 @@ import (
 	wfcore "github.com/chuccp/go-web-frame/core"
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/message"
+	wflog "github.com/chuccp/go-web-frame/log"
 	"go.uber.org/zap"
 )
 
@@ -29,7 +30,7 @@ func (s *Service) Init(ctx *wfcore.Context) error {
 		return nil
 	}
 
-	grpcClient := NewGrpcClient(s.app.GetLog())
+	grpcClient := NewGrpcClient()
 	s.machineStore = NewMachineStore(s.app, grpcClient)
 	s.app.SetForward(s)
 
@@ -37,7 +38,7 @@ func (s *Service) Init(ctx *wfcore.Context) error {
 	if len(machineId) == 0 {
 		machineId = MachineId()
 	}
-	s.app.GetLog().Info("machineId", zap.String("machineId", machineId))
+	wflog.Info("machineId", zap.String("machineId", machineId))
 
 	s.grpcPort = s.app.GetCfgInt("cluster", "local_port")
 	if s.grpcPort <= 0 {
@@ -60,7 +61,7 @@ func (s *Service) Init(ctx *wfcore.Context) error {
 	s.app.RegisterHandle("machineAddress", s.machineAddress)
 
 	s.grpcSrv = newGrpcServer(s.app, s.machineStore)
-	s.app.GetLog().Info("gRPC port", zap.Int("port", s.grpcPort))
+	wflog.Info("gRPC port", zap.Int("port", s.grpcPort))
 	return nil
 }
 
@@ -70,7 +71,7 @@ func (s *Service) Run() error {
 	}
 	go func() {
 		if err := s.grpcSrv.start(s.grpcPort); err != nil {
-			s.app.GetLog().Error("gRPC start failed", zap.Error(err))
+			wflog.Error("gRPC start failed", zap.Error(err))
 		}
 	}()
 	time.Sleep(time.Second)

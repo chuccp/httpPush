@@ -10,6 +10,7 @@ import (
 
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/message"
+	wflog "github.com/chuccp/go-web-frame/log"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/peer"
@@ -62,7 +63,7 @@ func (s *grpcServer) Initial(ctx context.Context, req *InitialRequest) (*Initial
 	}
 	fixLinkByPeer(ctx, &machine)
 
-	s.ctx.GetLog().Info("接收客户端的握手(gRPC)",
+	wflog.Info("接收客户端的握手(gRPC)",
 		zap.String("machine.Link", machine.Link))
 
 	s.machineStore.addMachine(&machine)
@@ -82,7 +83,7 @@ func (s *grpcServer) QueryMachineList(ctx context.Context, req *QueryMachineList
 	}
 	fixLinkByPeer(ctx, &machine)
 
-	s.ctx.GetLog().Debug("接收客户端的查询(gRPC)",
+	wflog.Debug("接收客户端的查询(gRPC)",
 		zap.String("machine.Link", machine.Link))
 
 	s.machineStore.addMachine(&machine)
@@ -123,7 +124,7 @@ func (s *grpcServer) SendTextMsg(ctx context.Context, req *SendTextMsgRequest) (
 		return nil, err
 	}
 	fa, err := s.ctx.SendLocalMessage(&textMessage)
-	s.ctx.GetLog().Debug("收到远程信息(gRPC):",
+	wflog.Debug("收到远程信息(gRPC):",
 		zap.String("toUser", textMessage.GetString(message.To)),
 		zap.Bool("是否成功", fa),
 		zap.Error(err))
@@ -144,6 +145,6 @@ func (s *grpcServer) start(port int) error {
 	}
 	grpcSrv := grpc.NewServer()
 	RegisterClusterServer(grpcSrv, s)
-	s.ctx.GetLog().Info("gRPC server starting", zap.Int("port", port))
+	wflog.Info("gRPC server starting", zap.Int("port", port))
 	return grpcSrv.Serve(lis)
 }

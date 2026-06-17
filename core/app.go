@@ -4,20 +4,23 @@ import (
 	"time"
 
 	"github.com/chuccp/go-web-frame/config"
+	wfcore "github.com/chuccp/go-web-frame/core"
+	wflog "github.com/chuccp/go-web-frame/log"
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
 	"go.uber.org/zap"
 )
 
-// Context 向后兼容别名，所有 *Context 引用自动指向 *App
+const VERSION = "0.5.0"
+
+// Context 向后兼容别名
 type Context = App
 
-// App httpPush 全局共享状态
+// App httpPush 全局共享状态，实现 go-web-frame IService
 type App struct {
 	userStore     *user.Store
 	msgDock       *MsgDock
 	handleFuncMap map[string]RegisterHandle
-	log           *zap.Logger
 	startTime     *time.Time
 	cfg           config.IConfig
 	systemInfo    map[string]any
@@ -36,15 +39,14 @@ func NewApp(cfg config.IConfig) *App {
 	return app
 }
 
-func (a *App) SetLog(log *zap.Logger) { a.log = log }
-func (a *App) GetLog() *zap.Logger    { return a.log }
+func (a *App) Init(ctx *wfcore.Context) error { return nil }
 
-func (a *App) GetStartTime() string        { return a.startTime.Format("2006-01-02 15:04:05.000") }
-func (a *App) SetForward(forward IForward) { a.msgDock.IForward = forward }
+func (a *App) GetStartTime() string           { return a.startTime.Format("2006-01-02 15:04:05.000") }
+func (a *App) SetForward(forward IForward)     { a.msgDock.IForward = forward }
 
 func (a *App) AddUser(iUser user.IUser) {
 	if a.userStore.AddUser(iUser) {
-		a.log.Info("新增用户", zap.String("username", iUser.GetUsername()))
+		wflog.Info("新增用户", zap.String("username", iUser.GetUsername()))
 	}
 }
 func (a *App) GetUserOrder(username string) []user.IOrderUser { return a.userStore.GetOrderUser(username) }
@@ -53,7 +55,7 @@ func (a *App) GetUserCreateTime(userName string) *time.Time    { return a.userSt
 func (a *App) GetUserNum() int                                 { return a.userStore.GetUserNum() }
 func (a *App) DeleteUser(iUser user.IUser) bool {
 	if a.userStore.DeleteUser(iUser) {
-		a.log.Info("用户离线", zap.String("username", iUser.GetUsername()))
+		wflog.Info("用户离线", zap.String("username", iUser.GetUsername()))
 		return true
 	}
 	return false
@@ -71,16 +73,12 @@ func (a *App) SendGroupTextMessage(from, groupId, msg string) int32 {
 	var num int32
 	if groupId == "all" || groupId == "All" {
 		a.userStore.RangeAllUser(func(username string) bool {
-			if fa, _ := a.msgDock.SendLocalMessage(message.NewTextMessage(from, username, msg)); fa {
-				num++
-			}
+			if fa, _ := a.msgDock.SendLocalMessage(message.NewTextMessage(from, username, msg)); fa { num++ }
 			return true
 		})
 	} else {
 		a.userStore.RangeGroupUser(groupId, func(username string) bool {
-			if fa, _ := a.msgDock.SendLocalMessage(message.NewTextMessage(from, username, msg)); fa {
-				num++
-			}
+			if fa, _ := a.msgDock.SendLocalMessage(message.NewTextMessage(from, username, msg)); fa { num++ }
 			return true
 		})
 	}
@@ -104,19 +102,8 @@ func (a *App) GetHandle(name string) (RegisterHandle, bool)  { h, ok := a.handle
 func (a *App) GetSystemInfo() map[string]any                 { return a.systemInfo }
 func (a *App) SetSystemInfo(key string, value any)           { a.systemInfo[key] = value }
 
-const VERSION = "0.5.0"
-
 // Config helpers
-func (a *App) Cfg() config.IConfig { return a.cfg }
-func (a *App) GetCfgString(section, key string) string {
-	return a.cfg.GetString(section + "." + key)
-}
-func (a *App) GetCfgInt(section, key string) int {
-	return a.cfg.GetInt(section + "." + key)
-}
-func (a *App) GetCfgBoolDefault(section, key string, d bool) bool {
-	return a.cfg.GetBoolOrDefault(section+"."+key, d)
-}
-func (a *App) GetCfgStringDefault(section, key, d string) string {
-	return a.cfg.GetStringOrDefault(section+"."+key, d)
-}
+func (a *App) GetCfgString(section, key string) string            { return a.cfg.GetString(section + "." + key) }
+func (a *App) GetCfgInt(section, key string) int                  { return a.cfg.GetInt(section + "." + key) }
+func (a *App) GetCfgBoolDefault(section, key string, d bool) bool { return a.cfg.GetBoolOrDefault(section+"."+key, d) }
+func (a *App) GetCfgStringDefault(section, key, d string) string  { return a.cfg.GetStringOrDefault(section+"."+key, d) }

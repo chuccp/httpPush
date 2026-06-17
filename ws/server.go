@@ -7,6 +7,7 @@ import (
 	"time"
 
 	wfcore "github.com/chuccp/go-web-frame/core"
+	wflog "github.com/chuccp/go-web-frame/log"
 	"github.com/chuccp/go-web-frame/web"
 	"github.com/chuccp/httpPush/core"
 	ws "github.com/gorilla/websocket"
@@ -68,7 +69,7 @@ func (c *Controller) handleWs(r *web.Request) (any, error) {
 	c.rLock.RUnlock()
 
 	c.app.AddUser(cuser)
-	c.app.GetLog().Info("ws connect", zap.String("user", username))
+	wflog.Info("ws connect", zap.String("user", username))
 
 	go c.readPump(conn, username)
 	c.writePump(conn, writeCh)
@@ -113,7 +114,7 @@ func (c *Controller) readPump(conn *ws.Conn, username string) {
 	for {
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
-			c.app.GetLog().Info("ws disconnect", zap.String("user", username))
+			wflog.Info("ws disconnect", zap.String("user", username))
 			break
 		}
 		var wsMsg struct {

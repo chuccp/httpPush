@@ -5,6 +5,7 @@ import (
 	"github.com/chuccp/httpPush/message"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
+	wflog "github.com/chuccp/go-web-frame/log"
 	"go.uber.org/zap"
 	"sort"
 	"sync"
@@ -132,7 +133,7 @@ func (us *userStore) AddUser(username string, machineId string, writeSyncMessage
 	defer us.rLock.Unlock()
 	cus, ok := us.userMap.Load(username)
 	if !ok {
-		us.context.GetLog().Debug("AddUser", zap.String("username", username), zap.Int("us.num", int(us.num)))
+		wflog.Debug("AddUser", zap.String("username", username), zap.Int("us.num", int(us.num)))
 		atomic.AddInt32(&us.num, 1)
 		cus := getNewCuStore(username)
 		cus.addUser(username, machineId, writeSyncMessage)

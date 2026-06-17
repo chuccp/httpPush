@@ -8,6 +8,7 @@ import (
 
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/util"
+	wflog "github.com/chuccp/go-web-frame/log"
 	"go.uber.org/zap"
 )
 
@@ -181,7 +182,7 @@ func (machineStore *MachineStore) Query(parameter *core.Parameter, localValue an
 				defer waitGroup.Done()
 				v, err := machineStore.query(machine, jsonData, localValue)
 				if err != nil {
-					machineStore.context.GetLog().Error("query", zap.Error(err), zap.Any("value", v))
+					wflog.Error("query", zap.Error(err), zap.Any("value", v))
 				}
 				if err == nil && v != nil {
 					v1, ok := v.(*any)
@@ -211,7 +212,7 @@ func (machineStore *MachineStore) GetMachineLink(machineId string) string {
 	return machineStore.machines.getMachineLink(machineId)
 }
 func (machineStore *MachineStore) initial(machine *Machine, data []byte) {
-	machineStore.context.GetLog().Debug("initial", zap.Any("machine", machine))
+	wflog.Debug("initial", zap.Any("machine", machine))
 	call, err := machineStore.grpcClient.Call(machine, "/_cluster/initial", data)
 	if err == nil {
 		var _machine_ Machine
@@ -220,12 +221,12 @@ func (machineStore *MachineStore) initial(machine *Machine, data []byte) {
 			machine.MachineId = _machine_.MachineId
 			machineStore.switchTempToMachines(machine)
 		} else {
-			machineStore.context.GetLog().Info("initial 握手的对象是自己移除", zap.String("MachineId", _machine_.MachineId))
+			wflog.Info("initial 握手的对象是自己移除", zap.String("MachineId", _machine_.MachineId))
 			machine.MachineId = _machine_.MachineId
 			machineStore.removeTempMachine(machine)
 		}
 	} else {
-		machineStore.context.GetLog().Error("initial", zap.Any("machine", machine), zap.Error(err))
+		wflog.Error("initial", zap.Any("machine", machine), zap.Error(err))
 	}
 }
 
@@ -255,7 +256,7 @@ func (machineStore *MachineStore) queryMachines(machine *Machine, data []byte) {
 			machineStore.addMachines(machines)
 		}
 	} else {
-		machineStore.context.GetLog().Error("queryMachines", zap.Any("machine", machine), zap.Error(err))
+		wflog.Error("queryMachines", zap.Any("machine", machine), zap.Error(err))
 	}
 }
 func (machineStore *MachineStore) sendMsg(machineId string, data []byte) error {

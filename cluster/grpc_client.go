@@ -9,6 +9,7 @@ import (
 
 	"github.com/chuccp/httpPush/core"
 	"go.uber.org/zap"
+	wflog "github.com/chuccp/go-web-frame/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -17,14 +18,12 @@ import (
 type GrpcClient struct {
 	conns map[string]*grpc.ClientConn
 	lock  *sync.RWMutex
-	log   *zap.Logger
 }
 
-func NewGrpcClient(log *zap.Logger) *GrpcClient {
+func NewGrpcClient() *GrpcClient {
 	return &GrpcClient{
 		conns: make(map[string]*grpc.ClientConn),
 		lock:  new(sync.RWMutex),
-		log:   log,
 	}
 }
 
@@ -58,7 +57,7 @@ func (c *GrpcClient) getConn(link string) (*grpc.ClientConn, error) {
 		return nil, err
 	}
 	c.conns[link] = conn
-	c.log.Info("创建 gRPC 连接", zap.String("link", link))
+	wflog.Info("创建 gRPC 连接", zap.String("link", link))
 	return conn, nil
 }
 
