@@ -71,15 +71,21 @@ func (c *Controller) sendMsg(r *web.Request) (any, error) {
 }
 
 func (c *Controller) sendGroupMsg(r *web.Request) (any, error) {
-	groupId := r.Query("groupId")
-	msg := r.Query("msg")
-	if groupId == "" || msg == "" { return "groupId or msg required", nil }
-	num := c.app.SendGroupTextMessage("system", groupId, msg)
-	return map[string]any{"success": true, "num": num}, nil
+	parameter := newParameter(r)
+	values := c.app.Query(parameter).([]any)
+	var total int32
+	for _, v := range values {
+		if gm, ok := v.(*groupMsg); ok {
+			total += gm.Num
+		}
+	}
+	return map[string]any{"total": total, "list": values}, nil
 }
 
 func (c *Controller) handleSendGroupMsg(p *core.Parameter) any {
-	return map[string]any{}
+	groupId := p.GetString("groupId")
+	msg := p.GetString("msg")
+	return &groupMsg{Num: c.app.SendGroupTextMessage("system", groupId, msg)}
 }
 
 func (c *Controller) sendMessage(r *web.Request) (any, error) {
@@ -201,6 +207,11 @@ type pageUser struct {
 type page struct {
 	Num  int
 	List []*pageUser
+}
+type groupMsg struct {
+	Num            int32  `json:"num"`
+	MachineId      string `json:"machineId"`
+	MachineAddress string `json:"machineAddress,omitempty"`
 }
 type clusterUserNum struct {
 	UserNum   any    `json:"userNum"`
