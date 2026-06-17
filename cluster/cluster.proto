@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package cluster;
+
+option go_package = "github.com/chuccp/httpPush/cluster";
+
+// Initial 握手
+message InitialRequest {
+  bytes machine = 1; // JSON-encoded Machine
+}
+message InitialResponse {
+  bytes machine = 1; // JSON-encoded Machine
+}
+
+// QueryMachineList 查询节点列表
+message QueryMachineListRequest {
+  bytes machine = 1; // JSON-encoded Machine
+}
+message QueryMachineListResponse {
+  bytes machines = 1; // JSON-encoded []*Machine
+}
+
+// Query 通用查询转发
+message QueryRequest {
+  bytes parameter = 1; // JSON-encoded core.Parameter
+}
+message QueryResponse {
+  bytes result = 1; // JSON-encoded query result, 空表示无结果
+}
+
+// SendTextMsg 转发消息
+message SendTextMsgRequest {
+  bytes message = 1; // JSON-encoded message.TextMessage
+}
+message SendTextMsgResponse {
+  int32 code = 1;
+  string error = 2;
+}
+
+// Cluster 集群通信服务
+service Cluster {
+  rpc Initial(InitialRequest) returns (InitialResponse);
+  rpc QueryMachineList(QueryMachineListRequest) returns (QueryMachineListResponse);
+  rpc Query(QueryRequest) returns (QueryResponse);
+  rpc SendTextMsg(SendTextMsgRequest) returns (SendTextMsgResponse);
+}

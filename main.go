@@ -4,6 +4,7 @@ import (
 	"github.com/chuccp/httpPush/cluster"
 	"github.com/chuccp/httpPush/ex"
 	"log"
+	"os"
 	"runtime"
 
 	"github.com/chuccp/httpPush/api"
@@ -13,7 +14,11 @@ import (
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	cfg, err := config.LoadFile("config.ini")
+	configFile := "config.ini"
+	if len(os.Args) > 1 {
+		configFile = os.Args[1]
+	}
+	cfg, err := config.LoadFile(configFile)
 	if err != nil {
 		log.Panic(err)
 		return

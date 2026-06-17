@@ -2,15 +2,13 @@ package cluster
 
 import (
 	"encoding/json"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/message"
 	"go.uber.org/zap"
-	"io"
-	"net"
-	"net/http"
-	"net/url"
-	"strings"
-	"time"
 )
 
 type Server struct {
@@ -20,6 +18,8 @@ type Server struct {
 	isStart      bool
 	machineStore *MachineStore
 	userStore    *userStore
+	grpcServer   *grpcServer
+	grpcPort     int
 }
 
 func NewServer() *Server {
@@ -28,6 +28,7 @@ func NewServer() *Server {
 	server.IHttpServer = httpServer
 	return server
 }
+
 func (server *Server) checkUser() {
 	for {
 		time.Sleep(time.Second * 5)
@@ -38,6 +39,14 @@ func (server *Server) checkUser() {
 
 func (server *Server) Start() error {
 	if server.isStart {
+		if server.grpcServer != nil && server.grpcPort > 0 {
+			server.context.RecoverGo(func() {
+				err := server.grpcServer.start(server.grpcPort)
+				if err != nil {
+					server.context.GetLog().Error("gRPC server 启动失败", zap.Error(err))
+				}
+			})
+		}
 		server.context.RecoverGo(func() {
 			server.loop()
 		})
@@ -66,7 +75,6 @@ func (server *Server) sendMsg(message message.IMessage, machineId string) (bool,
 	if err != nil {
 		return false, err
 	}
-
 	return true, nil
 }
 
@@ -103,9 +111,9 @@ func (server *Server) WriteSyncMessage(iMessage message.IMessage) (fa bool, err 
 			}
 		}
 	}
-
 	return false, core.NoFoundUser
 }
+
 func (server *Server) Query(parameter *core.Parameter, localValue any) []any {
 	return server.machineStore.Query(parameter, localValue)
 }
@@ -113,176 +121,56 @@ func (server *Server) Query(parameter *core.Parameter, localValue any) []any {
 func (server *Server) machineInfoId(parameter *core.Parameter) any {
 	return server.machineStore.localMachine.MachineId
 }
+
 func (server *Server) remoteMachineNum(parameter *core.Parameter) any {
 	return server.machineStore.num()
-}
-
-func (server *Server) initial(w http.ResponseWriter, re *http.Request) {
-	machine, err := getRemoteMachine(re)
-	if err == nil {
-		server.context.GetLog().Info("接收客户端的握手", zap.String("machine.Link", machine.Link), zap.String("remoteAddress", re.RemoteAddr))
-		server.machineStore.addMachine(machine)
-		marshal, err := json.Marshal(server.machineStore.localMachine)
-		if err == nil {
-			w.Write(marshal)
-		} else {
-			w.WriteHeader(500)
-			w.Write([]byte(err.Error()))
-		}
-	} else {
-		w.WriteHeader(500)
-		w.Write([]byte(err.Error()))
-	}
-}
-
-func (server *Server) queryMachineList(w http.ResponseWriter, re *http.Request) {
-	machine, err := getRemoteMachine(re)
-	if err == nil {
-		server.context.GetLog().Debug("接收客户端的查询", zap.String("machine.Link", machine.Link), zap.String("remoteAddress", re.RemoteAddr))
-		server.machineStore.addMachine(machine)
-		marshal, err := json.Marshal(server.machineStore.GetMachines())
-		if err == nil {
-			w.Write(marshal)
-		} else {
-			w.WriteHeader(500)
-			w.Write([]byte(err.Error()))
-		}
-	} else {
-		w.WriteHeader(500)
-		w.Write([]byte(err.Error()))
-	}
-}
-
-func getRemoteMachine(re *http.Request) (*Machine, error) {
-	all, err := io.ReadAll(re.Body)
-	if err != nil {
-		return nil, err
-	} else {
-		var machine Machine
-		err := json.Unmarshal(all, &machine)
-		if err != nil {
-			return nil, err
-		}
-		url, err := url.Parse(machine.Link)
-		if err != nil {
-			return nil, err
-		}
-		host, _, err := net.SplitHostPort(re.RemoteAddr)
-		if err != nil {
-			return nil, err
-		}
-		link := url.Scheme + "://" + host + ":" + url.Port()
-		machine.Link = link
-		return &machine, nil
-	}
-}
-
-func (server *Server) query(w http.ResponseWriter, re *http.Request) {
-	var parameter core.Parameter
-	err := UnmarshalJsonBody(re, &parameter)
-	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(err.Error()))
-	} else {
-		server.context.GetLog().Debug("收到查询", zap.String("path", parameter.Path), zap.String("remoteAddress", re.RemoteAddr))
-		handleFunc, fa := server.context.GetHandle(parameter.Path)
-		if fa {
-			v := handleFunc(&parameter)
-			if v == nil {
-				w.Write([]byte(""))
-				return
-			} else {
-				marshal, err := json.Marshal(v)
-				if err == nil {
-					w.Write(marshal)
-					return
-				} else {
-					w.WriteHeader(500)
-					w.Write([]byte(err.Error()))
-				}
-			}
-		}
-	}
-
-}
-
-func (server *Server) sendTextMsg(writer http.ResponseWriter, request *http.Request) {
-	var textMessage message.TextMessage
-	err := UnmarshalJsonBody(request, &textMessage)
-	if err == nil {
-		err, fa := server.context.SendLocalMessage(&textMessage)
-		server.context.GetLog().Debug("收到远程信息:", zap.String("toUser", textMessage.GetString(message.To)), zap.Bool("是否成功", fa), zap.Error(err))
-		if fa {
-			v, err := json.Marshal(successResponse())
-			if err == nil {
-				writer.Write(v)
-				return
-			}
-		} else {
-			if err != nil {
-				v, err := json.Marshal(failResponse(err.Error()))
-				if err == nil {
-					writer.Write(v)
-					return
-				}
-			} else {
-				v, err := json.Marshal(failResponse("fail"))
-				if err == nil {
-					writer.Write(v)
-					return
-				}
-			}
-		}
-	}
-	writer.WriteHeader(500)
 }
 
 func (server *Server) Init(context *core.Context) {
 	server.context = context
 	server.isStart = server.context.GetCfgBoolDefault("cluster", "start", false)
 	if server.isStart {
-		server.machineStore = NewMachineStore(server.context)
+		grpcClient := NewGrpcClient(server.context.GetLog())
+		server.machineStore = NewMachineStore(server.context, grpcClient)
 		context.SetForward(server)
+
 		machineId := server.context.GetCfgString("cluster", "machineId")
 		if len(machineId) == 0 {
 			machineId = MachineId()
 		}
 		server.context.GetLog().Info("machineId配置", zap.String("machineId", machineId))
-		localLink := server.context.GetCfgString("cluster", "local.link")
-		if len(localLink) == 0 {
-			localLink = server.GetServerHost()
+
+		// gRPC 端口：cluster.local.port，默认 HTTP端口+1
+		server.grpcPort = server.context.GetCfgInt("cluster", "local.port")
+		if server.grpcPort <= 0 {
+			server.grpcPort = server.context.GetCfgInt("core", "http.port") + 1
 		}
-		localMachine, err := parseLink(localLink)
-		if err != nil {
-			server.context.GetLog().Panic("解析本地配置localLink失败", zap.Error(err))
-			return
-		}
-		localMachine.MachineId = machineId
+
+		// 本地机器信息，link 使用 gRPC 端口
+		localMachine := &Machine{MachineId: machineId, Link: "0.0.0.0:" + strconv.Itoa(server.grpcPort)}
 		server.machineStore.localMachine = localMachine
 
-		remoteLinkStr := server.context.GetCfgString("cluster", "remote.link")
-		remoteLinks := strings.Split(remoteLinkStr, ",")
-		for _, remoteLink := range remoteLinks {
-			machine, err := parseLink(remoteLink)
-			if err != nil {
-				server.context.GetLog().Panic("解析本地配置remoteLink失败", zap.Error(err))
-				return
-			} else {
-				server.machineStore.addFirstMachine(machine)
+		// 远程节点
+		remoteHostStr := server.context.GetCfgString("cluster", "remote.host")
+		for _, host := range strings.Split(remoteHostStr, ",") {
+			host = strings.TrimSpace(host)
+			if len(host) > 0 {
+				server.machineStore.addFirstMachine(&Machine{Link: host})
 			}
 		}
+
 		server.userStore = newUserStore(context, server.sendMsg)
 		server.context.RegisterHandle("machineInfoId", server.machineInfoId)
 		server.context.RegisterHandle("remoteMachineNum", server.remoteMachineNum)
 		server.context.RegisterHandle("clusterUserNum", server.clusterUserNum)
 		server.context.RegisterHandle("machineAddress", server.machineAddress)
-		server.AddHttpRoute("/_cluster/initial", server.initial)
-		server.AddHttpRoute("/_cluster/queryMachineList", server.queryMachineList)
-		server.AddHttpRoute("/_cluster/query", server.query)
-		server.AddHttpRoute("/_cluster/sendTextMsg", server.sendTextMsg)
-	}
 
+		// 创建 gRPC server
+		server.grpcServer = newGrpcServer(server.context, server.machineStore)
+		server.context.GetLog().Info("gRPC 端口配置", zap.Int("grpcPort", server.grpcPort))
+	}
 }
+
 func (server *Server) Name() string {
 	return "cluster"
 }

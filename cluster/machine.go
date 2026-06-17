@@ -3,11 +3,12 @@ package cluster
 import (
 	"encoding/json"
 	"errors"
+	"sync"
+	"time"
+
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/util"
 	"go.uber.org/zap"
-	"sync"
-	"time"
 )
 
 type Machine struct {
@@ -93,13 +94,13 @@ type MachineStore struct {
 	tempMachines *Machines
 	machines     *Machines
 	lock         *sync.RWMutex
-	httpClient   *HttpClient
+	grpcClient   *GrpcClient
 	localMachine *Machine
 	context      *core.Context
 }
 
-func NewMachineStore(context *core.Context) *MachineStore {
-	return &MachineStore{tempMachines: NewMachines(), machines: NewMachines(), lock: new(sync.RWMutex), httpClient: NewHttpClient(), context: context}
+func NewMachineStore(context *core.Context, grpcClient *GrpcClient) *MachineStore {
+	return &MachineStore{tempMachines: NewMachines(), machines: NewMachines(), lock: new(sync.RWMutex), grpcClient: grpcClient, context: context}
 }
 
 func (machineStore *MachineStore) addFirstMachine(machine *Machine) {
@@ -211,7 +212,7 @@ func (machineStore *MachineStore) GetMachineLink(machineId string) string {
 }
 func (machineStore *MachineStore) initial(machine *Machine, data []byte) {
 	machineStore.context.GetLog().Debug("initial", zap.Any("machine", machine))
-	call, err := machineStore.httpClient.Call(machine, "/_cluster/initial", data)
+	call, err := machineStore.grpcClient.Call(machine, "/_cluster/initial", data)
 	if err == nil {
 		var _machine_ Machine
 		err = json.Unmarshal(call, &_machine_)
@@ -229,7 +230,7 @@ func (machineStore *MachineStore) initial(machine *Machine, data []byte) {
 }
 
 func (machineStore *MachineStore) query(machine *Machine, data []byte, localValue any) (any, error) {
-	call, err := machineStore.httpClient.Call(machine, "/_cluster/query", data)
+	call, err := machineStore.grpcClient.Call(machine, "/_cluster/query", data)
 	if err == nil {
 		if len(call) == 0 {
 			return nil, errors.New("NO_VALUE")
@@ -246,7 +247,7 @@ func (machineStore *MachineStore) query(machine *Machine, data []byte, localValu
 	}
 }
 func (machineStore *MachineStore) queryMachines(machine *Machine, data []byte) {
-	call, err := machineStore.httpClient.Call(machine, "/_cluster/queryMachineList", data)
+	call, err := machineStore.grpcClient.Call(machine, "/_cluster/queryMachineList", data)
 	if err == nil {
 		var machines []*Machine
 		err = json.Unmarshal(call, &machines)
@@ -260,7 +261,7 @@ func (machineStore *MachineStore) queryMachines(machine *Machine, data []byte) {
 func (machineStore *MachineStore) sendMsg(machineId string, data []byte) error {
 	link := machineStore.GetMachineLink(machineId)
 	if len(link) > 0 {
-		call, err := machineStore.httpClient.CallByLink(link, "/_cluster/sendTextMsg", data)
+		call, err := machineStore.grpcClient.CallByLink(link, "/_cluster/sendTextMsg", data)
 		if err == nil {
 			var response Response
 			err := json.Unmarshal(call, &response)

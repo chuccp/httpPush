@@ -98,6 +98,12 @@ func (r *Request) Call(link string, jsonData []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(resp.Body)
 	if resp.StatusCode != 200 {
 		return nil, errors.New(resp.Status)
 	}
@@ -113,6 +119,12 @@ func (r *Request) Get(link string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(resp.Body)
 	r.netBreak.noBreak()
 	all, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -123,8 +135,14 @@ func (r *Request) Get(link string) ([]byte, error) {
 func (r *Request) JustCall(link string, jsonData []byte) error {
 	var buff = new(bytes.Buffer)
 	buff.Write(jsonData)
-	_, err := r.client.Post(link, "application/json", buff)
+	resp, err := r.client.Post(link, "application/json", buff)
 	if err == nil {
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+
+			}
+		}(resp.Body)
 		r.netBreak.noBreak()
 	}
 	return err
