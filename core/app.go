@@ -26,10 +26,9 @@ type App struct {
 	systemInfo    map[string]any
 }
 
-func NewApp(cfg config.IConfig) *App {
+func NewApp() *App {
 	st := time.Now()
 	app := &App{
-		cfg:           cfg,
 		startTime:     &st,
 		handleFuncMap: make(map[string]RegisterHandle),
 		systemInfo:    make(map[string]any),
@@ -39,7 +38,10 @@ func NewApp(cfg config.IConfig) *App {
 	return app
 }
 
-func (a *App) Init(ctx *wfcore.Context) error { return nil }
+func (a *App) Init(ctx *wfcore.Context) error {
+	a.cfg = ctx.GetConfig()
+	return nil
+}
 
 func (a *App) GetStartTime() string           { return a.startTime.Format("2006-01-02 15:04:05.000") }
 func (a *App) SetForward(forward IForward)     { a.msgDock.IForward = forward }

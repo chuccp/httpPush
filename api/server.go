@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 
+	wf "github.com/chuccp/go-web-frame"
 	wfcore "github.com/chuccp/go-web-frame/core"
 	"github.com/chuccp/go-web-frame/web"
 	"github.com/chuccp/httpPush/core"
@@ -14,11 +15,10 @@ type Controller struct {
 	app *core.App
 }
 
-func NewController(app *core.App) *Controller {
-	return &Controller{app: app}
-}
+func NewController() *Controller { return &Controller{} }
 
 func (c *Controller) Init(ctx *wfcore.Context) error {
+	c.app = wf.GetService[*core.App](ctx)
 	h := ctx.Get  // route register shorthand
 
 	// 基础 API

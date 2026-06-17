@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	wf "github.com/chuccp/go-web-frame"
 	wfcore "github.com/chuccp/go-web-frame/core"
 	"github.com/chuccp/go-web-frame/web"
 	"github.com/chuccp/httpPush/core"
@@ -19,9 +20,8 @@ type Controller struct {
 	tw2      *util.TimeWheel2
 }
 
-func NewController(app *core.App) *Controller {
+func NewController() *Controller {
 	return &Controller{
-		app:   app,
 		store: NewStore(),
 		rLock: new(sync.RWMutex),
 		tw:    util.NewTimeWheel2(1, 180),
@@ -30,6 +30,7 @@ func NewController(app *core.App) *Controller {
 }
 
 func (c *Controller) Init(ctx *wfcore.Context) error {
+	c.app = wf.GetService[*core.App](ctx)
 	if !c.app.GetCfgBoolDefault("ex", "start", false) {
 		return nil
 	}

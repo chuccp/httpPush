@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	wf "github.com/chuccp/go-web-frame"
 	wfcore "github.com/chuccp/go-web-frame/core"
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/message"
@@ -21,11 +22,10 @@ type Service struct {
 	grpcPort     int
 }
 
-func NewService(app *core.App) *Service {
-	return &Service{app: app}
-}
+func NewService() *Service { return &Service{} }
 
 func (s *Service) Init(ctx *wfcore.Context) error {
+	s.app = wf.GetService[*core.App](ctx)
 	if !s.app.GetCfgBoolDefault("cluster", "start", false) {
 		return nil
 	}

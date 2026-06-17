@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	wf "github.com/chuccp/go-web-frame"
 	wfcore "github.com/chuccp/go-web-frame/core"
 	wflog "github.com/chuccp/go-web-frame/log"
 	"github.com/chuccp/go-web-frame/web"
@@ -21,9 +22,8 @@ type Controller struct {
 	upgrader ws.Upgrader
 }
 
-func NewController(app *core.App) *Controller {
+func NewController() *Controller {
 	return &Controller{
-		app:   app,
 		store: NewStore(),
 		rLock: new(sync.RWMutex),
 		upgrader: ws.Upgrader{
@@ -33,6 +33,7 @@ func NewController(app *core.App) *Controller {
 }
 
 func (c *Controller) Init(ctx *wfcore.Context) error {
+	c.app = wf.GetService[*core.App](ctx)
 	if !c.app.GetCfgBoolDefault("ws", "start", false) {
 		return nil
 	}

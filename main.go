@@ -20,14 +20,12 @@ func main() {
 		panic(err)
 	}
 
-	app := core.NewApp(cfg)
-
 	builder := wf.NewBuilder(cfg)
-	builder.Service(app)
-	builder.Service(cluster.NewService(app))
-	builder.Rest(api.NewController(app))
-	builder.Rest(ex.NewController(app))
-	builder.Rest(ws.NewController(app))
+	builder.Service(core.NewApp())
+	builder.Service(cluster.NewService())
+	builder.Rest(api.NewController())
+	builder.Rest(ex.NewController())
+	builder.Rest(ws.NewController())
 	if err := builder.Build().Run(context.Background()); err != nil {
 		wflog.Fatal("server stopped", zap.Error(err))
 	}
