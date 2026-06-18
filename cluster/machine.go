@@ -175,6 +175,7 @@ func (machineStore *MachineStore) Query(parameter *core.Parameter, localValue an
 
 	for _, machine := range machines {
 		parameter.SetIndex(index)
+		index++
 		data, err := json.Marshal(parameter)
 		if err == nil {
 			waitGroup.Add(1)
