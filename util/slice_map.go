@@ -113,23 +113,15 @@ func (b *SliceMap[V]) Delete(key string) {
 	cs := b.buf[b.off:]
 	for index, c := range cs {
 		if c.key == key {
-			if index == 0 {
-				b.off++
-			} else {
-				copy(cs[index:], cs[index+1:])
-				newLen := len(b.buf) - 1
-				if newLen <= b.off {
-					b.Reset()
-				} else {
-					b.buf = b.buf[:newLen]
-				}
+			if index > 0 {
+				copy(cs[1:], cs[:index])
 			}
-			if b.empty() {
-				b.Reset()
-			}
+			b.off++
 			b.lastRead = opRead
-			return
 		}
+	}
+	if b.empty() {
+		b.Reset()
 	}
 }
 
