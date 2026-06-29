@@ -21,6 +21,7 @@ type Controller struct {
 	rLock    *sync.RWMutex
 	upgrader ws.Upgrader
 	ctx      *wfcore.Context
+	openSend bool
 }
 
 func NewController() *Controller {
@@ -39,6 +40,8 @@ func (c *Controller) Init(ctx *wfcore.Context) error {
 	if !c.app.GetCfgBoolDefault("ws", "start", false) {
 		return nil
 	}
+	openSend := c.app.GetCfgBoolDefault("ws", "openSend", false)
+	c.openSend = openSend
 	ctx.Any("/ws", c.handleWs)
 	return nil
 }
@@ -117,12 +120,14 @@ func (c *Controller) readPump(conn *ws.Conn, username string) {
 			wflog.Info("ws disconnect", zap.String("user", username))
 			break
 		}
-		var wsMsg struct {
-			To  string `json:"to"`
-			Msg string `json:"msg"`
-		}
-		if json.Unmarshal(msg, &wsMsg) == nil && len(wsMsg.To) > 0 {
-			c.app.SendTextMessage(username, wsMsg.To, wsMsg.Msg)
+		if c.openSend {
+			var wsMsg struct {
+				To  string `json:"to"`
+				Msg string `json:"msg"`
+			}
+			if json.Unmarshal(msg, &wsMsg) == nil && len(wsMsg.To) > 0 {
+				c.app.SendTextMessage(username, wsMsg.To, wsMsg.Msg)
+			}
 		}
 	}
 }

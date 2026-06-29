@@ -4,6 +4,7 @@ import (
 	wf "github.com/chuccp/go-web-frame"
 	wfcore "github.com/chuccp/go-web-frame/core"
 	"github.com/chuccp/go-web-frame/web"
+	"github.com/chuccp/httpPush/auth"
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/user"
 	"github.com/chuccp/httpPush/util"
@@ -17,29 +18,28 @@ func NewController() *Controller { return &Controller{} }
 
 func (c *Controller) Init(ctx *wfcore.Context) error {
 	c.app = wf.GetService[*core.App](ctx)
-	h := ctx.Get
 
 	// 基础 API
-	h("/root_version", c.rootVersion)
-	h("/sendmsg", c.sendMsg)
-	h("/sendMessage", c.sendMessage)
-	h("/sendGroupMsg", c.sendGroupMsg)
+	ctx.Get("/root_version", c.rootVersion).WithMeta(auth.WithAuth())
+	ctx.Get("/sendmsg", c.sendMsg).WithMeta(auth.WithAuth())
+	ctx.Get("/sendMessage", c.sendMessage).WithMeta(auth.WithAuth())
+	ctx.Get("/sendGroupMsg", c.sendGroupMsg).WithMeta(auth.WithAuth())
 	c.app.RegisterHandle("/sendGroupMsg", c.handleSendGroupMsg)
 
 	// 查询 API — 同时注册端口 handler 和本地查询函数
-	h("/queryUser", c.queryUser)
+	ctx.Get("/queryUser", c.queryUser).WithMeta(auth.WithAuth())
 	c.app.RegisterHandle("/queryUser", c.handleQueryUser)
-	h("/onlineUser", c.onlineUser)
+	ctx.Get("/onlineUser", c.onlineUser).WithMeta(auth.WithAuth())
 	c.app.RegisterHandle("/onlineUser", c.handleOnlineUser)
-	h("/info_user", c.clusterInfo)
+	ctx.Get("/info_user", c.clusterInfo).WithMeta(auth.WithAuth())
 	c.app.RegisterHandle("/info_user", c.handleClusterInfo)
-	h("/queryOrderInfo", c.queryOrderInfo)
+	ctx.Get("/queryOrderInfo", c.queryOrderInfo).WithMeta(auth.WithAuth())
 	c.app.RegisterHandle("/queryOrderInfo", c.handleQueryOrderInfo)
-	h("/queryClusterUserNum", c.queryClusterUserNum)
+	ctx.Get("/queryClusterUserNum", c.queryClusterUserNum).WithMeta(auth.WithAuth())
 	c.app.RegisterHandle("/queryClusterUserNum", c.handleClusterUserNum)
-	h("/queryGroupInfo", c.queryGroupInfo)
+	ctx.Get("/queryGroupInfo", c.queryGroupInfo).WithMeta(auth.WithAuth())
 	c.app.RegisterHandle("/queryGroupInfo", c.handleQueryGroupInfo)
-	h("/queryVersion", c.queryVersion)
+	ctx.Get("/queryVersion", c.queryVersion).WithMeta(auth.WithAuth())
 	c.app.RegisterHandle("/queryVersion", c.handleQueryVersion)
 
 	c.app.SetSystemInfo("VERSION", core.VERSION)
@@ -62,11 +62,17 @@ func (c *Controller) rootVersion(r *web.Request) (any, error) {
 
 func (c *Controller) sendMsg(r *web.Request) (any, error) {
 	username := r.Query("username")
-	if username == "" { username = r.Query("id") }
+	if username == "" {
+		username = r.Query("id")
+	}
 	msg := r.Query("msg")
-	if username == "" || msg == "" { return "username or msg required", nil }
+	if username == "" || msg == "" {
+		return "username or msg required", nil
+	}
 	fa, _ := c.app.SendTextMessage("system", username, msg)
-	if fa { return "success", nil }
+	if fa {
+		return "success", nil
+	}
 	return "NO user", nil
 }
 
@@ -90,9 +96,13 @@ func (c *Controller) handleSendGroupMsg(p *core.Parameter) any {
 
 func (c *Controller) sendMessage(r *web.Request) (any, error) {
 	username := r.Query("username")
-	if username == "" { username = r.Query("id") }
+	if username == "" {
+		username = r.Query("id")
+	}
 	msg := r.Query("msg")
-	if username == "" || msg == "" { return "username or msg required", nil }
+	if username == "" || msg == "" {
+		return "username or msg required", nil
+	}
 	fa, _ := c.app.SendTextMessage("system", username, msg)
 	return map[string]any{"success": fa}, nil
 }
@@ -129,7 +139,9 @@ func (c *Controller) handleOnlineUser(p *core.Parameter) any {
 func (c *Controller) handleClusterInfo(p *core.Parameter) any {
 	mid, _ := c.app.GetHandle("machineInfoId")
 	machineId := ""
-	if mid != nil { machineId = mid(p).(string) }
+	if mid != nil {
+		machineId = mid(p).(string)
+	}
 	return &machineInfo{MachineId: machineId, UserNum: c.app.GetUserNum()}
 }
 
@@ -145,7 +157,9 @@ func (c *Controller) handleQueryOrderInfo(p *core.Parameter) any {
 
 func (c *Controller) handleClusterUserNum(p *core.Parameter) any {
 	h, ok := c.app.GetHandle("clusterUserNum")
-	if ok { return &clusterUserNum{UserNum: h(p)} }
+	if ok {
+		return &clusterUserNum{UserNum: h(p)}
+	}
 	return &clusterUserNum{}
 }
 
@@ -267,7 +281,9 @@ func (c *Controller) queryOrderInfo(r *web.Request) (any, error) {
 	// fallback: just show local
 	if len(result) == 0 {
 		userId := r.Query("id")
-		if userId == "" { userId = r.Query("username") }
+		if userId == "" {
+			userId = r.Query("username")
+		}
 		for _, u := range c.app.GetUserOrder(userId) {
 			result = append(result, map[string]any{
 				"priority": u.GetPriority(), "machineId": u.GetMachineId(),
@@ -283,7 +299,9 @@ func (c *Controller) queryClusterUserNum(r *web.Request) (any, error) {
 	vs := c.app.Query(parameter).([]any)
 	result := make([]*clusterUserNum, 0)
 	for _, v := range vs {
-		if m, ok := v.(*clusterUserNum); ok { result = append(result, m) }
+		if m, ok := v.(*clusterUserNum); ok {
+			result = append(result, m)
+		}
 	}
 	return result, nil
 }
@@ -293,7 +311,9 @@ func (c *Controller) queryGroupInfo(r *web.Request) (any, error) {
 	vs := c.app.Query(parameter).([]any)
 	result := make([]*groupInfo, 0)
 	for _, v := range vs {
-		if m, ok := v.(*groupInfo); ok { result = append(result, m) }
+		if m, ok := v.(*groupInfo); ok {
+			result = append(result, m)
+		}
 	}
 	return result, nil
 }
@@ -303,7 +323,9 @@ func (c *Controller) queryVersion(r *web.Request) (any, error) {
 	vs := c.app.Query(parameter).([]any)
 	result := make([]*versionInfo, 0)
 	for _, v := range vs {
-		if m, ok := v.(*versionInfo); ok { result = append(result, m) }
+		if m, ok := v.(*versionInfo); ok {
+			result = append(result, m)
+		}
 	}
 	return map[string]any{
 		"versions": result,
