@@ -14,10 +14,10 @@ type IForward interface {
 type MsgDock struct {
 	IForward  IForward
 	userStore *user.Store
-	context   *Context
+	context   *App
 }
 
-func NewMsgDock(userStore *user.Store, context *Context) *MsgDock {
+func NewMsgDock(userStore *user.Store, context *App) *MsgDock {
 	msgDock := &MsgDock{userStore: userStore, context: context}
 	return msgDock
 }

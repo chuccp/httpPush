@@ -6,9 +6,10 @@ import (
 	"sync"
 	"time"
 
+	wfcore "github.com/chuccp/go-web-frame/core"
+	wflog "github.com/chuccp/go-web-frame/log"
 	"github.com/chuccp/httpPush/core"
 	"github.com/chuccp/httpPush/util"
-	wflog "github.com/chuccp/go-web-frame/log"
 	"go.uber.org/zap"
 )
 
@@ -97,11 +98,19 @@ type MachineStore struct {
 	lock         *sync.RWMutex
 	grpcClient   *GrpcClient
 	localMachine *Machine
-	context      *core.Context
+	context      *core.App
+	ctx          *wfcore.Context
 }
 
-func NewMachineStore(context *core.Context, grpcClient *GrpcClient) *MachineStore {
-	return &MachineStore{tempMachines: NewMachines(), machines: NewMachines(), lock: new(sync.RWMutex), grpcClient: grpcClient, context: context}
+func NewMachineStore(context *core.App, grpcClient *GrpcClient, ctx *wfcore.Context) *MachineStore {
+	return &MachineStore{
+		tempMachines: NewMachines(),
+		machines:     NewMachines(),
+		lock:         new(sync.RWMutex),
+		grpcClient:   grpcClient,
+		context:      context,
+		ctx:          ctx,
+	}
 }
 
 func (machineStore *MachineStore) addFirstMachine(machine *Machine) {
@@ -167,43 +176,37 @@ func (machineStore *MachineStore) getExMachines(machineIds ...string) []*Machine
 }
 
 func (machineStore *MachineStore) Query(parameter *core.Parameter, localValue any) []any {
-	vs := make([]any, 0)
-	index := 0
-	waitGroup := new(sync.WaitGroup)
-	var lock sync.Mutex
 	machines := machineStore.GetMachines()
+	vs := make([]any, 0, len(machines))
+	var wg sync.WaitGroup
+	var lock sync.Mutex
 
-	for _, machine := range machines {
-		parameter.SetIndex(index)
-		index++
+	for i, machine := range machines {
+		parameter.SetIndex(i)
 		data, err := json.Marshal(parameter)
-		if err == nil {
-			waitGroup.Add(1)
-			go func(jsonData []byte) {
-				defer waitGroup.Done()
-				v, err := machineStore.query(machine, jsonData, localValue)
-				if err != nil {
-					wflog.Error("query", zap.Error(err), zap.Any("value", v))
-				}
-				if err == nil && v != nil {
-					v1, ok := v.(*any)
-					if ok {
-						lock.Lock()
-						vs = append(vs, *v1)
-						lock.Unlock()
-					} else {
-						lock.Lock()
-						vs = append(vs, v)
-						lock.Unlock()
-					}
-				}
-
-			}(data)
+		if err != nil {
+			continue
 		}
-
+		wg.Add(1)
+		machineStore.ctx.Go(func(c *wfcore.Context) {
+			defer wg.Done()
+			v, err := machineStore.query(machine, data, localValue)
+			if err != nil {
+				wflog.Error("query", zap.Error(err), zap.Any("value", v))
+				return
+			}
+			if v == nil {
+				return
+			}
+			if p, ok := v.(*any); ok {
+				v = *p
+			}
+			lock.Lock()
+			vs = append(vs, v)
+			lock.Unlock()
+		})
 	}
-
-	waitGroup.Wait()
+	wg.Wait()
 	return vs
 }
 

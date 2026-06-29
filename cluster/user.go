@@ -125,7 +125,7 @@ type userStore struct {
 	userMap *sync.Map
 	num     int32
 	rLock   *sync.RWMutex
-	context *core.Context
+	context *core.App
 }
 
 func (us *userStore) AddUser(username string, machineId string, writeSyncMessage writeSyncMessage) {
@@ -220,6 +220,6 @@ func (us *userStore) GetOrderUser(username string) []user.IOrderUser {
 	u := make([]user.IOrderUser, 0)
 	return u
 }
-func newUserStore(context *core.Context, writeSyncMessage writeSyncMessage) *userStore {
+func newUserStore(context *core.App, writeSyncMessage writeSyncMessage) *userStore {
 	return &userStore{userMap: new(sync.Map), rLock: new(sync.RWMutex), context: context}
 }

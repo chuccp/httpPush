@@ -19,6 +19,7 @@ type Service struct {
 	machineStore *MachineStore
 	userStore    *userStore
 	grpcSrv      *grpcServer
+	ctx          *wfcore.Context
 	grpcPort     int
 }
 
@@ -26,12 +27,13 @@ func NewService() *Service { return &Service{} }
 
 func (s *Service) Init(ctx *wfcore.Context) error {
 	s.app = wf.GetService[*core.App](ctx)
+	s.ctx = ctx
 	if !s.app.GetCfgBoolDefault("cluster", "start", false) {
 		return nil
 	}
 
 	grpcClient := NewGrpcClient()
-	s.machineStore = NewMachineStore(s.app, grpcClient)
+	s.machineStore = NewMachineStore(s.app, grpcClient, ctx)
 	s.app.SetForward(s)
 
 	machineId := s.app.GetCfgString("cluster", "machine_id")
@@ -73,15 +75,20 @@ func (s *Service) Run() error {
 	if s.grpcPort <= 0 {
 		return nil
 	}
-	go func() {
+
+	s.ctx.Go(func(c *wfcore.Context) {
 		if err := s.grpcSrv.start(s.grpcPort); err != nil {
 			wflog.Error("gRPC start failed", zap.Error(err))
 		}
-	}()
+	})
 	time.Sleep(time.Second)
 
-	go s.loop()
-	go s.checkUser()
+	s.ctx.Go(func(c *wfcore.Context) {
+		s.loop()
+	})
+	s.ctx.Go(func(c *wfcore.Context) {
+		s.checkUser()
+	})
 
 	select {}
 }
@@ -143,7 +150,7 @@ func (s *Service) Query(parameter *core.Parameter, localValue any) []any {
 	return s.machineStore.Query(parameter, localValue)
 }
 
-func (s *Service) machineInfoId(*core.Parameter) any   { return s.machineStore.localMachine.MachineId }
+func (s *Service) machineInfoId(*core.Parameter) any    { return s.machineStore.localMachine.MachineId }
 func (s *Service) remoteMachineNum(*core.Parameter) any { return s.machineStore.num() }
 func (s *Service) clusterUserNum(*core.Parameter) any   { return s.userStore.Num() }
 func (s *Service) machineAddress(parameter *core.Parameter) any {

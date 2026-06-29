@@ -36,9 +36,13 @@ func (c *Controller) Init(ctx *wfcore.Context) error {
 	}
 	c.liveTime = c.app.GetCfgInt("ex", "live_time")
 
-	go c.tw.Start()
-	go c.tw2.Start()
-
+	ctx.Go(func(ctx *wfcore.Context) {
+		c.tw.Start()
+	})
+	ctx.Go(func(ctx *wfcore.Context) {
+		c.tw2.Start()
+	})
+	
 	ctx.Any("/ex", c.handleEx)
 	return nil
 }

@@ -18,11 +18,11 @@ import (
 
 type grpcServer struct {
 	UnimplementedClusterServer
-	ctx          *core.Context
+	ctx          *core.App
 	machineStore *MachineStore
 }
 
-func newGrpcServer(ctx *core.Context, store *MachineStore) *grpcServer {
+func newGrpcServer(ctx *core.App, store *MachineStore) *grpcServer {
 	return &grpcServer{ctx: ctx, machineStore: store}
 }
 

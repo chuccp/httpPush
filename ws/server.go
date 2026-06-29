@@ -20,6 +20,7 @@ type Controller struct {
 	store    *Store
 	rLock    *sync.RWMutex
 	upgrader ws.Upgrader
+	ctx      *wfcore.Context
 }
 
 func NewController() *Controller {
@@ -33,6 +34,7 @@ func NewController() *Controller {
 }
 
 func (c *Controller) Init(ctx *wfcore.Context) error {
+	c.ctx = ctx
 	c.app = wf.GetService[*core.App](ctx)
 	if !c.app.GetCfgBoolDefault("ws", "start", false) {
 		return nil
@@ -69,7 +71,7 @@ func (c *Controller) handleWs(r *web.Request) (any, error) {
 	c.app.AddUser(cuser)
 	wflog.Info("ws connect", zap.String("user", username))
 
-	go c.readPump(conn, username)
+	c.ctx.Go(func(_ *wfcore.Context) { c.readPump(conn, username) })
 	c.writePump(conn, writeCh)
 
 	c.rLock.Lock()

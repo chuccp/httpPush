@@ -10,7 +10,7 @@ import (
 
 type client struct {
 	username string
-	context  *core.Context
+	context  *core.App
 	connMap  *util.SliceMap[*User]
 	rLock    *sync.RWMutex
 }
@@ -21,7 +21,7 @@ var poolClient = &sync.Pool{
 	},
 }
 
-func getNewClient(context *core.Context, username string) *client {
+func getNewClient(context *core.App, username string) *client {
 	cl := poolClient.Get().(*client)
 	cl.connMap.Reset()
 	cl.username = username

@@ -1,11 +1,12 @@
 package ex
 
 import (
-	"github.com/chuccp/httpPush/core"
-	"github.com/chuccp/httpPush/util"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/chuccp/httpPush/core"
+	"github.com/chuccp/httpPush/util"
 )
 
 const expiredCheckTimeSecond = 6
@@ -16,7 +17,7 @@ const defaultLiveTime = 15
 
 type client struct {
 	username string
-	context  *core.Context
+	context  *core.App
 	connMap  *util.SliceMap[*User]
 	queue    *util.SliceQueueSafe
 	liveTime int
@@ -29,7 +30,7 @@ var poolClient = &sync.Pool{
 	},
 }
 
-func getNewClient(context *core.Context, username string, liveTime int) *client {
+func getNewClient(context *core.App, username string, liveTime int) *client {
 	client := poolClient.Get().(*client)
 	client.connMap.Reset()
 	client.queue.Reset()

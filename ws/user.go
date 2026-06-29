@@ -17,7 +17,7 @@ type User struct {
 	username      string
 	remoteAddress string
 	groupIds      []string
-	context       *core.Context
+	context       *core.App
 	id            string
 	conn          *websocket.Conn
 	writeCh       chan []byte
@@ -68,7 +68,7 @@ func (u *User) WriteSyncMessage(iMessage message.IMessage) (bool, error) {
 	}
 }
 
-func NewUser(username string, id string, context *core.Context, conn *websocket.Conn, writeCh chan []byte, re *http.Request) *User {
+func NewUser(username string, id string, context *core.App, conn *websocket.Conn, writeCh chan []byte, re *http.Request) *User {
 	t := time.Now()
 	u := &User{
 		username:      username,

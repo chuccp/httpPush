@@ -19,7 +19,7 @@ type User struct {
 	writer        http.ResponseWriter
 	sliceQueue    *util.SliceQueueSafe
 	groupIds      []string
-	context       *core.Context
+	context       *core.App
 	id            string
 	onceSend      *OnceSend
 	lock          *sync.RWMutex
@@ -126,7 +126,7 @@ func (u *User) GetMachineId() string {
 func (u *User) GetOrderTime() *time.Time {
 	return u.lastLiveTime
 }
-func NewUser(username string, id string, sliceQueue *util.SliceQueueSafe, context *core.Context, writer http.ResponseWriter, re *http.Request) *User {
+func NewUser(username string, id string, sliceQueue *util.SliceQueueSafe, context *core.App, writer http.ResponseWriter, re *http.Request) *User {
 	u := &User{username: username, id: id, context: context, sliceQueue: sliceQueue, writer: writer, remoteAddress: re.RemoteAddr}
 	u.groupIds = util.GetGroupIds(re)
 	u.lock = new(sync.RWMutex)
