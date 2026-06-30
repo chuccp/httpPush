@@ -75,12 +75,6 @@ func (s *Service) Run() error {
 	if s.grpcPort <= 0 {
 		return nil
 	}
-
-	s.ctx.Go(func(c *wfcore.Context) {
-		if err := s.grpcSrv.start(s.grpcPort); err != nil {
-			wflog.Error("gRPC start failed", zap.Error(err))
-		}
-	})
 	time.Sleep(time.Second)
 
 	s.ctx.Go(func(c *wfcore.Context) {
@@ -89,6 +83,10 @@ func (s *Service) Run() error {
 	s.ctx.Go(func(c *wfcore.Context) {
 		s.checkUser(c)
 	})
+	if err := s.grpcSrv.start(s.grpcPort); err != nil {
+		wflog.Error("gRPC start failed", zap.Error(err))
+		return err
+	}
 	return nil
 }
 
