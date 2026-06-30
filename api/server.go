@@ -91,7 +91,7 @@ func (c *Controller) sendGroupMsg(r *web.Request) (any, error) {
 func (c *Controller) handleSendGroupMsg(p *core.Parameter) any {
 	groupId := p.GetString("groupId")
 	msg := p.GetString("msg")
-	userName := p.GetVString("userId", "userName", "id", "userId")
+	userName := p.GetVString("userId", "userName", "id", "userId", "username")
 	if len(userName) == 0 {
 		userName = "system"
 	}
