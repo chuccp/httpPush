@@ -116,11 +116,17 @@ func (c *Controller) sendMessage(r *web.Request) (any, error) {
 func (c *Controller) handleQueryUser(p *core.Parameter) any {
 	id := p.GetVString("id", "username")
 	var result []map[string]any
+	mid, _ := c.app.GetHandle("machineInfoId")
+	machineId := ""
+	if mid != nil {
+		machineId = mid(p).(string)
+	}
 	if id != "" {
 		if us, ok := c.app.GetUser(id); ok {
 			for _, u := range user.SortByAsc(us) {
 				result = append(result, map[string]any{
 					"username":      u.GetUsername(),
+					"machineId":     machineId,
 					"remoteAddress": u.GetRemoteAddress(),
 					"lastLiveTime":  u.LastLiveTime().Format(util.TimestampFormat),
 					"createTime":    u.CreateTime().Format(util.TimestampFormat),
@@ -133,8 +139,22 @@ func (c *Controller) handleQueryUser(p *core.Parameter) any {
 
 func (c *Controller) handleOnlineUser(p *core.Parameter) any {
 	var list []*pageUser
-	c.app.RangeUser(func(username string, _ *user.StoreUser) bool {
-		list = append(list, &pageUser{UserName: username})
+	mid, _ := c.app.GetHandle("machineInfoId")
+	machineId := ""
+	if mid != nil {
+		machineId = mid(p).(string)
+	}
+	c.app.RangeUser(func(username string, storeUser *user.StoreUser) bool {
+		pu := &pageUser{
+			UserName:   username,
+			CreateTime: storeUser.GetCreateTime(),
+			MachineId:  machineId,
+		}
+		users := storeUser.GetUsers()
+		if len(users) > 0 {
+			pu.MachineAddress = users[0].GetRemoteAddress()
+		}
+		list = append(list, pu)
 		return true
 	})
 	return &page{List: list, Num: c.app.GetUserNum()}

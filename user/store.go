@@ -37,7 +37,7 @@ func (u *StoreUser) delete(user IUser) int {
 	delete(u.store, user.GetId())
 	return len(u.store)
 }
-func (u *StoreUser) getUsers() []IUser {
+func (u *StoreUser) GetUsers() []IUser {
 	u.rLock.RLock()
 	defer u.rLock.RUnlock()
 	us := make([]IUser, 0)
@@ -193,7 +193,7 @@ func (store *Store) GetUser(username string) ([]IUser, bool) {
 	v, ok := store.uMap.Load(username)
 	if ok {
 		us := v.(*StoreUser)
-		return us.getUsers(), true
+		return us.GetUsers(), true
 	}
 	return nil, false
 }
