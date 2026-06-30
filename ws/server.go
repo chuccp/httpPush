@@ -37,12 +37,13 @@ func NewController() *Controller {
 func (c *Controller) Init(ctx *wfcore.Context) error {
 	c.ctx = ctx
 	c.app = wf.GetService[*core.App](ctx)
-	if !c.app.GetCfgBoolDefault("ws", "start", false) {
-		return nil
-	}
+	start := c.app.GetCfgBoolDefault("ws", "start", false)
 	openSend := c.app.GetCfgBoolDefault("ws", "openSend", false)
 	c.openSend = openSend
-	ctx.Any("/ws", c.handleWs)
+	wflog.Info("Init WS", zap.Bool("start", start), zap.Bool("openSend", openSend))
+	if start {
+		ctx.Any("/ws", c.handleWs)
+	}
 	return nil
 }
 
@@ -120,6 +121,7 @@ func (c *Controller) readPump(conn *ws.Conn, username string) {
 			wflog.Info("ws disconnect", zap.String("user", username))
 			break
 		}
+		wflog.Info("ws read", zap.Bool("c.openSend", c.openSend))
 		if c.openSend {
 			var wsMsg struct {
 				To  string `json:"to"`

@@ -84,29 +84,38 @@ func (s *Service) Run() error {
 	time.Sleep(time.Second)
 
 	s.ctx.Go(func(c *wfcore.Context) {
-		s.loop()
+		s.loop(c)
 	})
 	s.ctx.Go(func(c *wfcore.Context) {
-		s.checkUser()
+		s.checkUser(c)
 	})
-
-	select {}
+	return nil
 }
 
-func (s *Service) loop() {
+func (s *Service) loop(ctx *wfcore.Context) {
+	ticker := time.NewTicker(time.Second * 10)
+	defer ticker.Stop()
 	for {
-		time.Sleep(time.Second * 5)
-		s.machineStore.initials()
-		time.Sleep(time.Second * 5)
-		s.machineStore.queryMachineList()
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.machineStore.initials()
+			s.machineStore.queryMachineList()
+		}
 	}
 }
 
-func (s *Service) checkUser() {
+func (s *Service) checkUser(ctx *wfcore.Context) {
+	ticker := time.NewTicker(time.Second * 10)
+	defer ticker.Stop()
 	for {
-		time.Sleep(time.Second * 5)
-		s.userStore.ClearTimeOutUser(time.Now())
-		time.Sleep(time.Second * 5)
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.userStore.ClearTimeOutUser(time.Now())
+		}
 	}
 }
 
