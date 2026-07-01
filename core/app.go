@@ -63,9 +63,9 @@ func (a *App) DeleteUser(iUser user.IUser) bool {
 	}
 	return false
 }
-func (a *App) RangeUser(f func(username string, user *user.StoreUser) bool) { a.userStore.Range(f) }
-func (a *App) AllGroupInfo() map[string]int                                 { return a.userStore.AllGroupInfo() }
-func (a *App) HasLocalUser(username string) bool                            { return a.userStore.HasLocalUser(username) }
+func (a *App) RangeUser(f func(username string, user *user.StoreUserInfo) bool) { a.userStore.Range(f) }
+func (a *App) AllGroupInfo() map[string]int                                     { return a.userStore.AllGroupInfo() }
+func (a *App) HasLocalUser(username string) bool                                { return a.userStore.HasLocalUser(username) }
 
 func (a *App) SendLocalMessage(msg message.IMessage) (bool, error) {
 	return a.msgDock.SendLocalMessage(msg)

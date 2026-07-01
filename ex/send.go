@@ -2,10 +2,11 @@ package ex
 
 import (
 	"encoding/json"
-	"github.com/chuccp/httpPush/message"
-	"github.com/chuccp/httpPush/util"
 	"io"
 	"sync"
+
+	"github.com/chuccp/httpPush/message"
+	"github.com/chuccp/httpPush/util"
 )
 
 func (s *OnceSend) messageToBytes(iMessage message.IMessage) []byte {
@@ -37,10 +38,10 @@ func (s *OnceSend) write(iMessage message.IMessage) (n bool, err error) {
 			_, err := s.writer.Write([]byte("[]"))
 			return err == nil, err
 		}
-	} else {
-		if iMessage != nil {
-			s.sliceQueue.Write(iMessage)
-		}
+	}
+
+	if iMessage != nil {
+		s.sliceQueue.Write(iMessage)
 	}
 	return true, nil
 }

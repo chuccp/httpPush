@@ -144,13 +144,13 @@ func (c *Controller) handleOnlineUser(p *core.Parameter) any {
 	if mid != nil {
 		machineId = mid(p).(string)
 	}
-	c.app.RangeUser(func(username string, storeUser *user.StoreUser) bool {
+	c.app.RangeUser(func(username string, storeUser *user.StoreUserInfo) bool {
 		pu := &pageUser{
 			UserName:   username,
-			CreateTime: storeUser.GetCreateTime(),
+			CreateTime: storeUser.CreateTime,
 			MachineId:  machineId,
 		}
-		users := storeUser.GetUsers()
+		users := storeUser.Users
 		if len(users) > 0 {
 			pu.MachineAddress = users[0].GetRemoteAddress()
 		}
@@ -223,7 +223,7 @@ func (c *Controller) onlineUser(r *web.Request) (any, error) {
 		}
 	}
 	if len(result) == 0 {
-		c.app.RangeUser(func(username string, _ *user.StoreUser) bool {
+		c.app.RangeUser(func(username string, _ *user.StoreUserInfo) bool {
 			result = append(result, map[string]any{"userName": username})
 			return true
 		})

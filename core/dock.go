@@ -26,14 +26,20 @@ func (md *MsgDock) SendLocalMessage(msg message.IMessage) (bool, error) {
 	username := msg.GetString(message.To)
 	us := md.userStore.GetOrderUser(username)
 	var err error
-	var fa bool
+	var faSend = false
 	for _, u := range us {
-		fa, err = u.WriteSyncMessage(msg)
+		fa, err0 := u.WriteSyncMessage(msg)
 		if fa {
-			return true, nil
+			faSend = true
+		}
+		if err0 != nil {
+			err = err0
 		}
 	}
-	return fa, err
+	if faSend {
+		return true, nil
+	}
+	return false, err
 }
 
 func (md *MsgDock) SendMessage(msg message.IMessage) (bool, error) {

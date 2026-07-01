@@ -244,12 +244,12 @@ func (machineStore *MachineStore) query(machine *Machine, data []byte, localValu
 		err = json.Unmarshal(call, m)
 		if err == nil {
 			return m, nil
-		} else {
-			return nil, err
 		}
-	} else {
+
 		return nil, err
 	}
+
+	return nil, err
 }
 func (machineStore *MachineStore) queryMachines(machine *Machine, data []byte) {
 	call, err := machineStore.grpcClient.Call(machine, "/_cluster/queryMachineList", data)
@@ -272,19 +272,19 @@ func (machineStore *MachineStore) sendMsg(machineId string, data []byte) error {
 			err := json.Unmarshal(call, &response)
 			if err != nil {
 				return err
-			} else {
-				if response.Code == 200 {
-					return nil
-				} else {
-					return core.NoFoundUser
-				}
 			}
-		} else {
-			return err
+
+			if response.Code == 200 {
+				return nil
+			}
+
+			return core.NoFoundUser
 		}
-	} else {
-		return core.NoFoundUser
+
+		return err
 	}
+
+	return core.NoFoundUser
 }
 
 func (machineStore *MachineStore) initials() {
